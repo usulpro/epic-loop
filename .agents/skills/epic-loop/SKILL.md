@@ -11,7 +11,60 @@ description: Use this skill when the user wants to shape, run, resume, reset, or
 
 ## First Move
 
-Decide the mode before doing work:
+Before asking for the epic title or lifecycle mode, run the technical readiness check:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs doctor --json
+```
+
+If the result is `ready`, continue to lifecycle selection.
+
+If the result is `setup-required`, do not ask the shaping/resume question yet. Use a very short setup exchange and do not mention internal diagnostics unless the user asks.
+
+- **Automatic setup**: if `.codex/hooks.json` is writable and the user explicitly approves setup, run `node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks`.
+- **Manual setup**: if `.codex/hooks.json` is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
+
+Do not edit global Codex config from this skill. If `doctor` reports that `codex_hooks` is missing or disabled, explain where it appears to be missing and ask the user before changing any project-local config.
+
+Keep the user-facing setup message ultra-short. Do not paste the full doctor output unless the user asks for details. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics in the normal flow.
+
+Use this shape when setup is possible but not yet approved:
+
+```text
+проверила: epic-loop needs to add project-local Codex hooks. Install them now?
+```
+
+Use this shape when the current session cannot write `.codex/hooks.json`:
+
+```text
+проверила: hooks need setup, but this session cannot write `.codex/hooks.json`.
+
+cd <project-root>
+node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
+```
+
+Use this shape when the user asked to install and the automatic install failed:
+
+```text
+попробовала установить hooks, но `.codex/hooks.json` is not writable here.
+
+cd <project-root>
+node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
+```
+
+Use this shape after successful automatic setup:
+
+```text
+готово, hooks настроены. можем начинать epic.
+```
+
+Use dry-run when the user wants to inspect the planned hook changes first:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks --dry-run
+```
+
+After hooks are ready, decide the mode before doing epic work:
 
 - **Shaping**: the user is still clarifying the epic, roadmap, phases, contracts, risks, or open questions.
 - **Implementation**: the epic has actionable tasks and the user wants autonomous execution.
@@ -147,7 +200,9 @@ Use project-local hooks for epic-loop work. Install them from the project root w
 node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
 ```
 
-The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; mutable runtime state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
+
+The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; mutable runtime state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
 
 Bind a Codex session to an epic explicitly when running parallel sessions:
 

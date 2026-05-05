@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
 const MODES = ["shaping", "implementation", "review", "reset"];
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const CODEX_HOOKS_RELATIVE_PATH = path.join(".codex", "hooks.json");
+const CODEX_CONFIG_RELATIVE_PATH = path.join(".codex", "config.toml");
 
 function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/u, "+00:00");
@@ -70,6 +72,30 @@ function readJson(filePath, fallback) {
   }
 }
 
+function readJsonStrict(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return {
+      exists: false,
+      value: null,
+      error: null,
+    };
+  }
+
+  try {
+    return {
+      exists: true,
+      value: JSON.parse(fs.readFileSync(filePath, "utf8")),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      exists: true,
+      value: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function writeJson(filePath, value) {
   ensureDir(path.dirname(filePath));
   const tempPath = `${filePath}.tmp`;
@@ -104,6 +130,10 @@ function shellQuote(value) {
 
 function buildHookCommand() {
   return `node ${shellQuote(SCRIPT_PATH)} hook`;
+}
+
+function isEpicLoopHookCommand(command) {
+  return typeof command === "string" && /epic[-_]loop/u.test(command) && /\bhook\b/u.test(command);
 }
 
 function sessionRoot(projectRoot) {
@@ -158,25 +188,175 @@ function readStdin() {
   return fs.readFileSync(0, "utf8");
 }
 
-function installHooks(flags) {
-  const root = resolveRoot(flags.root);
-  const hooksPath = path.join(root, ".codex", "hooks.json");
-  const document = readJson(hooksPath, {});
-  const normalizedDocument = document && typeof document === "object" && !Array.isArray(document) ? document : {};
+function canWritePath(targetPath) {
+  let existingPath = fs.existsSync(targetPath) ? targetPath : path.dirname(targetPath);
+  while (!fs.existsSync(existingPath) && path.dirname(existingPath) !== existingPath) {
+    existingPath = path.dirname(existingPath);
+  }
+
+  try {
+    fs.accessSync(existingPath, fs.constants.W_OK);
+    return {
+      ok: true,
+      reason: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function canReadPath(targetPath) {
+  try {
+    fs.accessSync(targetPath, fs.constants.R_OK);
+    return {
+      ok: true,
+      reason: null,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function parseCodexHooksFeature(configPath) {
+  if (!fs.existsSync(configPath)) {
+    return {
+      exists: false,
+      value: null,
+    };
+  }
+
+  const lines = fs.readFileSync(configPath, "utf8").split(/\r?\n/u);
+  let currentTable = "";
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/#.*/u, "").trim();
+    if (!line) {
+      continue;
+    }
+
+    const tableMatch = line.match(/^\[([^\]]+)\]$/u);
+    if (tableMatch) {
+      currentTable = tableMatch[1] ?? "";
+      continue;
+    }
+
+    if (currentTable !== "features") {
+      continue;
+    }
+
+    const featureMatch = line.match(/^codex_hooks\s*=\s*(true|false)\s*$/u);
+    if (featureMatch) {
+      return {
+        exists: true,
+        value: featureMatch[1] === "true",
+      };
+    }
+  }
+
+  return {
+    exists: true,
+    value: null,
+  };
+}
+
+function inspectCodexHooksFeature(root) {
+  const localPath = path.join(root, CODEX_CONFIG_RELATIVE_PATH);
+  const globalPath = path.join(process.env.HOME ?? "", ".codex", "config.toml");
+  const local = parseCodexHooksFeature(localPath);
+  const global = parseCodexHooksFeature(globalPath);
+
+  if (local.value !== null) {
+    return {
+      enabled: local.value,
+      source: localPath,
+      scope: "project",
+    };
+  }
+
+  if (global.value !== null) {
+    return {
+      enabled: global.value,
+      source: globalPath,
+      scope: "global",
+    };
+  }
+
+  return {
+    enabled: null,
+    source: null,
+    scope: null,
+  };
+}
+
+function normalizeHookDocument(document) {
+  return document && typeof document === "object" && !Array.isArray(document) ? document : {};
+}
+
+function buildHooksDocument(existingDocument) {
+  const normalizedDocument = normalizeHookDocument(existingDocument);
   const hooks = normalizedDocument.hooks && typeof normalizedDocument.hooks === "object" && !Array.isArray(normalizedDocument.hooks) ? normalizedDocument.hooks : {};
   const command = buildHookCommand();
+  const changes = [];
 
   for (const eventName of HOOK_EVENTS) {
     const entries = Array.isArray(hooks[eventName]) ? hooks[eventName] : [];
-    const alreadyInstalled = entries.some((entry) => {
+    let changedEvent = false;
+    let exactInstalled = false;
+
+    const normalizedEntries = entries.map((entry) => {
       if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
-        return false;
+        return entry;
       }
-      return entry.hooks.some((hook) => hook && typeof hook === "object" && hook.command === command);
+
+      const nextHooks = [];
+
+      for (const hook of entry.hooks) {
+        if (!hook || typeof hook !== "object") {
+          nextHooks.push(hook);
+          continue;
+        }
+
+        if (hook.command === command) {
+          if (exactInstalled) {
+            changedEvent = true;
+            continue;
+          }
+          exactInstalled = true;
+          nextHooks.push(hook);
+          continue;
+        }
+
+        if (isEpicLoopHookCommand(hook.command)) {
+          changedEvent = true;
+          if (!exactInstalled) {
+            exactInstalled = true;
+            nextHooks.push({
+              ...hook,
+              command,
+              timeout: 30,
+              type: "command",
+            });
+          }
+          continue;
+        }
+
+        nextHooks.push(hook);
+      }
+
+      return {
+        ...entry,
+        hooks: nextHooks,
+      };
     });
 
-    if (!alreadyInstalled) {
-      entries.push({
+    if (!exactInstalled) {
+      normalizedEntries.push({
         hooks: [
           {
             command,
@@ -185,13 +365,190 @@ function installHooks(flags) {
           },
         ],
       });
+      changedEvent = true;
     }
 
-    hooks[eventName] = entries;
+    if (changedEvent) {
+      changes.push(eventName);
+    }
+
+    hooks[eventName] = normalizedEntries;
   }
 
   normalizedDocument.hooks = hooks;
-  writeJson(hooksPath, normalizedDocument);
+
+  return {
+    changes,
+    command,
+    document: normalizedDocument,
+  };
+}
+
+function inspectHookConfig(root) {
+  const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
+  const strict = readJsonStrict(hooksPath);
+  const writable = canWritePath(hooksPath);
+  const command = buildHookCommand();
+
+  if (strict.error) {
+    return {
+      command,
+      exists: strict.exists,
+      hooksPath,
+      invalid: true,
+      missingEvents: HOOK_EVENTS,
+      ready: false,
+      staleEvents: [],
+      writable,
+    };
+  }
+
+  const document = normalizeHookDocument(strict.value);
+  const hooks = document.hooks && typeof document.hooks === "object" && !Array.isArray(document.hooks) ? document.hooks : {};
+  const missingEvents = [];
+  const staleEvents = [];
+
+  for (const eventName of HOOK_EVENTS) {
+    const entries = Array.isArray(hooks[eventName]) ? hooks[eventName] : [];
+    const commands = entries.flatMap((entry) => {
+      if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+        return [];
+      }
+      return entry.hooks.map((hook) => hook?.command).filter((value) => typeof value === "string");
+    });
+
+    if (!commands.includes(command)) {
+      missingEvents.push(eventName);
+    }
+
+    if (commands.some((value) => isEpicLoopHookCommand(value) && value !== command)) {
+      staleEvents.push(eventName);
+    }
+  }
+
+  return {
+    command,
+    exists: strict.exists,
+    hooksPath,
+    invalid: false,
+    missingEvents,
+    ready: missingEvents.length === 0 && staleEvents.length === 0,
+    staleEvents,
+    writable,
+  };
+}
+
+function formatList(values) {
+  return values.length > 0 ? values.join(", ") : "none";
+}
+
+function doctor(flags) {
+  const root = resolveRoot(flags.root);
+  const hookConfig = inspectHookConfig(root);
+  const feature = inspectCodexHooksFeature(root);
+  const runtimeWritable = canWritePath(sessionRoot(root));
+  const scriptReadable = canReadPath(SCRIPT_PATH);
+  const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok;
+  const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
+  const status = {
+    command: hookConfig.command,
+    codexHooksFeature: feature,
+    hookConfig: {
+      exists: hookConfig.exists,
+      invalid: hookConfig.invalid,
+      missingEvents: hookConfig.missingEvents,
+      path: hookConfig.hooksPath,
+      staleEvents: hookConfig.staleEvents,
+      writable: hookConfig.writable,
+    },
+    ready,
+    runtimeState: {
+      path: sessionRoot(root),
+      writable: runtimeWritable,
+    },
+    setupPossible,
+    status: ready ? "ready" : "setup-required",
+    projectRoot: root,
+    hookTarget: {
+      exists: fs.existsSync(SCRIPT_PATH),
+      path: SCRIPT_PATH,
+      readable: scriptReadable,
+    },
+  };
+
+  if (flags.json) {
+    console.log(JSON.stringify(status, null, 2));
+    return;
+  }
+
+  console.log(`Epic-loop hook readiness: ${ready ? "ready" : "setup-required"}`);
+  console.log(`Project root: ${root}`);
+  console.log(`Hook config: ${hookConfig.exists ? hookConfig.hooksPath : `${hookConfig.hooksPath} (missing)`}`);
+  console.log(`Hook command: ${hookConfig.command}`);
+  console.log(`Required events missing: ${formatList(hookConfig.missingEvents)}`);
+  console.log(`Stale epic-loop hook entries: ${formatList(hookConfig.staleEvents)}`);
+  console.log(`Hook config writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
+  console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
+
+  if (feature.enabled === true) {
+    console.log(`codex_hooks feature: enabled via ${feature.scope} config ${feature.source}`);
+  } else if (feature.enabled === false) {
+    console.log(`codex_hooks feature: disabled via ${feature.scope} config ${feature.source}`);
+  } else {
+    console.log("codex_hooks feature: unknown; add codex_hooks = true under [features] in the active Codex config/profile.");
+  }
+
+  console.log(`Hook target exists: ${fs.existsSync(SCRIPT_PATH) ? "yes" : "no"}`);
+  console.log(`Hook target readable: ${scriptReadable.ok ? "yes" : `no (${scriptReadable.reason})`}`);
+
+  if (ready) {
+    console.log("Next: continue epic-loop lifecycle setup.");
+    return;
+  }
+
+  if (setupPossible) {
+    console.log("Next: ask the user for approval, then run:");
+    console.log("  node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks");
+    console.log("Preview without writing:");
+    console.log("  node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks --dry-run");
+    return;
+  }
+
+  console.log("Next: setup must be run from a writable project checkout or host terminal:");
+  console.log("  node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks");
+}
+
+function installHooks(flags) {
+  const root = resolveRoot(flags.root);
+  const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
+  const strict = readJsonStrict(hooksPath);
+
+  if (strict.error) {
+    throw new Error(`Cannot update invalid JSON in ${hooksPath}: ${strict.error}`);
+  }
+
+  const next = buildHooksDocument(strict.value ?? {});
+
+  if (flags["dry-run"]) {
+    console.log(`Dry run: ${hooksPath}`);
+    console.log(`Hook command: ${next.command}`);
+    console.log(`Events that would change: ${formatList(next.changes)}`);
+    console.log(JSON.stringify(next.document, null, 2));
+    return;
+  }
+
+  if (next.changes.length === 0) {
+    console.log(`Epic-loop hooks already installed: ${hooksPath}`);
+    console.log("Requires codex_hooks = true in the active Codex config/profile.");
+    return;
+  }
+
+  const writable = canWritePath(hooksPath);
+  if (!writable.ok) {
+    throw new Error(`Cannot write ${hooksPath}: ${writable.reason}`);
+  }
+
+  writeJson(hooksPath, next.document);
 
   console.log(`Installed project-local epic-loop hooks: ${hooksPath}`);
   console.log("Requires codex_hooks = true in the active Codex config/profile.");
@@ -517,8 +874,9 @@ function printHelp() {
   console.log(`Usage: epic-loop.mjs <command> [options]
 
 Commands:
+  doctor [--root <path>] [--json]
   init --title <title> [--slug <slug>] [--root <path>] [--mode <mode>] [--no-gitignore]
-  install-hooks [--root <path>]
+  install-hooks [--root <path>] [--dry-run]
   hook [--root <path>]
   bind-session --session-id <id> --slug <slug> --mode <mode> [--root <path>]
   status <slug> [--root <path>]`);
@@ -529,6 +887,9 @@ function main() {
   const { flags, positionals } = parseArgs(rest);
 
   switch (command) {
+    case "doctor":
+      doctor(flags);
+      break;
     case "init":
       initEpic(flags);
       break;

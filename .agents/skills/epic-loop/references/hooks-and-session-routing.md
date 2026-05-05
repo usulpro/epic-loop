@@ -6,7 +6,19 @@ Epic-loop hooks must be project-local and session-aware. Parallel sessions in th
 
 ## Local Config
 
-Install hooks from the project root:
+Start with a read-only readiness check:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs doctor --json
+```
+
+If setup is needed, preview the changes:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks --dry-run
+```
+
+Install hooks from the project root only after user approval:
 
 ```bash
 node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
@@ -25,6 +37,33 @@ The hook command points to the installed skill script and handles:
 - `Stop`
 
 The Codex feature flag `codex_hooks = true` must still be enabled in the active Codex config/profile. The project-local hook config controls which hook command runs for this project.
+
+If `.codex/hooks.json` is not writable from the current Codex session, do not attempt workarounds. Give the user the install command and ask them to run it from a writable project checkout or host terminal.
+
+If `codex_hooks` is not enabled, tell the user where the feature appears to be missing. Do not edit global `~/.codex/config.toml` from a project skill. Project-local config may be edited only after explicit user approval and only when it is writable.
+
+User-facing setup messages should be tiny. Normal flow is:
+
+```text
+проверяю setup
+проверила: нужно добавить hooks. Install now?
+готово, hooks настроены. можем начинать epic.
+```
+
+Do not show full `doctor` output by default. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics unless the user asks. If install was attempted and failed, say that explicitly in one sentence.
+
+## Installer Behavior
+
+The installer must be conservative:
+
+- preserve unrelated hook entries
+- add missing epic-loop hook entries for `SessionStart`, `UserPromptSubmit`, and `Stop`
+- replace stale epic-loop hook commands when the skill path changed
+- refuse to overwrite invalid JSON
+- support `--dry-run` without writing files
+- keep mutable runtime state out of `.codex/`
+
+The installer does not fix every Codex feature/profile configuration. Its job is project-local `.codex/hooks.json`. `doctor` reports whether `codex_hooks` appears enabled through project or global `[features]`; if the user launches Codex with a custom profile, the user may need to enable `codex_hooks = true` in that active profile.
 
 ## Hook Payload
 
