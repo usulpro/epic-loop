@@ -1,0 +1,18 @@
+{
+  "title": "Documentation",
+  "root": true,
+  "pages": [
+    "---Getting started---",
+    "introduction",
+    "installation",
+    "configuration",
+    "---Content---",
+    "content",
+    "---Building Your Application---",
+    "data-fetching",
+    "rendering",
+    "routing",
+    "---Architecture---",
+    "architecture"
+  ]
+}

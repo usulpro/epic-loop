@@ -1,0 +1,25 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "primeui",
+    "chrome-devtools",
+    "next-devtools"
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(git:*)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(sleep:*)",
+      "Bash(kill:*)",
+      "Bash(wait:*)",
+      "Read",
+      "Edit",
+      "mcp__primeui__*",
+      "mcp__chrome-devtools__*",
+      "mcp__next-devtools__*"
+    ],
+    "deny": []
+  }
+}

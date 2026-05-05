@@ -1,0 +1,5 @@
+{
+  "title": "Data fetching",
+  "pages": ["json", "graphql", "xml"],
+  "defaultOpen": true
+}
