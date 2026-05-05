@@ -1,0 +1,20 @@
+{
+  "name": "epic-loop-marketplace",
+  "interface": {
+    "displayName": "Epic Loop"
+  },
+  "plugins": [
+    {
+      "name": "epic-loop",
+      "source": {
+        "source": "local",
+        "path": "./plugins/epic-loop"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

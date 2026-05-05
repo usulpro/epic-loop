@@ -1,0 +1,4 @@
+interface:
+  display_name: "Epic Loop"
+  short_description: "Orchestrate long-lived epic work"
+  default_prompt: "Use $epic-loop to shape and run this epic across sessions."

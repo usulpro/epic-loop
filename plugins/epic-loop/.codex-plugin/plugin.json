@@ -1,0 +1,24 @@
+{
+  "name": "epic-loop",
+  "version": "0.1.0",
+  "description": "Orchestrate long-lived epic-level software work across sessions.",
+  "author": {
+    "name": "PrimeUI"
+  },
+  "license": "MIT",
+  "keywords": ["codex", "skills", "epic", "automation", "hooks"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Epic Loop",
+    "shortDescription": "Orchestrate long-lived epic work",
+    "longDescription": "Run durable epic-level software work across Codex sessions with lifecycle modes, disk-backed artifacts, and a hook-driven manager, techlead, and engineer implementation loop.",
+    "developerName": "PrimeUI",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Use epic-loop to shape and run this epic.",
+      "Resume my epic-loop workspace.",
+      "Review this completed epic-loop slice."
+    ]
+  }
+}
