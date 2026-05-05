@@ -9,19 +9,19 @@ Epic-loop hooks must be project-local and session-aware. Parallel sessions in th
 Start with a read-only readiness check:
 
 ```bash
-node .agents/skills/epic-loop/scripts/epic-loop.mjs doctor --json
+node .agents/skills/epic-loop/scripts/doctor.mjs --json
 ```
 
 If setup is needed, preview the changes:
 
 ```bash
-node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks --dry-run
+node .agents/skills/epic-loop/scripts/install-hooks.mjs --dry-run
 ```
 
 Install hooks from the project root only after user approval:
 
 ```bash
-node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
+node .agents/skills/epic-loop/scripts/install-hooks.mjs
 ```
 
 This creates or updates:
@@ -121,7 +121,7 @@ epics/{epic-slug}/sessions/{session_id}/
 Bind explicitly:
 
 ```bash
-node .agents/skills/epic-loop/scripts/epic-loop.mjs bind-session --session-id "<session_id>" --slug "<epic-slug>" --mode implementation
+node .agents/skills/epic-loop/scripts/bind-session.mjs --session-id "<session_id>" --slug "<epic-slug>" --mode implementation
 ```
 
 Do not infer bindings from cwd alone when multiple epic sessions can run inside the same project.

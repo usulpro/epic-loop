@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "node '/home/usulpro/projects/PrimeUI/ai-dev/qa-tuesday/.agents/skills/epic-loop/scripts/hook.mjs'",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "node '/home/usulpro/projects/PrimeUI/ai-dev/qa-tuesday/.agents/skills/epic-loop/scripts/hook.mjs'",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "node '/home/usulpro/projects/PrimeUI/ai-dev/qa-tuesday/.agents/skills/epic-loop/scripts/hook.mjs'",
+            "timeout": 30,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

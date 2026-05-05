@@ -53,3 +53,5 @@ next-env.d.ts
 node_modules/
 
 .codex/tmp
+epics/
+.epic-loop/
