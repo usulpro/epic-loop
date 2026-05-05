@@ -1,0 +1,160 @@
+---
+name: epic-loop
+description: Use this skill when the user wants to shape, run, resume, reset, or review a long-lived epic-level software effort across multiple sessions. It is for sustained autonomous engineering work with an epic workspace, tracker, documentation pack, decision log, risk register, lifecycle modes, and a techlead/engineer implementation cycle. Do not use it for one-off feature requests, simple checklist execution, or generating a large document in a single pass.
+---
+
+# Epic Loop
+
+## Purpose
+
+`epic-loop` turns a large feature or migration into a durable program of work. The epic has its own workspace, artifacts, lifecycle modes, and re-entry path so the agent can preserve intent, decisions, roadmap, risks, and implementation state across sessions.
+
+## First Move
+
+Decide the mode before doing work:
+
+- **Shaping**: the user is still clarifying the epic, roadmap, phases, contracts, risks, or open questions.
+- **Implementation**: the epic has actionable tasks and the user wants autonomous execution.
+- **Review**: a completed slice must be checked against the original conversation intent, not only current docs.
+- **Reset**: the architecture, roadmap, or assumptions are no longer valid and need a controlled rewrite.
+- **Resume**: the user gives an existing epic slug or asks to continue previous epic work.
+
+If no epic workspace exists, initialize one with:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs init --title "Epic title"
+```
+
+If the user provides a slug, resume from `epics/{epic-slug}` in the current project unless they specify another root.
+
+## Re-Entry Checklist
+
+At the start of every non-trivial turn, read only the artifacts needed for the selected mode, but always orient from:
+
+1. Project instructions such as `AGENTS.md`, local docs, and relevant repo conventions.
+2. `epics/{slug}/state-of-epic.md`
+3. `epics/{slug}/tracker.md`
+4. `epics/{slug}/implementation-log.md`
+5. `epics/{slug}/decision-log.md`
+6. `epics/{slug}/risk-register.md`
+
+Do not depend on chat memory as the only source of truth. If the current conversation contains new intent, capture it into the epic artifacts before it is lost.
+
+## Artifact Model
+
+Epic workspaces live under project-local `epics/{epic-slug}` and should be gitignored. Each epic should contain:
+
+- `state-of-epic.md`: current mode, phase, last known state, blockers, next move.
+- `tracker.md`: phases, tasks, task kinds, status, acceptance criteria, doc links.
+- `implementation-log.md`: execution notes, verification results, commits, blockers.
+- `decision-log.md`: architectural decisions, tradeoffs, rejected options, unresolved design questions.
+- `risk-register.md`: risks, deferred concerns, mitigation ideas, owner/status when known.
+- `docs/`: evolving documentation pack for problem framing, architecture, contracts, verification, and rollout.
+- `runtime-state.json`: lightweight machine-readable coordination state.
+- Optional `execution-brief.md` or `prompt.md` for handoff-heavy tasks.
+
+Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
+
+## Mode References
+
+Load the detailed reference for the active mode:
+
+- Shaping: [references/shaping-mode.md](references/shaping-mode.md)
+- Implementation: [references/implementation-cycle.md](references/implementation-cycle.md)
+- Review: [references/review-mode.md](references/review-mode.md)
+- Architecture reset: [references/reset-protocol.md](references/reset-protocol.md)
+- Parallel sessions: [references/parallel-sessions.md](references/parallel-sessions.md)
+- Hooks and session routing: [references/hooks-and-session-routing.md](references/hooks-and-session-routing.md)
+
+Keep `SKILL.md` as the operating map. Use references only when the mode or problem requires the details.
+
+## Shaping Rules
+
+Shaping is a rhythmic dialogue, not one large planning dump. Work topic by topic, capture decisions and open questions, then grow the docs and tracker as clarity appears.
+
+The agent owns decomposition. The user can name big phases or areas, but should not have to produce the roadmap. Tasks should stay goal-oriented until implementation mode needs task-local detail.
+
+When writing implementation tasks, always include:
+
+- expected system outcome
+- implementation surface
+- acceptance criteria based on behavior, contract, or verification
+- relevant docs
+
+Design-like titles and `Docs:` links are not enough. If a task sounds like documentation-only but should change code or runtime behavior, rewrite it before execution.
+
+## Implementation Rules
+
+Implementation uses a turn-by-turn `techlead -> engineer -> techlead` cycle.
+
+`techlead` owns tactical orchestration:
+
+- verify whether the previous task is truly closed
+- choose the next actionable task
+- understand intent, constraints, docs, code context, and verification scope
+- produce a short execution brief
+- escalate blockers, architecture drift, or unclear tasks
+
+`engineer` owns tactical execution:
+
+- implement the brief
+- verify the change at the right level
+- update task-related artifacts
+- return blockers or mismatches to `techlead`
+
+`execution-brief.md` or `prompt.md` is optional. Create it when the task is long, handoff-heavy, hook-driven, or likely to span turns.
+
+## Review Rules
+
+Review mode checks whether the implementation matches the original intent, not just whether it matches the latest docs. It should compare:
+
+- original user goals and priorities
+- what was captured in docs and tracker
+- what was actually implemented
+- what may have drifted, been lost, or been over-literalized
+
+Review findings should become docs corrections, follow-up tasks, a new implementation slice, or a return to shaping.
+
+## Reset Rules
+
+Use reset mode when the active architecture, roadmap, or assumptions are no longer reliable. Do not silently keep executing a stale tracker.
+
+A reset should:
+
+1. Stop linear execution.
+2. Record why the reset is needed.
+3. Mark old roadmap/docs as historical baseline where appropriate.
+4. Define the new active plan.
+5. Update tracker, state, decision log, and risk register.
+6. Resume in shaping or implementation with the new source of truth.
+
+## Parallel Work
+
+One session may be in only one mode at a time, but multiple sessions may work on the same epic in different modes. Avoid conflicting writes by treating artifacts as mode-owned when possible:
+
+- Shaping owns future docs, roadmap changes, and open questions.
+- Implementation owns active task status, implementation log, verification notes, and task-local briefs.
+- Review owns review findings, drift analysis, and proposed follow-ups.
+- Reset owns baseline transition notes and active plan replacement.
+
+When parallel work may collide, read current files immediately before editing and append dated entries instead of rewriting broad sections.
+
+## Hooks
+
+Use project-local hooks for epic-loop work. Install them from the project root with:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs install-hooks
+```
+
+The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; mutable runtime state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+
+Bind a Codex session to an epic explicitly when running parallel sessions:
+
+```bash
+node .agents/skills/epic-loop/scripts/epic-loop.mjs bind-session --session-id "<session_id>" --slug "<epic-slug>" --mode implementation
+```
+
+Hooks can persist and route bound session-specific state. A passive hook cannot inject a prompt back into a live Codex terminal by itself; active continuation requires a wrapper/runner that owns the PTY for that specific session and consumes the project-local routing state.
+
+Do not block epic work solely because hook automation is absent.
