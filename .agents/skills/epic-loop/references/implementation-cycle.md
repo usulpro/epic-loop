@@ -9,7 +9,17 @@ Implementation alternates between:
 
 One active implementation session is in exactly one submode at a time.
 
+A slug-only resume is not permission to start implementation. The agent must read the epic state, report readiness, and wait for explicit confirmation before running the first techlead turn in that session.
+
 ## Techlead Turn
+
+Before the first techlead turn in a newly resumed session, activate that session for hook routing:
+
+```bash
+node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
+```
+
+If another session was previously active for the same epic and mode, this binding replaces it.
 
 The techlead must:
 

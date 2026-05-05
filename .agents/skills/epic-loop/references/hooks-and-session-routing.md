@@ -87,12 +87,13 @@ For bound sessions, the hook handler writes under:
 
 ```text
 .epic-loop/
+  epics/{epic-slug}/
   hook-events/{session_id}/...
   sessions/{session_id}.json
   session-bindings.json
 ```
 
-Do not store mutable epic-loop runtime state under `.codex/`. Codex may mount `.codex/` read-only inside normal sandboxed project sessions. `.codex/hooks.json` is only the static hook configuration entry point.
+Do not store mutable epic-loop state under `.codex/` or in top-level `epics/`. Codex may mount `.codex/` read-only inside normal sandboxed project sessions. `.codex/hooks.json` is only the static hook configuration entry point.
 
 `sessions/{session_id}.json` stores the latest known event, transcript path, cwd, model, and turn ids for registered epic-loop sessions only.
 
@@ -100,8 +101,12 @@ Do not store mutable epic-loop runtime state under `.codex/`. Codex may mount `.
 
 ```json
 {
+  "active_sessions": {
+    "runtime-token-migration:implementation": "019..."
+  },
   "sessions": {
     "019...": {
+      "active": true,
       "epic_slug": "runtime-token-migration",
       "mode": "implementation",
       "bound_at": "2026-05-05T00:00:00+00:00"
@@ -113,18 +118,18 @@ Do not store mutable epic-loop runtime state under `.codex/`. Codex may mount `.
 When a bound session emits a hook event, the handler also mirrors a lightweight event record into:
 
 ```text
-epics/{epic-slug}/sessions/{session_id}/
+.epic-loop/epics/{epic-slug}/sessions/{session_id}/
 ```
 
 ## Binding Sessions
 
-Bind explicitly:
+Bind the current session explicitly after the user confirms that implementation should run in this session:
 
 ```bash
-node .agents/skills/epic-loop/scripts/bind-session.mjs --session-id "<session_id>" --slug "<epic-slug>" --mode implementation
+node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
 
-Do not infer bindings from cwd alone when multiple epic sessions can run inside the same project.
+This deactivates the previous active session for the same epic and mode. Do not infer bindings from cwd alone when multiple epic sessions can run inside the same project. If `--current` cannot detect the current Codex session, pass `--session-id "<session_id>"` explicitly.
 
 ## What Hooks Can And Cannot Do
 
@@ -135,8 +140,6 @@ Hooks can:
 - update project-local routing metadata
 - prepare the next submode marker for the techlead/engineer cycle
 - give an external runner enough data to continue the right session
-
-Passive hooks cannot by themselves inject text into a live Codex terminal. To send a continuation prompt to the correct session, use a wrapper/runner that owns the PTY for that session and matches hook events by `session_id` and run identity.
 
 ## Parallel Safety
 

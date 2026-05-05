@@ -5,18 +5,20 @@
 Store each epic under:
 
 ```text
-epics/{epic-slug}/
+.epic-loop/epics/{epic-slug}/
 ```
 
-This directory should be ignored by project git unless the user explicitly wants to version epic artifacts.
-
-Project-local hook/session state lives under:
+All mutable epic-loop project state lives under one ignored directory:
 
 ```text
 .epic-loop/
+  epics/{epic-slug}/
+  hook-events/{session_id}/...
+  sessions/{session_id}.json
+  session-bindings.json
 ```
 
-This is not the epic documentation pack. It is runtime coordination state for hook events, session bindings, and per-session routing.
+This keeps epic artifacts, hook events, session bindings, and per-session routing out of the visible project root.
 
 ## Required Files
 
@@ -88,13 +90,25 @@ Record:
 - current status
 - linked tasks or docs
 
+### `docs/problem-framing.md`
+
+Purpose: initial shaping source of truth.
+
+Capture:
+
+- intent
+- desired outcome
+- scope and non-scope
+- constraints
+- open questions
+- known implementation surface
+
 ### `docs/`
 
 Purpose: evolving documentation pack.
 
 Create only documents that help the epic:
 
-- problem framing and scope
 - architecture
 - contracts
 - migration or rollout

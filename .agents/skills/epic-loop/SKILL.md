@@ -90,6 +90,21 @@ Do not ask the user for a title or slug for a new epic. When the user describes 
 node .agents/skills/epic-loop/scripts/init-epic.mjs --description "<user epic description>"
 ```
 
+Epic slugs must be compact: at most two slug words joined with `-`, and at most 30 characters total.
+
+After creating an epic, report it plainly:
+
+```text
+Эпик создан.
+
+Папка: .epic-loop/epics/<slug>
+Slug: <slug>
+
+Используй этот slug, чтобы продолжить epic в новой сессии.
+```
+
+Do not describe generated slugs as normal, normalized, fixed, renamed, corrected, or similar.
+
 Only after local epic context is clear, decide the mode before doing epic work:
 
 - **Shaping**: the user is still clarifying the epic, roadmap, phases, contracts, risks, or open questions.
@@ -104,31 +119,52 @@ If no epic workspace exists, initialize one with:
 node .agents/skills/epic-loop/scripts/init-epic.mjs --description "Epic description"
 ```
 
-If the user provides a slug, resume from `epics/{epic-slug}` in the current project unless they specify another root.
+If the user provides a slug, resume from `.epic-loop/epics/{epic-slug}` in the current project unless they specify another root.
+
+When the user invokes the skill with only an epic slug, treat it as resume/orientation, not permission to execute implementation. Read the re-entry artifacts, report the current state, and stop with a short readiness prompt. If the epic is ready for implementation, use this shape:
+
+```text
+Эпик прочитан.
+
+Папка: .epic-loop/epics/<slug>
+Slug: <slug>
+Состояние: готов к implementation.
+
+Запускаю implementation в этой session?
+```
+
+Start implementation only after explicit confirmation from the user in the current session. When the user confirms, activate this session for hook routing:
+
+```bash
+node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
+```
+
+If `--current` cannot detect the session, ask for the session id instead of guessing.
 
 ## Re-Entry Checklist
 
 At the start of every non-trivial turn, read only the artifacts needed for the selected mode, but always orient from:
 
 1. Project instructions such as `AGENTS.md`, local docs, and relevant repo conventions.
-2. `epics/{slug}/state-of-epic.md`
-3. `epics/{slug}/tracker.md`
-4. `epics/{slug}/implementation-log.md`
-5. `epics/{slug}/decision-log.md`
-6. `epics/{slug}/risk-register.md`
+2. `.epic-loop/epics/{slug}/state-of-epic.md`
+3. `.epic-loop/epics/{slug}/tracker.md`
+4. `.epic-loop/epics/{slug}/implementation-log.md`
+5. `.epic-loop/epics/{slug}/decision-log.md`
+6. `.epic-loop/epics/{slug}/risk-register.md`
 
 Do not depend on chat memory as the only source of truth. If the current conversation contains new intent, capture it into the epic artifacts before it is lost.
 
 ## Artifact Model
 
-Epic workspaces live under project-local `epics/{epic-slug}` and should be gitignored. Each epic should contain:
+Epic-loop stores all mutable project-local state under `.epic-loop/`. Epic workspaces live under `.epic-loop/epics/{epic-slug}`. Each epic should contain:
 
 - `state-of-epic.md`: current mode, phase, last known state, blockers, next move.
 - `tracker.md`: phases, tasks, task kinds, status, acceptance criteria, doc links.
 - `implementation-log.md`: execution notes, verification results, commits, blockers.
 - `decision-log.md`: architectural decisions, tradeoffs, rejected options, unresolved design questions.
 - `risk-register.md`: risks, deferred concerns, mitigation ideas, owner/status when known.
-- `docs/`: evolving documentation pack for problem framing, architecture, contracts, verification, and rollout.
+- `docs/problem-framing.md`: initial problem framing and scope source of truth.
+- `docs/`: additional documentation pack for architecture, contracts, verification, and rollout.
 - `runtime-state.json`: lightweight machine-readable coordination state.
 - Optional `execution-brief.md` or `prompt.md` for handoff-heavy tasks.
 
@@ -165,6 +201,8 @@ Design-like titles and `Docs:` links are not enough. If a task sounds like docum
 ## Implementation Rules
 
 Implementation uses a turn-by-turn `techlead -> engineer -> techlead` cycle.
+
+Do not enter implementation automatically from a slug-only resume. First report that the epic is ready, then wait for explicit confirmation to run implementation in the current session.
 
 `techlead` owns tactical orchestration:
 
@@ -228,14 +266,14 @@ node .agents/skills/epic-loop/scripts/install-hooks.mjs
 
 The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
 
-The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; mutable runtime state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
 
 Bind a Codex session to an epic explicitly when running parallel sessions:
 
 ```bash
-node .agents/skills/epic-loop/scripts/bind-session.mjs --session-id "<session_id>" --slug "<epic-slug>" --mode implementation
+node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
 
-Hooks can persist and route bound session-specific state. A passive hook cannot inject a prompt back into a live Codex terminal by itself; active continuation requires a wrapper/runner that owns the PTY for that specific session and consumes the project-local routing state.
+There is one active hook-routed session per epic/mode. Binding the current session for the same epic and mode deactivates the previous active session.
 
 Do not block epic work solely because hook automation is absent.

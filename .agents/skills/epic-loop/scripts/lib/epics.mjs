@@ -4,13 +4,15 @@ import path from "node:path";
 import {
   MODES,
   appendGitignore,
+  epicSlugify,
+  epicsRoot,
   ensureDir,
   nowIso,
+  readCurrentCodexSession,
   readJson,
   requireFlag,
   resolveRoot,
   sessionRoot,
-  slugify,
   titleFromDescription,
   writeJson,
   writeOnce,
@@ -20,14 +22,14 @@ export function initEpic(flags = {}) {
   const root = resolveRoot(flags.root);
   const description = typeof flags.description === "string" ? flags.description.trim() : "";
   const title = typeof flags.title === "string" && flags.title.trim() ? flags.title.trim() : titleFromDescription(description);
-  const slug = slugify(flags.slug ?? title);
+  const slug = epicSlugify(flags.slug ?? title);
   const mode = typeof flags.mode === "string" ? flags.mode : "shaping";
 
   if (!MODES.includes(mode)) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(root, "epics", slug);
+  const epicDir = path.join(epicsRoot(root), slug);
   ensureDir(path.join(epicDir, "docs"));
   ensureDir(path.join(epicDir, "execution"));
 
@@ -131,8 +133,8 @@ Epic: ${title}
   );
 
   writeOnce(
-    path.join(epicDir, "docs", "framing.md"),
-    `# Epic Framing
+    path.join(epicDir, "docs", "problem-framing.md"),
+    `# Epic Problem Framing
 
 ## Problem
 
@@ -192,7 +194,7 @@ export function status(flags = {}, positionals = []) {
     throw new Error("Missing epic slug.");
   }
 
-  const epicDir = path.join(root, "epics", slug);
+  const epicDir = path.join(epicsRoot(root), slug);
   const statePath = path.join(epicDir, "state-of-epic.md");
   const runtimePath = path.join(epicDir, "runtime-state.json");
 
@@ -212,7 +214,13 @@ export function status(flags = {}, positionals = []) {
 
 export function bindSession(flags = {}) {
   const root = resolveRoot(flags.root);
-  const sessionId = requireFlag(flags, "session-id");
+  const currentSession = flags.current ? readCurrentCodexSession(root) : null;
+
+  if (flags.current && !currentSession) {
+    throw new Error("Cannot detect current Codex session from .codex/tmp/last-hook-capture.json. Pass --session-id explicitly.");
+  }
+
+  const sessionId = currentSession?.session_id ?? requireFlag(flags, "session-id");
   const slug = requireFlag(flags, "slug");
   const mode = requireFlag(flags, "mode");
 
@@ -220,7 +228,7 @@ export function bindSession(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(root, "epics", slug);
+  const epicDir = path.join(epicsRoot(root), slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -229,13 +237,39 @@ export function bindSession(flags = {}) {
   const bindings = readJson(bindingsPath, { sessions: {} });
   const normalizedBindings = bindings && typeof bindings === "object" && !Array.isArray(bindings) ? bindings : { sessions: {} };
   const sessions = normalizedBindings.sessions && typeof normalizedBindings.sessions === "object" && !Array.isArray(normalizedBindings.sessions) ? normalizedBindings.sessions : {};
+  const activeSessions =
+    normalizedBindings.active_sessions && typeof normalizedBindings.active_sessions === "object" && !Array.isArray(normalizedBindings.active_sessions)
+      ? normalizedBindings.active_sessions
+      : {};
   const boundAt = nowIso();
+  const activeKey = `${slug}:${mode}`;
+  const previousSessionId = activeSessions[activeKey] ?? null;
+
+  for (const [existingSessionId, binding] of Object.entries(sessions)) {
+    if (!binding || typeof binding !== "object") {
+      continue;
+    }
+
+    if (binding.epic_slug === slug && binding.mode === mode && existingSessionId !== sessionId) {
+      sessions[existingSessionId] = {
+        ...binding,
+        active: false,
+        deactivated_at: boundAt,
+      };
+    }
+  }
 
   sessions[sessionId] = {
+    active: true,
+    activated_at: boundAt,
     bound_at: boundAt,
     epic_slug: slug,
     mode,
+    source: currentSession ? "current-codex-session" : "explicit-session-id",
+    turn_id: currentSession?.turn_id ?? null,
   };
+  activeSessions[activeKey] = sessionId;
+  normalizedBindings.active_sessions = activeSessions;
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
@@ -245,15 +279,19 @@ export function bindSession(flags = {}) {
     bound_at: boundAt,
     epic_slug: slug,
     mode,
+    previous_session_id: previousSessionId,
     session_id: sessionId,
   });
 
-  console.log(`Bound session ${sessionId} to epic ${slug} in ${mode} mode.`);
+  console.log(`Active ${mode} session for ${slug}: ${sessionId}`);
+  if (previousSessionId && previousSessionId !== sessionId) {
+    console.log(`Previous active session deactivated: ${previousSessionId}`);
+  }
 }
 
 export function listEpics(flags = {}) {
   const root = resolveRoot(flags.root);
-  const epicsDir = path.join(root, "epics");
+  const epicsDir = epicsRoot(root);
   const epics = fs.existsSync(epicsDir)
     ? fs
         .readdirSync(epicsDir, { withFileTypes: true })

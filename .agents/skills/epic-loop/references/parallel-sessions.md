@@ -4,6 +4,8 @@
 
 One session works in one mode at a time. One epic may have multiple sessions in different modes.
 
+For hook-driven routing, only one session may be active for a given epic and mode. When the user explicitly says to run implementation in the current session, bind the current session and deactivate the previous active implementation session for that epic.
+
 Examples:
 
 - implementation executes the current phase
@@ -25,6 +27,8 @@ Mode ownership:
 If two sessions need the same artifact, use dated sections with the mode name.
 
 ## State Updates
+
+Use `.epic-loop/session-bindings.json` as the source of truth for active hook-routed sessions. Historical or inactive sessions may remain recorded, but hooks should ignore them.
 
 `state-of-epic.md` should reflect the latest known whole-epic state. Keep it concise and edit it carefully. It is acceptable for parallel sessions to add a short note rather than rewrite the entire file.
 
