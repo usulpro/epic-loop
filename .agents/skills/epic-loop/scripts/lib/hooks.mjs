@@ -20,6 +20,7 @@ import {
   slugify,
   writeJson,
 } from "./common.mjs";
+import { maybeBuildImplementationContinuation } from "./loop.mjs";
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.dirname(LIB_DIR);
@@ -397,7 +398,7 @@ export function handleHook(rawInput, flags = {}) {
   updateSessionState(projectRoot, payload, eventPath);
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
 
-  const continuation = maybeBuildPocContinuation(projectRoot, payload, binding);
+  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding);
   if (continuation) {
     console.log(JSON.stringify(continuation));
   }
@@ -464,78 +465,4 @@ function mirrorBoundEvent(projectRoot, payload, eventRecord, binding) {
   const targetEventPath = path.join(targetDir, eventFilename(payload));
   writeJson(targetEventPath, eventRecord);
   writeJson(path.join(targetDir, "last-hook-event.json"), eventRecord);
-}
-
-function maybeBuildPocContinuation(projectRoot, payload, binding) {
-  if (payload.hook_event_name !== "Stop") {
-    return null;
-  }
-
-  const now = nowIso();
-
-  if (binding.epic_slug !== "footer-game" || binding.mode !== "implementation") {
-    appendPocLog(projectRoot, {
-      action: "skip",
-      mode: binding.mode,
-      reason: "not-footer-game-implementation",
-      session_id: payload.session_id ?? null,
-      slug: binding.epic_slug,
-      timestamp: now,
-    });
-    return null;
-  }
-
-  if (payload.stop_hook_active === true) {
-    appendPocLog(projectRoot, {
-      action: "skip",
-      reason: "stop-hook-active",
-      session_id: payload.session_id ?? null,
-      timestamp: now,
-    });
-    return null;
-  }
-
-  const statePath = path.join(sessionRoot(projectRoot), "poc-hardcoded-state.json");
-  const state = readJson(statePath, {});
-  const used = Number.isFinite(state.used) ? state.used : 0;
-  if (used >= 1) {
-    appendPocLog(projectRoot, {
-      action: "skip",
-      reason: "hardcoded-poc-already-used",
-      session_id: payload.session_id ?? null,
-      timestamp: now,
-    });
-    return null;
-  }
-
-  const prompt = [
-    "[$epic-loop] Continue `footer-game` implementation as the next techlead turn.",
-    "",
-    "First say briefly that the Stop hook continuation POC fired. Then read `.epic-loop/epics/footer-game/state-of-epic.md`, `tracker.md`, and `implementation-log.md`, verify whether the previous engineer turn closed its active task, and choose the next implementation step.",
-  ].join("\n");
-
-  writeJson(statePath, {
-    last_session_id: payload.session_id ?? null,
-    last_used_at: now,
-    used: used + 1,
-  });
-  appendPocLog(projectRoot, {
-    action: "block-with-continuation",
-    kind: "hardcoded-one-shot",
-    prompt,
-    session_id: payload.session_id ?? null,
-    slug: binding.epic_slug,
-    timestamp: now,
-  });
-
-  return {
-    decision: "block",
-    reason: prompt,
-  };
-}
-
-function appendPocLog(projectRoot, entry) {
-  const logPath = path.join(sessionRoot(projectRoot), "poc-hook-log.jsonl");
-  fs.mkdirSync(path.dirname(logPath), { recursive: true });
-  fs.appendFileSync(logPath, `${JSON.stringify(entry)}\n`, "utf8");
 }

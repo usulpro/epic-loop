@@ -141,6 +141,8 @@ node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-s
 
 If `--current` cannot detect the session, ask for the session id instead of guessing.
 
+After binding, do not start code implementation manually in the same user turn. Report that the implementation loop is active and stop. The `Stop` hook will continue the same session with the first `techlead` turn.
+
 ## Re-Entry Checklist
 
 At the start of every non-trivial turn, read only the artifacts needed for the selected mode, but always orient from:
@@ -204,6 +206,8 @@ Implementation uses a turn-by-turn `techlead -> engineer -> techlead` cycle.
 
 Do not enter implementation automatically from a slug-only resume. First report that the epic is ready, then wait for explicit confirmation to run implementation in the current session.
 
+When implementation starts, the first hook-driven continuation must be `techlead`. The `techlead` turn decides what happens next and must set the next role before stopping.
+
 `techlead` owns tactical orchestration:
 
 - verify whether the previous task is truly closed
@@ -212,12 +216,30 @@ Do not enter implementation automatically from a slug-only resume. First report 
 - produce a short execution brief
 - escalate blockers, architecture drift, or unclear tasks
 
+If implementation should continue, `techlead` writes a concrete engineer prompt and runs:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/execution/current-engineer-prompt.md" --reason "<short reason>"
+```
+
+If implementation should pause or stop, `techlead` runs:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role idle --reason "<why the loop stops>"
+```
+
 `engineer` owns tactical execution:
 
 - implement the brief
 - verify the change at the right level
 - update task-related artifacts
 - return blockers or mismatches to `techlead`
+
+At the end of every engineer turn, `engineer` must return control to `techlead`:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role techlead --reason "engineer turn complete"
+```
 
 `execution-brief.md` or `prompt.md` is optional. Create it when the task is long, handoff-heavy, hook-driven, or likely to span turns.
 

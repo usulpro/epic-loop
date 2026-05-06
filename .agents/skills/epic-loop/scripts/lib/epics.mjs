@@ -17,6 +17,7 @@ import {
   writeJson,
   writeOnce,
 } from "./common.mjs";
+import { startImplementationLoop } from "./loop.mjs";
 
 export function initEpic(flags = {}) {
   const root = resolveRoot(flags.root);
@@ -282,6 +283,13 @@ export function bindSession(flags = {}) {
     previous_session_id: previousSessionId,
     session_id: sessionId,
   });
+
+  if (mode === "implementation") {
+    startImplementationLoop(root, {
+      sessionId,
+      slug,
+    });
+  }
 
   console.log(`Active ${mode} session for ${slug}: ${sessionId}`);
   if (previousSessionId && previousSessionId !== sessionId) {

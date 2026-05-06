@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { readCurrentCodexSession, readJson, resolveRoot, sessionRoot } from "./common.mjs";
+import { readImplementationLoops } from "./loop.mjs";
 
 export function debugState(flags = {}) {
   const root = resolveRoot(flags.root);
@@ -10,8 +11,7 @@ export function debugState(flags = {}) {
   const bindingsPath = path.join(stateRoot, "session-bindings.json");
   const bindings = readJson(bindingsPath, { active_sessions: {}, sessions: {} });
   const currentSession = readCurrentCodexSession(root);
-  const hardcodedPocStatePath = path.join(stateRoot, "poc-hardcoded-state.json");
-  const pocLogPath = path.join(stateRoot, "poc-hook-log.jsonl");
+  const loopLogPath = path.join(stateRoot, "loop-log.jsonl");
   const sessionStates = readSessionStates(path.join(stateRoot, "sessions"));
   const recentHookEvents = listRecentFiles(path.join(stateRoot, "hook-events"), Number.isFinite(limit) ? limit : 10);
 
@@ -19,10 +19,9 @@ export function debugState(flags = {}) {
     active_sessions: bindings.active_sessions ?? {},
     bindings_path: bindingsPath,
     current_session_candidate: currentSession,
-    hardcoded_poc_state: readJson(hardcodedPocStatePath, null),
-    hardcoded_poc_state_path: hardcodedPocStatePath,
-    poc_hook_log: readJsonLinesTail(pocLogPath, Number.isFinite(limit) ? limit : 10),
-    poc_hook_log_path: pocLogPath,
+    implementation_loops: readImplementationLoops(root),
+    loop_log: readJsonLinesTail(loopLogPath, Number.isFinite(limit) ? limit : 10),
+    loop_log_path: loopLogPath,
     recent_hook_events: recentHookEvents,
     root,
     session_states: sessionStates,
@@ -38,10 +37,10 @@ export function debugState(flags = {}) {
   console.log(`Bindings: ${fs.existsSync(bindingsPath) ? bindingsPath : "none"}`);
   console.log(`Current session candidate: ${currentSession?.session_id ?? "none"}`);
   console.log(`Active sessions: ${Object.keys(payload.active_sessions).length > 0 ? JSON.stringify(payload.active_sessions) : "none"}`);
-  console.log(`Hardcoded POC used: ${payload.hardcoded_poc_state?.used ?? 0}`);
+  console.log(`Implementation loops: ${payload.implementation_loops.length}`);
   console.log(`Recorded session states: ${sessionStates.length}`);
   console.log(`Recent hook events: ${recentHookEvents.length}`);
-  console.log(`POC hook log entries: ${payload.poc_hook_log.length}`);
+  console.log(`Loop log entries: ${payload.loop_log.length}`);
 
   for (const event of recentHookEvents) {
     console.log(`- ${event.path} (${event.updated_at})`);

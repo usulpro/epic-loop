@@ -21,6 +21,8 @@ node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-s
 
 If another session was previously active for the same epic and mode, this binding replaces it.
 
+Binding starts the loop with `next_role: techlead`. The current user turn should stop after binding; the `Stop` hook continues the same session with the first techlead prompt.
+
 The techlead must:
 
 1. Check previous task closure:
@@ -62,6 +64,18 @@ The techlead must:
 
 The brief should be short enough to act on. Use `execution-brief.md` or `prompt.md` only when useful.
 
+When implementation should continue, write the engineer prompt and set the next role:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/execution/current-engineer-prompt.md" --reason "<short reason>"
+```
+
+When implementation should pause or stop, set the loop idle:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role idle --reason "<why the loop stops>"
+```
+
 ## Engineer Turn
 
 The engineer must:
@@ -78,6 +92,12 @@ The engineer must:
 5. Return blockers, mismatches, or architecture drift to techlead.
 
 The engineer may make local implementation decisions, but should not silently redesign the epic or ignore the brief.
+
+At the end of the turn, the engineer returns control to techlead:
+
+```bash
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role techlead --reason "engineer turn complete"
+```
 
 ## Exit Conditions
 
