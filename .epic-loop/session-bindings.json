@@ -1,0 +1,26 @@
+{
+  "sessions": {
+    "019df844-5a85-7f41-9aca-f5fadd2e36d3": {
+      "active": false,
+      "activated_at": "2026-05-05T13:14:31+00:00",
+      "bound_at": "2026-05-05T13:14:31+00:00",
+      "epic_slug": "footer-game",
+      "mode": "implementation",
+      "source": "current-codex-session",
+      "turn_id": null,
+      "deactivated_at": "2026-05-05T13:34:16+00:00"
+    },
+    "019df856-88cf-7703-a721-42e0eac3907b": {
+      "active": true,
+      "activated_at": "2026-05-05T13:34:16+00:00",
+      "bound_at": "2026-05-05T13:34:16+00:00",
+      "epic_slug": "footer-game",
+      "mode": "implementation",
+      "source": "current-codex-session",
+      "turn_id": "019df858-877d-7470-a639-5d94ece68530"
+    }
+  },
+  "active_sessions": {
+    "footer-game:implementation": "019df856-88cf-7703-a721-42e0eac3907b"
+  }
+}

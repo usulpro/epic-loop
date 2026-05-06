@@ -1,0 +1,12 @@
+{
+  "active_phase": "Phase 1 - Weather Data Foundation",
+  "active_task": "Phase 1 Task 1 - Define weather domain contract and provider boundary",
+  "created_at": "2026-05-06T06:20:53+00:00",
+  "description": "Weather provider integration: add a separate page where users can type or select their location, use an open and free weather API to detect current weather conditions for that location, and update the site header across pages with weather-reflective color, condition icon, and temperature. Build a nice and elegant UI. Split implementation into three technical phases with 5-8 small tasks per phase, plus any organizing phases if needed.",
+  "execution_brief": null,
+  "implementation_submode": "techlead",
+  "mode": "shaping",
+  "slug": "weather-provider",
+  "title": "Weather Provider Integration",
+  "updated_at": "2026-05-06T06:53:24Z"
+}
