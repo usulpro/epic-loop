@@ -3,6 +3,7 @@ import { ThumbsDown, ThumbsUp } from 'lucide-react';
 import { IDocsTreeNode } from '@/types/docs';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import FooterMiniGame from '@/components/footer/mini-game';
 import { Link } from '@/components/ui/link';
 import { Separator } from '@/components/ui/separator';
 
@@ -15,6 +16,8 @@ interface FooterProps {
 function Footer({ className, previousLink, nextLink }: FooterProps) {
   return (
     <footer className={cn('footer', className)}>
+      <FooterMiniGame />
+      <Separator className="my-7" />
       <div className="flex flex-col justify-between gap-y-6 md:flex-row">
         <div className="flex items-center">
           <p className="mr-6 text-sm leading-none font-medium tracking-tight text-muted-foreground">

@@ -52,6 +52,7 @@
 
   --sticky-header-height: 3.3125rem;
   --footer-safe-area-spacing: 0rem;
+  --footer-cookie-banner-spacing: 0rem;
   --sidebar: 210 40% 98%;
   --sidebar-foreground: 218 56% 15%;
   --sidebar-primary: 217 91% 60%;
@@ -292,6 +293,16 @@
 
   body:has([data-slot='documentation-menu-trigger']) {
     --footer-safe-area-spacing: 3.25rem;
+  }
+
+  body:has([data-cookie-banner]) {
+    --footer-cookie-banner-spacing: 16rem;
+  }
+
+  @media (min-width: 768px) {
+    body:has([data-cookie-banner]) {
+      --footer-cookie-banner-spacing: 7.5rem;
+    }
   }
 
   :where(:focus-visible) {

@@ -39,6 +39,7 @@ export default function CookieBanner({
         {(forceVisible || isCookieBannerVisible) && (
           <m.div
             key="cookie-banner-modal"
+            data-cookie-banner
             className={cn(
               'fixed inset-x-5 bottom-5 z-40 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-popover px-5 pt-4 text-popover-foreground shadow-[0px_8px_24px_0px_rgba(0,0,0,0.25)]',
               allowSettingsCustomization ? 'pb-5' : 'pb-4',

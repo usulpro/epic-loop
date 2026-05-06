@@ -9,6 +9,7 @@ import { Link } from '@/components/ui/link';
 import { Icons } from '@/components/icons';
 
 import Nav from './nav';
+import FooterMiniGame from './mini-game';
 import SystemStatus from './system-status';
 
 const LOGO_BOX_HEIGHT = 22;
@@ -66,7 +67,10 @@ function Footer({ menuItems, socialItems, logoUrl, logoAlt }: IFooterProps) {
             ))}
           </div>
         </div>
-        <div className="relative flex w-full flex-col justify-between gap-y-7 border-t border-secondary pt-5 pb-[calc(var(--footer-safe-area-spacing)+1.25rem)] md:flex-row md:items-center lg:pb-5">
+        <div className="border-t border-secondary py-5">
+          <FooterMiniGame />
+        </div>
+        <div className="relative flex w-full flex-col justify-between gap-y-7 border-t border-secondary pt-5 pb-[calc(var(--footer-safe-area-spacing)+var(--footer-cookie-banner-spacing)+1.25rem)] md:flex-row md:items-center lg:pb-[calc(var(--footer-cookie-banner-spacing)+1.25rem)]">
           <div className="flex w-full flex-col gap-y-7 md:flex-row md:items-center md:gap-x-7">
             <SystemStatus />
             <p className="text-sm leading-none tracking-tight text-muted-foreground">

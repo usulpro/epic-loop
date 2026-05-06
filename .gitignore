@@ -31,6 +31,7 @@ yarn-error.log*
 build.log
 prodserver.log
 devserver.log
+.playwright-cli/
 
 # eslint
 .eslintcache
@@ -53,5 +54,4 @@ next-env.d.ts
 node_modules/
 
 .codex/tmp
-epics/
-.epic-loop/
+
