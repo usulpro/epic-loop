@@ -137,6 +137,8 @@ Useful keys:
 
 Use `execution-brief.md` or `prompt.md` only when task handoff needs a file artifact. It should be short, task-specific, and safe to replace after the task is done.
 
+Use `execution/progress-log.md` as the append-only human-readable mirror of `execution/progress-log.jsonl`. Use `execution/progress-report.md` for regenerated aggregate timing and grouping.
+
 ## File Ownership Guidance
 
 Prefer append-only updates for logs and registers. Rewrite broad planning docs only in shaping or reset mode, and preserve historical context when old decisions might explain existing code.

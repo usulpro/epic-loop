@@ -172,6 +172,7 @@ Epic-loop stores all mutable project-local state under `.epic-loop/`. Epic works
 - `execution/prompt-log.md`: append-only readable log of implementation prompts by timestamp, session, role, and prompt text.
 - `execution/prompt-log.jsonl`: structured prompt log for tooling.
 - `execution/progress-log.jsonl`: structured implementation lifecycle event log.
+- `execution/progress-log.md`: append-only readable lifecycle event log mirroring `progress-log.jsonl`.
 - `execution/progress-report.md`: generated readable progress report with elapsed time, active turn time, role time, phase/task grouping, and role commands.
 
 Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
@@ -214,7 +215,7 @@ Do not enter implementation automatically from a slug-only resume. First report 
 
 When implementation starts, the first hook-driven continuation must be `techlead`. The `techlead` turn decides what happens next and must set the next role before stopping.
 
-Every implementation continuation must be recorded inside the epic workspace. Prompt text goes to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events and timing go to `execution/progress-log.jsonl`, with `execution/progress-report.md` regenerated from that event log.
+Every implementation continuation must be recorded inside the epic workspace. Prompt text goes to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events and timing go to `execution/progress-log.jsonl` and readable `execution/progress-log.md`, with `execution/progress-report.md` regenerated from the structured event log.
 
 `techlead` owns tactical orchestration:
 

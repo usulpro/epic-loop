@@ -9,6 +9,25 @@ const WAITING_FOR_TURN_TRANSITION = "awaiting-transition";
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "templates", "implementation-techlead-prompt.md");
+const PROGRESS_FIELD_LABELS = {
+  current_iteration: "Current iteration",
+  current_role: "Current role",
+  duration_ms: "Duration",
+  ended_at: "Ended at",
+  last_reason: "Last reason",
+  next_role: "Next role",
+  phase: "Phase",
+  prompt_file: "Prompt file",
+  reason: "Reason",
+  role: "Role",
+  session_id: "Session",
+  slug: "Slug",
+  started_at: "Started at",
+  status: "Status",
+  stop_hook_active: "Stop hook active",
+  task: "Task",
+  turn_id: "Turn",
+};
 
 export function startImplementationLoop(projectRoot, { sessionId, slug }) {
   const timestamp = nowIso();
@@ -116,17 +135,6 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   const slug = binding.epic_slug;
   const timestamp = nowIso();
 
-  if (payload.stop_hook_active === true) {
-    appendLoopLog(projectRoot, {
-      action: "skip",
-      reason: "stop-hook-active",
-      session_id: payload.session_id ?? null,
-      slug,
-      timestamp,
-    });
-    return null;
-  }
-
   const runtimePath = runtimeStatePath(projectRoot, slug);
   let runtime = normalizeObject(readJson(runtimePath, {}));
   let loop = normalizeObject(runtime.implementation_loop);
@@ -211,6 +219,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     role,
     session_id: payload.session_id ?? null,
     slug,
+    stop_hook_active: payload.stop_hook_active === true,
     task: runtime.active_task ?? null,
     timestamp,
     turn_id: payload.turn_id ?? null,
@@ -251,6 +260,7 @@ export function readImplementationLoops(projectRoot) {
         implementation_loop: runtime.implementation_loop ?? null,
         mode: runtime.mode ?? null,
         progress_events: countLines(path.join(executionPath, "progress-log.jsonl")),
+        progress_log_markdown_path: path.join(executionPath, "progress-log.md"),
         progress_log_path: path.join(executionPath, "progress-log.jsonl"),
         progress_report_path: path.join(executionPath, "progress-report.md"),
         prompt_entries: countLines(path.join(executionPath, "prompt-log.jsonl")),
@@ -332,8 +342,9 @@ function appendLoopLog(projectRoot, entry) {
     return;
   }
 
-  const logPath = path.join(executionDir(projectRoot, slug), "progress-log.jsonl");
-  appendJsonLine(logPath, entry);
+  const executionPath = executionDir(projectRoot, slug);
+  appendJsonLine(path.join(executionPath, "progress-log.jsonl"), entry);
+  appendProgressMarkdown(path.join(executionPath, "progress-log.md"), entry);
   rebuildProgressReport(projectRoot, slug);
 }
 
@@ -374,6 +385,7 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
     session_id: payload.session_id ?? null,
     slug,
     started_at: loop.active_turn_started_at,
+    stop_hook_active: payload.stop_hook_active === true,
     task: runtime.active_task ?? null,
     timestamp,
     turn_id: payload.turn_id ?? null,
@@ -404,6 +416,23 @@ function appendPromptMarkdown(filePath, entry) {
       "````text",
       entry.prompt,
       "````",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+}
+
+function appendProgressMarkdown(filePath, entry) {
+  ensureMarkdownFile(filePath, "# Implementation Progress Log\n");
+  fs.appendFileSync(
+    filePath,
+    [
+      "",
+      `## ${entry.timestamp ?? nowIso()} | ${entry.action ?? "event"}`,
+      "",
+      progressSummary(entry),
+      "",
+      ...formatProgressDetails(entry),
       "",
     ].join("\n"),
     "utf8",
@@ -530,6 +559,57 @@ function formatOpenTurns(openTurns) {
   }
 
   return openTurns.map((turn) => `- Turn ${turn.iteration ?? "?"} | ${turn.role ?? "unknown"} | started ${turn.timestamp}`);
+}
+
+function progressSummary(entry) {
+  switch (entry.action) {
+    case "loop-start":
+      return `Loop started. Next role: \`${entry.next_role ?? "unknown"}\`.`;
+    case "role-command":
+      return `Role command set next role to \`${entry.next_role ?? "unknown"}\`${entry.reason ? `: ${entry.reason}.` : "."}`;
+    case "turn-start":
+      return `Turn ${entry.iteration ?? "?"} started for \`${entry.role ?? "unknown"}\`.`;
+    case "turn-stop":
+      return `Turn ${entry.iteration ?? "?"} stopped after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+    case "skip":
+      return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
+    default:
+      return "Progress event recorded.";
+  }
+}
+
+function formatProgressDetails(entry) {
+  return Object.entries(entry)
+    .filter(([key, value]) => key !== "action" && key !== "timestamp" && value !== undefined)
+    .map(([key, value]) => `- ${formatFieldName(key)}: ${formatFieldValue(key, value)}`);
+}
+
+function formatFieldName(key) {
+  if (PROGRESS_FIELD_LABELS[key]) {
+    return PROGRESS_FIELD_LABELS[key];
+  }
+
+  return key.replace(/_/gu, " ").replace(/\b\w/gu, (letter) => letter.toUpperCase());
+}
+
+function formatFieldValue(key, value) {
+  if (value === null) {
+    return "`null`";
+  }
+
+  if (key === "duration_ms" && typeof value === "number") {
+    return `${formatDuration(value)} (${value} ms)`;
+  }
+
+  if (typeof value === "string") {
+    return value ? `\`${value}\`` : "`\"\"`";
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return `\`${String(value)}\``;
+  }
+
+  return `\`${JSON.stringify(value)}\``;
 }
 
 function collectOpenTurns(events) {
