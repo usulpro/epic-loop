@@ -181,7 +181,9 @@ Read [references/artifact-model.md](references/artifact-model.md) when creating 
 Load the detailed reference for the active mode:
 
 - Shaping: [references/shaping-mode.md](references/shaping-mode.md)
-- Implementation: [references/implementation-cycle.md](references/implementation-cycle.md)
+- Implementation cycle: [references/implementation-cycle.md](references/implementation-cycle.md)
+- Implementation techlead role: [references/implementation-techlead-role.md](references/implementation-techlead-role.md)
+- Implementation engineer role: [references/implementation-engineer-role.md](references/implementation-engineer-role.md)
 - Review: [references/review-mode.md](references/review-mode.md)
 - Architecture reset: [references/reset-protocol.md](references/reset-protocol.md)
 - Parallel sessions: [references/parallel-sessions.md](references/parallel-sessions.md)

@@ -1,16 +1,42 @@
 # Architecture Reset Protocol
 
+## Reset Ladder
+
+Do not jump straight to reset when the current path becomes uncomfortable.
+
+Choose the smallest honest escalation:
+
+1. `local correction`
+   - the path is still right
+   - fix a concrete defect, omission, or weak proof
+
+2. `tactical detour`
+   - the phase intent still stands
+   - the implementation path should change
+   - the epic does not need a full reframe
+
+3. `strategic reset`
+   - the active architecture, roadmap, task framing, or assumptions are no longer a reliable guide
+
 ## When To Reset
 
-Use reset when the current architecture, roadmap, or task model is no longer a reliable guide.
+Use strategic reset when the current architecture, roadmap, or task model is no longer a reliable guide.
 
 Signals:
 
-- core assumption is invalid
+- a core assumption is invalid
 - old docs now mislead implementation
 - roadmap order no longer fits reality
 - phase/task framing fights the desired architecture
 - implementation repeatedly discovers the same structural mismatch
+- a workaround would silently replace the active architecture
+- tracker and implementation truth can no longer be repaired with local corrections alone
+
+Do not reset:
+
+- just because the path is annoying
+- just because one task is harder than expected
+- when a local correction or tactical detour would preserve the same phase intent honestly
 
 ## Protocol
 
