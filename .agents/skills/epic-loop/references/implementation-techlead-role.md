@@ -143,6 +143,7 @@ A task is not done because code was edited. It is done when:
 - verification ran at the right level or the verification gap is explicitly recorded
 - tracker, logs, state, docs, and risks reflect reality
 - blockers, risks, and known limitations are not hidden
+- task-owned changes are committed, unless project rules explicitly require a different commit policy
 
 Closure notes in `implementation-log.md` should minimally record:
 
@@ -182,15 +183,22 @@ The techlead should choose the smallest honest escalation:
 
 Do not reset just because the current path is uncomfortable. Reset when the active architecture, roadmap, or task framing is no longer a reliable guide.
 
-## Commit Safety
+## Commit Discipline
 
-If the project workflow expects commits, apply commit discipline:
+Closed tasks should normally end with a commit of the task-owned changes.
+
+Only skip the task-level commit when project rules explicitly require a different policy, such as batched commits or phase-level commits.
+
+If a commit skill is available in the session, prefer using it. Otherwise follow the repository's normal git workflow with standard git commands.
+
+Apply commit safety:
 
 - review `git status` and relevant diffs first
 - commit only task-owned changes
 - do not include unrelated dirty files or parallel-session changes
 - if unrelated changes are present, prefer excluding them and still producing a clean task-owned commit
-- skip the commit only when a clean task-owned commit cannot be produced honestly, and record why
+- if you cannot produce a clean task-owned commit and project rules do not explicitly allow skipping it, do not treat the task as honestly closed yet
+- if project rules explicitly allow skipping the task-level commit, record the exact reason
 - if a commit is made, record its hash in `implementation-log.md`
 - if no commit is made, still record exact changed areas and verification state
 

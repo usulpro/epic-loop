@@ -125,6 +125,7 @@ A task is not done because code was edited. It is done when:
 - verification ran at the right level or the verification gap is explicitly recorded
 - epic artifacts reflect reality
 - blockers, risks, and known limitations are not hidden
+- task-owned changes are committed, unless project rules explicitly require a different commit policy
 
 Closure notes in `implementation-log.md` should minimally record:
 
@@ -189,14 +190,21 @@ When techlead writes the next engineer brief, it must be:
 
 The engineer brief should be created from scratch each turn through `write-engineer-brief.mjs`. Techlead should not inspect or edit the previous brief file.
 
-## Commit Safety
+## Commit Discipline
 
-If the project workflow expects commits, techlead should still apply commit discipline:
+Closed tasks should normally end with a commit of the task-owned changes.
+
+Only skip the task-level commit when project rules explicitly require a different policy, such as batched commits or phase-level commits.
+
+If a commit skill is available in the session, techlead should prefer using it. Otherwise techlead should follow the repository's normal git workflow with standard git commands.
+
+Apply commit discipline:
 
 - review `git status` and relevant diffs first
 - commit only task-owned changes
 - never sweep unrelated dirty files into the task commit
 - if unrelated changes from parallel work are present, prefer excluding them and still producing a clean task-owned commit
-- skip the commit only when a clean task-owned commit cannot be produced honestly, and record why
+- if a clean task-owned commit cannot be produced and project rules do not explicitly allow skipping it, the task should not be treated as honestly closed yet
+- if project rules explicitly allow skipping the task-level commit, record why
 - if a commit is made, record the commit hash in `implementation-log.md`
 - if a commit is not made, still record the exact changed areas and verification state
