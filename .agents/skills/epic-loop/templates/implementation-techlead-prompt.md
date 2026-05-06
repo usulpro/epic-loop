@@ -98,7 +98,8 @@ Do not trust epic artifacts alone. Verify them against the live repository state
    - review `git status` and relevant diffs before committing
    - commit only task-owned changes
    - do not include unrelated dirty files or changes from parallel sessions
-   - if unrelated changes are present, either exclude them from the commit or skip the commit and record the exact reason
+   - if unrelated changes are present, prefer staging and committing only the task-owned changes
+   - skip the commit only when a clean task-owned commit cannot be produced honestly, and record the exact reason
    - if a commit is made, record the commit hash in `implementation-log.md`
    - if a commit is not made, still record the exact changed areas and verification state in `implementation-log.md`
 

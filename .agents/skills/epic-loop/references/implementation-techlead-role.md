@@ -148,7 +148,8 @@ If the project workflow expects commits, apply commit discipline:
 - review `git status` and relevant diffs first
 - commit only task-owned changes
 - do not include unrelated dirty files or parallel-session changes
-- if unrelated changes are present, exclude them or skip the commit and record why
+- if unrelated changes are present, prefer excluding them and still producing a clean task-owned commit
+- skip the commit only when a clean task-owned commit cannot be produced honestly, and record why
 - if a commit is made, record its hash in `implementation-log.md`
 - if no commit is made, still record exact changed areas and verification state
 

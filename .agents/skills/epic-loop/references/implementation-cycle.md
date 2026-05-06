@@ -190,6 +190,7 @@ If the project workflow expects commits, techlead should still apply commit disc
 - review `git status` and relevant diffs first
 - commit only task-owned changes
 - never sweep unrelated dirty files into the task commit
-- if unrelated changes from parallel work are present, exclude them from the commit or skip the commit and record why
+- if unrelated changes from parallel work are present, prefer excluding them and still producing a clean task-owned commit
+- skip the commit only when a clean task-owned commit cannot be produced honestly, and record why
 - if a commit is made, record the commit hash in `implementation-log.md`
 - if a commit is not made, still record the exact changed areas and verification state
