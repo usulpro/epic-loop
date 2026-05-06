@@ -8,7 +8,7 @@ import {
   HOOK_EVENTS,
   canReadPath,
   canWritePath,
-  epicsRoot,
+  epicRuntimeRoot,
   eventTimestamp,
   formatList,
   nowIso,
@@ -462,7 +462,7 @@ function mirrorBoundEvent(projectRoot, payload, eventRecord, binding) {
     return;
   }
 
-  const targetDir = path.join(epicsRoot(projectRoot), String(binding.epic_slug), "sessions", sessionId);
+  const targetDir = path.join(epicRuntimeRoot(projectRoot, String(binding.epic_slug)), "sessions", sessionId);
   const targetEventPath = path.join(targetDir, eventFilename(payload));
   writeJson(targetEventPath, eventRecord);
   writeJson(path.join(targetDir, "last-hook-event.json"), eventRecord);

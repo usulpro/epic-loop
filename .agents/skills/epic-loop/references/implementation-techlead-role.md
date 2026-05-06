@@ -31,33 +31,74 @@ The techlead:
 
 The techlead also performs the technical loop duties:
 
-- set task status/checks in `tracker.md`
-- reflect phase status in `tracker.md` when a phase honestly changes state
+- use task/phase scripts to update structured roadmap state and render `tracker.md`
+- reflect phase status with phase scripts when a phase honestly changes state
 - close a phase only when phase-level closure is honestly satisfied
-- write closure notes in `implementation-log.md`
+- append closure notes with `append-implementation-log.mjs`
 - update `state-of-epic.md`, `decision-log.md`, and `risk-register.md` when needed
 - make a commit if the project workflow expects it
-- write the next engineer prompt
+- write the next engineer brief
 - hand the loop to `engineer` or set it `idle`
+
+Useful control scripts:
+
+```bash
+node .agents/skills/epic-loop/scripts/role-summary.mjs --slug "<epic-slug>"
+node .agents/skills/epic-loop/scripts/start-task.mjs --slug "<epic-slug>" --task-id "<task-id>"
+node .agents/skills/epic-loop/scripts/close-task.mjs --slug "<epic-slug>" --task-id "<task-id>"
+node .agents/skills/epic-loop/scripts/set-task-status.mjs --slug "<epic-slug>" --task-id "<task-id>" --status "<status>"
+node .agents/skills/epic-loop/scripts/start-phase.mjs --slug "<epic-slug>" --phase-id "<phase-id>"
+node .agents/skills/epic-loop/scripts/close-phase.mjs --slug "<epic-slug>" --phase-id "<phase-id>"
+node .agents/skills/epic-loop/scripts/append-implementation-log.mjs --slug "<epic-slug>" --task "<task>" --verdict "<verdict>"
+```
 
 ## Required Reads
 
-Before deciding, the techlead should read:
+Before deciding, start from the compact summary:
+
+```bash
+node .agents/skills/epic-loop/scripts/role-summary.mjs --slug "<epic-slug>"
+```
+
+In normal implementation flow, this summary is the default entrypoint. Do not begin by opening every epic artifact manually.
+
+Then read only what is actually needed:
 
 - `.epic-loop/epics/{slug}/state-of-epic.md`
 - `.epic-loop/epics/{slug}/tracker.md`
-- `.epic-loop/epics/{slug}/implementation-log.md`
 - `.epic-loop/epics/{slug}/decision-log.md`
 - `.epic-loop/epics/{slug}/risk-register.md`
+- the latest engineer report, if it exists
 - root `AGENTS.md` and any nested `AGENTS.md` / local instructions under candidate touched surfaces
 - active task and phase docs
 - this role reference
-- [implementation-engineer-role.md](implementation-engineer-role.md) before writing the next engineer prompt
+- [implementation-engineer-role.md](implementation-engineer-role.md) before writing the next engineer brief
+
+Read `implementation-log.md` selectively, not by default. Open it only when:
+
+- you need to compare the current closure decision with an earlier closure note
+- you suspect artifact drift across multiple completed tasks
+- you are performing phase closure
+- you are deciding whether reset or review is required
 
 When reset or review may be needed, also read:
 
 - [reset-protocol.md](reset-protocol.md)
 - [review-mode.md](review-mode.md)
+
+## Forbidden Runtime Surfaces
+
+In normal implementation mode, the techlead should not read:
+
+- `.epic-loop/epics/{slug}/.runtime/**`
+- prompt logs
+- progress logs
+- progress reports
+- hook-event files
+- session files
+- session bindings
+
+Those are technical runtime/debug artifacts for framework observability, not role-facing source-of-truth files.
 
 ## How Techlead Reviews Work
 
@@ -155,9 +196,9 @@ If the project workflow expects commits, apply commit discipline:
 
 ## Engineer Prompt Contract
 
-When implementation should continue, techlead writes exactly one concrete engineer prompt.
+When implementation should continue, techlead writes exactly one concrete engineer brief.
 
-That prompt must:
+That brief must:
 
 - be skill-agnostic, with no epic-loop, tracker, artifact, role-routing, handoff, or `set-next-role` instructions
 - choose one task type only
@@ -170,14 +211,21 @@ That prompt must:
 - call out known risks or challenge questions
 - define stop conditions as normal engineering blockers
 
-The engineer prompt must be executable, narrow, evidence-oriented, and hard to misread.
+The engineer brief must be executable, narrow, evidence-oriented, and hard to misread.
+
+The engineer brief is created from scratch each turn. Do not read or edit the previous engineer brief. Use the writer script:
+
+```bash
+node .agents/skills/epic-loop/scripts/write-engineer-brief.mjs --slug "<epic-slug>" --stdin
+```
 
 ## Role Handoff
 
-When implementation should continue, write the engineer prompt and set the next role:
+When implementation should continue, write the engineer brief and set the next role:
 
 ```bash
-node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/execution/current-engineer-prompt.md" --reason "<short reason>"
+node .agents/skills/epic-loop/scripts/write-engineer-brief.mjs --slug "<epic-slug>" --stdin
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/.runtime/current-engineer-prompt.md" --reason "<short reason>"
 ```
 
 When implementation should pause or stop, set the loop idle:

@@ -158,25 +158,28 @@ Do not depend on chat memory as the only source of truth. If the current convers
 
 ## Artifact Model
 
-Epic-loop stores all mutable project-local state under `.epic-loop/`. Epic workspaces live under `.epic-loop/epics/{epic-slug}`. Each epic should contain:
+Epic-loop stores human-facing epic artifacts under `.epic-loop/epics/{epic-slug}` and machine/runtime artifacts under hidden `.runtime` folders.
+
+Each epic should expose these human-facing files:
 
 - `state-of-epic.md`: current mode, phase, last known state, blockers, next move.
-- `tracker.md`: phases, tasks, task kinds, status, acceptance criteria, doc links.
-- `implementation-log.md`: execution notes, verification results, commits, blockers.
+- `tracker.md`: rendered phases, tasks, task kinds, status, acceptance criteria, doc links.
+- `implementation-log.md`: append-only execution notes, verification results, commits, blockers.
 - `decision-log.md`: architectural decisions, tradeoffs, rejected options, unresolved design questions.
 - `risk-register.md`: risks, deferred concerns, mitigation ideas, owner/status when known.
 - `docs/problem-framing.md`: initial problem framing and scope source of truth.
 - `docs/`: additional documentation pack for architecture, contracts, verification, and rollout.
+
+Each epic stores hidden machine artifacts under `.epic-loop/epics/{epic-slug}/.runtime/`:
+
 - `runtime-state.json`: lightweight machine-readable coordination state.
-- Optional `execution-brief.md` or `prompt.md` for handoff-heavy tasks.
-- `execution/prompt-log.md`: append-only readable log of implementation prompts by timestamp, session, role, and prompt text.
-- `execution/prompt-log.jsonl`: structured prompt log for tooling.
-- `execution/progress-log.jsonl`: structured implementation lifecycle event log.
-- `execution/progress-log.md`: append-only readable lifecycle event log mirroring `progress-log.jsonl`.
-- `execution/progress-report.md`: generated readable progress report with elapsed time, active turn time, role time, phase/task grouping, and role commands.
-- `execution/engineer-reports.md`: append-only readable log of final engineer messages captured from `Stop` hooks.
-- `execution/engineer-reports.jsonl`: structured final engineer message log for tooling.
-- `execution/latest-engineer-report.md`: latest final engineer message for the next techlead turn.
+- `roadmap-state.json`: structured source of truth for phase/task ids, statuses, active phase, and active task.
+- `current-engineer-prompt.md`: replaceable active engineer brief.
+- `prompt-log.md` and `prompt-log.jsonl`: append-only implementation prompt log.
+- `progress-log.md`, `progress-log.jsonl`, and `progress-report.md`: lifecycle timing and role progress traces.
+- `engineer-reports.md`, `engineer-reports.jsonl`, and `latest-engineer-report.md`: final engineer messages captured from `Stop` hooks.
+
+Global routing/session runtime lives under `.epic-loop/.runtime/`.
 
 Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
 
@@ -218,9 +221,9 @@ Do not enter implementation automatically from a slug-only resume. First report 
 
 When implementation starts, the first hook-driven continuation must be `techlead`. The `techlead` turn decides what happens next and must set the next role before stopping.
 
-Every implementation continuation must be recorded inside the epic workspace. Prompt text goes to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events and timing go to `execution/progress-log.jsonl` and readable `execution/progress-log.md`, with `execution/progress-report.md` regenerated from the structured event log.
+Every implementation continuation must be recorded inside the epic runtime. Prompt text goes to `.runtime/prompt-log.md` and `.runtime/prompt-log.jsonl`. Lifecycle events and timing go to `.runtime/progress-log.jsonl` and readable `.runtime/progress-log.md`, with `.runtime/progress-report.md` regenerated from the structured event log.
 
-Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `execution/latest-engineer-report.md` and automatically returns control to `techlead`.
+Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `.runtime/latest-engineer-report.md` and automatically returns control to `techlead`.
 
 If a bound implementation session receives a new `UserPromptSubmit` while a turn is still open, treat the open turn as interrupted. Record `turn-interrupted`, set the loop status to `interrupted`, and do not auto-continue until a new implementation start/resume explicitly rebinds or restarts the loop. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
 
@@ -232,10 +235,13 @@ If a bound implementation session receives a new `UserPromptSubmit` while a turn
 - produce a short execution brief
 - escalate blockers, architecture drift, or unclear tasks
 
-If implementation should continue, `techlead` writes a concrete engineer prompt and runs:
+Use `node .agents/skills/epic-loop/scripts/role-summary.mjs --slug "<epic-slug>"` for compact loop state and latest engineer report. Do not read prompt/progress runtime logs during normal implementation flow.
+
+If implementation should continue, `techlead` writes a concrete engineer brief through the brief writer and then sets the next role:
 
 ```bash
-node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/execution/current-engineer-prompt.md" --reason "<short reason>"
+node .agents/skills/epic-loop/scripts/write-engineer-brief.mjs --slug "<epic-slug>" --stdin
+node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role engineer --prompt-file ".epic-loop/epics/<epic-slug>/.runtime/current-engineer-prompt.md" --reason "<short reason>"
 ```
 
 If implementation should pause or stop, `techlead` runs:
@@ -252,7 +258,7 @@ node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --r
 - reports changed files, verification, blockers, gaps, or follow-up notes
 - stops after the final report; the hook returns control to `techlead`
 
-`execution-brief.md` or `prompt.md` is optional. Create it when the task is long, handoff-heavy, hook-driven, or likely to span turns.
+Use `write-engineer-brief.mjs` for engineer handoffs. Do not keep handoff prompts in the human-facing epic root.
 
 ## Review Rules
 
@@ -299,7 +305,7 @@ node .agents/skills/epic-loop/scripts/install-hooks.mjs
 
 The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
 
-The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
 
 Bind a Codex session to an epic explicitly when running parallel sessions:
 

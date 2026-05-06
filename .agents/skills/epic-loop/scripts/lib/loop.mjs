@@ -2,14 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureDir, epicsRoot, nowIso, readJson, requireFlag, resolveRoot, writeJson } from "./common.mjs";
+import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { readRoadmapSummary } from "./roadmap.mjs";
 
 const LOOP_ROLES = ["techlead", "engineer", "idle"];
 const WAITING_FOR_TURN_TRANSITION = "awaiting-transition";
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "templates", "implementation-techlead-prompt.md");
-const LATEST_ENGINEER_REPORT_RELATIVE_PATH = "execution/latest-engineer-report.md";
+const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md";
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
   current_role: "Current role",
@@ -346,7 +347,7 @@ export function rebuildProgressArtifacts(flags = {}) {
 }
 
 function buildTechleadPrompt(slug, iteration) {
-  const promptPath = `.epic-loop/epics/${slug}/execution/current-engineer-prompt.md`;
+  const promptPath = `.epic-loop/epics/${slug}/.runtime/current-engineer-prompt.md`;
   const latestEngineerReportPath = `.epic-loop/epics/${slug}/${LATEST_ENGINEER_REPORT_RELATIVE_PATH}`;
 
   return renderTemplate(fs.readFileSync(TECHLEAD_PROMPT_TEMPLATE_PATH, "utf8"), {
@@ -404,12 +405,8 @@ function normalizePromptFile(root, slug, value) {
   return normalized;
 }
 
-function runtimeStatePath(projectRoot, slug) {
-  return path.join(epicsRoot(projectRoot), slug, "runtime-state.json");
-}
-
 function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
-  const summary = readEpicStateSummary(projectRoot, slug);
+  const summary = readRoadmapStateSummary(projectRoot, slug) ?? readEpicStateSummary(projectRoot, slug);
 
   return {
     ...runtime,
@@ -431,6 +428,14 @@ function readEpicStateSummary(projectRoot, slug) {
     active_task: readStateLine(text, "Active task"),
     mode: readStateLine(text, "Current mode"),
   };
+}
+
+function readRoadmapStateSummary(projectRoot, slug) {
+  try {
+    return readRoadmapSummary(projectRoot, slug);
+  } catch {
+    return null;
+  }
 }
 
 function readStateLine(text, label) {
@@ -967,7 +972,7 @@ function writeText(filePath, text) {
 }
 
 function executionDir(projectRoot, slug) {
-  return path.join(epicsRoot(projectRoot), slug, "execution");
+  return epicRuntimeRoot(projectRoot, slug);
 }
 
 function sum(values) {

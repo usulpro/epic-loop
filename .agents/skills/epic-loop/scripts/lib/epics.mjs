@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   MODES,
   appendGitignore,
+  epicRuntimeRoot,
   epicSlugify,
   epicsRoot,
   ensureDir,
@@ -12,12 +13,15 @@ import {
   readJson,
   requireFlag,
   resolveRoot,
+  roadmapStatePath,
+  runtimeStatePath,
   sessionRoot,
   titleFromDescription,
   writeJson,
   writeOnce,
 } from "./common.mjs";
 import { startImplementationLoop } from "./loop.mjs";
+import { createInitialRoadmapState, renderTrackerMarkdown } from "./roadmap.mjs";
 
 export function initEpic(flags = {}) {
   const root = resolveRoot(flags.root);
@@ -32,7 +36,7 @@ export function initEpic(flags = {}) {
 
   const epicDir = path.join(epicsRoot(root), slug);
   ensureDir(path.join(epicDir, "docs"));
-  ensureDir(path.join(epicDir, "execution"));
+  ensureDir(epicRuntimeRoot(root, slug));
 
   const createdAt = nowIso();
 
@@ -44,7 +48,7 @@ Epic: ${title}
 Slug: \`${slug}\`
 Created: ${createdAt}
 Current mode: ${mode}
-Active phase: TBD
+Active phase: Phase 1 - Shape The Epic
 Active task: TBD
 
 ## Current State
@@ -62,41 +66,15 @@ Active task: TBD
 `,
   );
 
-  writeOnce(
-    path.join(epicDir, "tracker.md"),
-    `# Tracker
-
-Epic: ${title}
-
-## Task Statuses
-
-- todo
-- doing
-- blocked
-- partially-satisfied
-- deferred
-- reset-required
-- done
-
-## Task Kinds
-
-- implementation
-- verification
-- review
-- follow-up
-- architecture-reset
-- documentation-only
-
-## Active Roadmap
-
-### Phase 1: Shape The Epic
-
-- [ ] Kind: documentation-only | Status: todo | Capture problem framing, desired outcome, scope, non-scope, constraints, risks, and initial open questions.
-  - Outcome: The epic has enough structure for phase and task decomposition.
-  - Surface: \`docs/\`, \`decision-log.md\`, \`risk-register.md\`, \`state-of-epic.md\`.
-  - Acceptance: A future session can understand why this epic exists and what should happen next.
-`,
-  );
+  const roadmapPath = roadmapStatePath(root, slug);
+  const trackerPath = path.join(epicDir, "tracker.md");
+  const roadmap = fs.existsSync(roadmapPath) ? readJson(roadmapPath, createInitialRoadmapState({ slug, title })) : createInitialRoadmapState({ slug, title });
+  if (!fs.existsSync(roadmapPath)) {
+    writeJson(roadmapPath, roadmap);
+  }
+  if (!fs.existsSync(trackerPath)) {
+    renderTrackerMarkdown(root, slug, roadmap);
+  }
 
   writeOnce(
     path.join(epicDir, "implementation-log.md"),
@@ -163,10 +141,10 @@ TBD
 `,
   );
 
-  const runtimeStatePath = path.join(epicDir, "runtime-state.json");
-  if (!fs.existsSync(runtimeStatePath)) {
-    writeJson(runtimeStatePath, {
-      active_phase: null,
+  const runtimePath = runtimeStatePath(root, slug);
+  if (!fs.existsSync(runtimePath)) {
+    writeJson(runtimePath, {
+      active_phase: "Phase 1 - Shape The Epic",
       active_task: null,
       created_at: createdAt,
       description: description || null,
@@ -197,7 +175,7 @@ export function status(flags = {}, positionals = []) {
 
   const epicDir = path.join(epicsRoot(root), slug);
   const statePath = path.join(epicDir, "state-of-epic.md");
-  const runtimePath = path.join(epicDir, "runtime-state.json");
+  const runtimePath = runtimeStatePath(root, slug);
 
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
@@ -274,7 +252,7 @@ export function bindSession(flags = {}) {
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
-  const sessionDir = path.join(epicDir, "sessions", sessionId);
+  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionId);
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
@@ -304,7 +282,7 @@ export function listEpics(flags = {}) {
     ? fs
         .readdirSync(epicsDir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
-        .map((entry) => readEpicSummary(path.join(epicsDir, entry.name), entry.name))
+        .map((entry) => readEpicSummary(root, path.join(epicsDir, entry.name), entry.name))
         .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
     : [];
 
@@ -323,11 +301,12 @@ export function listEpics(flags = {}) {
   }
 }
 
-function readEpicSummary(epicDir, slug) {
-  const runtime = readJson(path.join(epicDir, "runtime-state.json"), {});
+function readEpicSummary(projectRoot, epicDir, slug) {
+  const runtime = readJson(runtimeStatePath(projectRoot, slug), {});
   const statePath = path.join(epicDir, "state-of-epic.md");
   const title = runtime.title || readTitleFromState(statePath) || slug;
-  const updatedAtMs = latestMtimeMs(epicDir);
+  const runtimeUpdatedAtMs = Date.parse(runtime.updated_at ?? "");
+  const updatedAtMs = Number.isFinite(runtimeUpdatedAtMs) ? runtimeUpdatedAtMs : latestMtimeMs(epicDir);
   const updatedAt = new Date(updatedAtMs).toISOString();
 
   return {

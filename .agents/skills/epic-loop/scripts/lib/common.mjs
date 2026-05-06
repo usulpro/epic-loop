@@ -171,7 +171,7 @@ export function writeJson(filePath, value) {
 
 export function appendGitignore(root) {
   const gitignorePath = path.join(root, ".gitignore");
-  const requiredLines = [".epic-loop/"];
+  const requiredLines = [".epic-loop/.runtime/", ".epic-loop/epics/*/.runtime/"];
 
   if (!fs.existsSync(gitignorePath)) {
     fs.writeFileSync(gitignorePath, `${requiredLines.join("\n")}\n`, "utf8");
@@ -267,12 +267,28 @@ export function canReadPath(targetPath) {
   }
 }
 
-export function sessionRoot(projectRoot) {
+export function epicLoopRoot(projectRoot) {
   return path.join(projectRoot, ".epic-loop");
 }
 
+export function sessionRoot(projectRoot) {
+  return path.join(epicLoopRoot(projectRoot), ".runtime");
+}
+
 export function epicsRoot(projectRoot) {
-  return path.join(sessionRoot(projectRoot), "epics");
+  return path.join(epicLoopRoot(projectRoot), "epics");
+}
+
+export function epicRuntimeRoot(projectRoot, slug) {
+  return path.join(epicsRoot(projectRoot), slug, ".runtime");
+}
+
+export function runtimeStatePath(projectRoot, slug) {
+  return path.join(epicRuntimeRoot(projectRoot, slug), "runtime-state.json");
+}
+
+export function roadmapStatePath(projectRoot, slug) {
+  return path.join(epicRuntimeRoot(projectRoot, slug), "roadmap-state.json");
 }
 
 export function readCurrentCodexSession(projectRoot) {

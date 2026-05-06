@@ -13,11 +13,12 @@ A slug-only resume is not permission to start implementation. The agent must rea
 
 ## Canonical Runtime Behavior
 
-The live role prompt is the canonical runtime contract for the active role.
+The techlead hook prompt is intentionally compact. It should point the model to the role definition and the compact role summary rather than inlining the full role contract every turn.
 
-- Techlead live prompt: [../templates/implementation-techlead-prompt.md](../templates/implementation-techlead-prompt.md)
+- Techlead live hook prompt: [../templates/implementation-techlead-prompt.md](../templates/implementation-techlead-prompt.md)
+- Techlead role definition: [implementation-techlead-role.md](implementation-techlead-role.md)
 
-The reference files below support and deepen the runtime prompt, but they do not override it.
+The role definition is the main behavioral contract. The hook prompt should stay short and operational.
 
 ## Role References
 
@@ -38,7 +39,7 @@ If another session was previously active for the same epic and mode, this bindin
 
 Binding starts the loop with `next_role: techlead`. The current user turn should stop after binding; the `Stop` hook continues the same session with the first techlead prompt.
 
-Implementation observability is permanent. Each continuation prompt is appended to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events are appended to `execution/progress-log.jsonl` and readable `execution/progress-log.md`; `execution/progress-report.md` is regenerated from the structured event log and groups completed turns by phase, task, and role.
+Implementation observability is permanent. Runtime/debug traces are stored under `.runtime/` for debugging and analysis only; they are not part of the normal read path for techlead or engineer.
 
 ## Turn Order
 
@@ -46,7 +47,7 @@ Implementation observability is permanent. Each continuation prompt is appended 
 2. The agent binds the current session to the epic and implementation mode.
 3. The next `Stop` hook emits the first techlead prompt.
 4. The techlead inspects epic state and live repository evidence, then decides whether to close work, continue, pause, review, detour, or reset.
-5. If implementation should continue, techlead writes exactly one concrete, skill-agnostic engineer prompt and sets the next role to `engineer`.
+5. If implementation should continue, techlead writes exactly one concrete, skill-agnostic engineer brief through `write-engineer-brief.mjs` and sets the next role to `engineer`.
 6. The hook starts one engineer turn and immediately pre-sets the following role to `techlead`.
 7. The engineer executes that prompt, verifies the slice, reports the factual outcome, and stops.
 8. The `Stop` hook captures the engineer final message, stores it as the latest engineer report, and automatically starts the next techlead turn.
@@ -68,20 +69,21 @@ The techlead is not just a planner. It is the governing loop for:
 
 The techlead must:
 
-1. Re-ground on epic and phase context.
-2. Inspect live repository evidence rather than trusting artifacts alone.
-3. Review the previous engineer turn as an adversarial owner.
-4. Ask pointed challenge questions when the work is suspicious, incomplete, or weakly verified.
-5. Decide task closure honestly.
-6. Execute the technical control duties:
-   - update `tracker.md`
-   - reflect phase status in `tracker.md` when a phase honestly changes state
-   - update `implementation-log.md`
+1. Start from `role-summary.mjs`, then read only the additional artifacts needed for the current decision.
+2. Re-ground on epic and phase context.
+3. Inspect live repository evidence rather than trusting artifacts alone.
+4. Review the previous engineer turn as an adversarial owner.
+5. Ask pointed challenge questions when the work is suspicious, incomplete, or weakly verified.
+6. Decide task closure honestly.
+7. Execute the technical control duties:
+   - use task/phase scripts to update structured roadmap state and render `tracker.md`
+   - reflect phase status with phase scripts when a phase honestly changes state
+   - append to `implementation-log.md` with `append-implementation-log.mjs`
    - update `state-of-epic.md`
    - update `decision-log.md` and `risk-register.md` when needed
    - make a commit if the workflow expects it
-7. Apply stricter standards to phase closure than task closure.
-8. Choose the next move:
+8. Apply stricter standards to phase closure than task closure.
+9. Choose the next move:
    - close and continue
    - corrective pass
    - investigation pass
@@ -90,7 +92,9 @@ The techlead must:
    - review
    - reset
    - idle/stop
-9. Write exactly one high-quality engineer prompt when implementation continues.
+10. Write exactly one high-quality engineer brief when implementation continues.
+
+Normal techlead flow must not read `.runtime/` logs, prompt history, progress history, hook events, or session files. Those are technical debug artifacts only.
 
 ## Engineer Turn Expectations
 
@@ -172,7 +176,7 @@ Leave the implementation cycle when:
 
 ## Prompt-Writing Rule
 
-When techlead writes the next engineer prompt, it must be:
+When techlead writes the next engineer brief, it must be:
 
 - skill-agnostic, with no epic-loop, tracker, artifact, role-routing, handoff, or `set-next-role` instructions
 - narrow enough to execute safely
@@ -181,7 +185,9 @@ When techlead writes the next engineer prompt, it must be:
 - explicit about required evidence
 - explicit about stop conditions and escalation triggers
 
-“Continue implementation” is not a valid engineer prompt.
+“Continue implementation” is not a valid engineer brief.
+
+The engineer brief should be created from scratch each turn through `write-engineer-brief.mjs`. Techlead should not inspect or edit the previous brief file.
 
 ## Commit Safety
 

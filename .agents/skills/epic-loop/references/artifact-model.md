@@ -8,17 +8,30 @@ Store each epic under:
 .epic-loop/epics/{epic-slug}/
 ```
 
-All mutable epic-loop project state lives under one ignored directory:
+Human-facing epic artifacts live under `.epic-loop/epics/{epic-slug}/`. Runtime and debug artifacts live under hidden `.runtime` folders:
 
 ```text
 .epic-loop/
   epics/{epic-slug}/
-  hook-events/{session_id}/...
-  sessions/{session_id}.json
-  session-bindings.json
+    state-of-epic.md
+    tracker.md
+    implementation-log.md
+    decision-log.md
+    risk-register.md
+    docs/
+    .runtime/
+      runtime-state.json
+      roadmap-state.json
+      prompt-log.jsonl
+      progress-log.jsonl
+      latest-engineer-report.md
+  .runtime/
+    hook-events/{session_id}/...
+    sessions/{session_id}.json
+    session-bindings.json
 ```
 
-This keeps epic artifacts, hook events, session bindings, and per-session routing out of the visible project root.
+This keeps role-facing truth separate from framework execution traces.
 
 ## Required Files
 
@@ -39,7 +52,7 @@ Keep it short:
 
 ### `tracker.md`
 
-Purpose: execution source of truth.
+Purpose: human-readable roadmap projection.
 
 Track:
 
@@ -51,11 +64,13 @@ Track:
 - acceptance criteria
 - relevant docs
 
+`tracker.md` is rendered from `.runtime/roadmap-state.json`. Use task and phase scripts for mechanical status changes.
+
 ### `implementation-log.md`
 
 Purpose: chronological execution trace.
 
-Append dated entries for:
+Append dated entries through `append-implementation-log.mjs` for:
 
 - task started/completed
 - code changes
@@ -115,7 +130,7 @@ Create only documents that help the epic:
 - verification plan
 - operations or support notes
 
-### `runtime-state.json`
+### `.runtime/runtime-state.json`
 
 Purpose: lightweight coordination state.
 
@@ -133,13 +148,27 @@ Useful keys:
 }
 ```
 
-## Optional Files
+### `.runtime/roadmap-state.json`
 
-Use `execution-brief.md` or `prompt.md` only when task handoff needs a file artifact. It should be short, task-specific, and safe to replace after the task is done.
+Purpose: structured source of truth for deterministic phase/task mutations.
 
-Use `execution/progress-log.md` as the append-only human-readable mirror of `execution/progress-log.jsonl`. Use `execution/progress-report.md` for regenerated aggregate timing and grouping.
+Track:
 
-Use `execution/engineer-reports.md` and `execution/engineer-reports.jsonl` for final engineer messages captured from `Stop` hooks. `execution/latest-engineer-report.md` is replaced on each engineer stop so the next techlead turn can read the latest factual report quickly.
+- phase ids and task ids
+- task status
+- active phase and active task
+- follow-up tasks
+- rendered tracker projection state
+
+## Runtime Files
+
+Use `.runtime/current-engineer-prompt.md` only as the active engineer handoff file. Create it with `write-engineer-brief.mjs`.
+
+Use `.runtime/progress-log.md` as the append-only human-readable mirror of `.runtime/progress-log.jsonl`. Use `.runtime/progress-report.md` for regenerated aggregate timing and grouping.
+
+Use `.runtime/engineer-reports.md` and `.runtime/engineer-reports.jsonl` for final engineer messages captured from `Stop` hooks. `.runtime/latest-engineer-report.md` is replaced on each engineer stop so the next techlead turn can read the latest factual report quickly.
+
+Use `.epic-loop/.runtime/` for global hook events, session routing, and debug captures.
 
 ## File Ownership Guidance
 

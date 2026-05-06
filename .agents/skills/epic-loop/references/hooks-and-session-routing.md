@@ -79,7 +79,7 @@ Codex hook payloads are JSON on stdin. Observed useful fields:
 
 Route by `session_id` first. Use `cwd` as the project root boundary. Use `turn_id` only as event identity inside a registered session.
 
-Unbound sessions are silent no-ops. If `session_id` is absent from `.epic-loop/session-bindings.json`, the hook handler must exit without writing files.
+Unbound sessions are silent no-ops. If `session_id` is absent from `.epic-loop/.runtime/session-bindings.json`, the hook handler must exit without writing files.
 
 ## Project-Local State
 
@@ -88,16 +88,18 @@ For bound sessions, the hook handler writes under:
 ```text
 .epic-loop/
   epics/{epic-slug}/
-  hook-events/{session_id}/...
-  sessions/{session_id}.json
-  session-bindings.json
+    .runtime/sessions/{session_id}/...
+  .runtime/
+    hook-events/{session_id}/...
+    sessions/{session_id}.json
+    session-bindings.json
 ```
 
 Do not store mutable epic-loop state under `.codex/` or in top-level `epics/`. Codex may mount `.codex/` read-only inside normal sandboxed project sessions. `.codex/hooks.json` is only the static hook configuration entry point.
 
-`sessions/{session_id}.json` stores the latest known event, transcript path, cwd, model, and turn ids for registered epic-loop sessions only.
+`.runtime/sessions/{session_id}.json` stores the latest known event, transcript path, cwd, model, and turn ids for registered epic-loop sessions only.
 
-`session-bindings.json` maps a session to an epic:
+`.runtime/session-bindings.json` maps a session to an epic:
 
 ```json
 {
@@ -118,7 +120,7 @@ Do not store mutable epic-loop state under `.codex/` or in top-level `epics/`. C
 When a bound session emits a hook event, the handler also mirrors a lightweight event record into:
 
 ```text
-.epic-loop/epics/{epic-slug}/sessions/{session_id}/
+.epic-loop/epics/{epic-slug}/.runtime/sessions/{session_id}/
 ```
 
 ## Binding Sessions

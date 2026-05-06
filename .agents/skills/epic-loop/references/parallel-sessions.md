@@ -28,7 +28,7 @@ If two sessions need the same artifact, use dated sections with the mode name.
 
 ## State Updates
 
-Use `.epic-loop/session-bindings.json` as the source of truth for active hook-routed sessions. Historical or inactive sessions may remain recorded, but hooks should ignore them.
+Use `.epic-loop/.runtime/session-bindings.json` as the source of truth for active hook-routed sessions. Historical or inactive sessions may remain recorded, but hooks should ignore them.
 
 `state-of-epic.md` should reflect the latest known whole-epic state. Keep it concise and edit it carefully. It is acceptable for parallel sessions to add a short note rather than rewrite the entire file.
 
