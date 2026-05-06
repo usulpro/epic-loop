@@ -33,8 +33,18 @@ const PROGRESS_FIELD_LABELS = {
 export function startImplementationLoop(projectRoot, { sessionId, slug }) {
   const timestamp = nowIso();
   const runtimePath = runtimeStatePath(projectRoot, slug);
-  const runtime = normalizeObject(readJson(runtimePath, {}));
+  const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
+
+  if (hasOpenTurn(loop)) {
+    recordTurnInterrupted(projectRoot, slug, runtime, loop, {
+      durationMs: null,
+      reason: "implementation-loop-restarted-with-open-turn",
+      sessionId: loop.last_session_id ?? sessionId,
+      timestamp,
+      turnId: loop.last_stop_turn_id ?? null,
+    });
+  }
 
   writeJson(runtimePath, {
     ...runtime,
@@ -89,7 +99,7 @@ export function setNextRole(flags = {}) {
 
   const timestamp = nowIso();
   const runtimePath = runtimeStatePath(root, slug);
-  const runtime = normalizeObject(readJson(runtimePath, {}));
+  const runtime = mergeEpicStateIntoRuntime(root, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
   const status = role === "idle" ? "idle" : "running";
 
@@ -137,7 +147,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   const timestamp = nowIso();
 
   const runtimePath = runtimeStatePath(projectRoot, slug);
-  let runtime = normalizeObject(readJson(runtimePath, {}));
+  let runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   let loop = normalizeObject(runtime.implementation_loop);
 
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
@@ -244,6 +254,56 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   };
 }
 
+export function markInterruptedTurnIfNeeded(projectRoot, payload, binding) {
+  if (payload.hook_event_name !== "UserPromptSubmit" || binding.mode !== "implementation") {
+    return false;
+  }
+
+  const slug = binding.epic_slug;
+  const timestamp = nowIso();
+  const runtimePath = runtimeStatePath(projectRoot, slug);
+  const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
+  const loop = normalizeObject(runtime.implementation_loop);
+
+  if (!hasOpenTurn(loop)) {
+    return false;
+  }
+
+  recordTurnInterrupted(projectRoot, slug, runtime, loop, {
+    reason: "user-prompt-interrupted-open-turn",
+    sessionId: payload.session_id ?? null,
+    timestamp,
+    turnId: payload.turn_id ?? null,
+  });
+
+  return true;
+}
+
+export function interruptOpenTurn(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+  const reason = typeof flags.reason === "string" && flags.reason.trim() ? flags.reason.trim() : "manual-interrupt-open-turn";
+  const timestamp = typeof flags.timestamp === "string" && flags.timestamp.trim() ? flags.timestamp.trim() : nowIso();
+  const runtimePath = runtimeStatePath(root, slug);
+  const runtime = mergeEpicStateIntoRuntime(root, slug, normalizeObject(readJson(runtimePath, {})));
+  const loop = normalizeObject(runtime.implementation_loop);
+
+  if (!hasOpenTurn(loop)) {
+    console.log(`No open implementation turn for ${slug}.`);
+    return;
+  }
+
+  recordTurnInterrupted(root, slug, runtime, loop, {
+    durationMs: parseInterruptDuration(flags),
+    reason,
+    sessionId: flags["session-id"] ?? loop.last_session_id ?? null,
+    timestamp,
+    turnId: flags["turn-id"] ?? loop.last_stop_turn_id ?? null,
+  });
+
+  console.log(`Interrupted open implementation turn for ${slug}.`);
+}
+
 export function readImplementationLoops(projectRoot) {
   const root = epicsRoot(projectRoot);
 
@@ -274,6 +334,15 @@ export function readImplementationLoops(projectRoot) {
         updated_at: runtime.updated_at ?? null,
       };
     });
+}
+
+export function rebuildProgressArtifacts(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+
+  rebuildProgressMarkdown(root, slug);
+  rebuildProgressReport(root, slug);
+  console.log(`Rebuilt implementation progress artifacts for ${slug}.`);
 }
 
 function buildTechleadPrompt(slug, iteration) {
@@ -339,6 +408,46 @@ function runtimeStatePath(projectRoot, slug) {
   return path.join(epicsRoot(projectRoot), slug, "runtime-state.json");
 }
 
+function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
+  const summary = readEpicStateSummary(projectRoot, slug);
+
+  return {
+    ...runtime,
+    ...(summary.active_phase !== undefined ? { active_phase: summary.active_phase } : {}),
+    ...(summary.active_task !== undefined ? { active_task: summary.active_task } : {}),
+    ...(summary.mode !== undefined ? { mode: summary.mode } : {}),
+  };
+}
+
+function readEpicStateSummary(projectRoot, slug) {
+  const statePath = path.join(epicsRoot(projectRoot), slug, "state-of-epic.md");
+  if (!fs.existsSync(statePath)) {
+    return {};
+  }
+
+  const text = fs.readFileSync(statePath, "utf8");
+  return {
+    active_phase: readStateLine(text, "Active phase"),
+    active_task: readStateLine(text, "Active task"),
+    mode: readStateLine(text, "Current mode"),
+  };
+}
+
+function readStateLine(text, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const match = text.match(new RegExp(`^${escaped}:\\s*(.+)$`, "imu"));
+  if (!match) {
+    return undefined;
+  }
+
+  const value = (match[1] ?? "").trim().replace(/^`|`$/gu, "");
+  if (!value || /^(none|null|n\/a|tbd)$/iu.test(value)) {
+    return null;
+  }
+
+  return value;
+}
+
 function appendLoopLog(projectRoot, entry) {
   const slug = entry.slug;
   if (!slug) {
@@ -353,6 +462,10 @@ function appendLoopLog(projectRoot, entry) {
 
 function normalizeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function hasOpenTurn(loop) {
+  return Boolean(loop.current_role && loop.active_turn_started_at && !loop.active_turn_stopped_at && loop.status === "running");
 }
 
 function renderTemplate(template, values) {
@@ -398,6 +511,61 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   });
 
   return { loop: stoppedLoop, runtime: nextRuntime };
+}
+
+function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, reason, sessionId, timestamp, turnId }) {
+  const resolvedDurationMs = durationMs === undefined ? durationMsBetween(loop.active_turn_started_at, timestamp) : durationMs;
+  const stoppedLoop = {
+    ...loop,
+    active_turn_stopped_at: timestamp,
+    last_interrupt_session_id: sessionId ?? null,
+    last_interrupt_turn_id: turnId ?? null,
+    last_reason: reason,
+    next_role: "idle",
+    status: "interrupted",
+  };
+
+  const nextRuntime = {
+    ...runtime,
+    implementation_loop: stoppedLoop,
+    updated_at: timestamp,
+  };
+
+  writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
+  appendLoopLog(projectRoot, {
+    action: "turn-interrupted",
+    duration_ms: resolvedDurationMs,
+    ended_at: timestamp,
+    iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
+    phase: runtime.active_phase ?? null,
+    reason,
+    role: loop.current_role,
+    session_id: sessionId ?? null,
+    slug,
+    started_at: loop.active_turn_started_at,
+    task: runtime.active_task ?? null,
+    timestamp,
+    turn_id: turnId ?? null,
+  });
+
+  return nextRuntime;
+}
+
+function parseInterruptDuration(flags) {
+  if (flags["unknown-duration"]) {
+    return null;
+  }
+
+  if (flags["duration-ms"] === undefined) {
+    return undefined;
+  }
+
+  const durationMs = Number(flags["duration-ms"]);
+  if (!Number.isFinite(durationMs) || durationMs < 0) {
+    throw new Error(`Invalid --duration-ms "${flags["duration-ms"]}".`);
+  }
+
+  return durationMs;
 }
 
 function appendPromptLog(projectRoot, entry) {
@@ -492,6 +660,17 @@ function appendProgressMarkdown(filePath, entry) {
   );
 }
 
+function rebuildProgressMarkdown(projectRoot, slug) {
+  const executionPath = executionDir(projectRoot, slug);
+  const markdownPath = path.join(executionPath, "progress-log.md");
+  const events = readJsonLines(path.join(executionPath, "progress-log.jsonl"));
+
+  writeText(markdownPath, "# Implementation Progress Log\n");
+  for (const event of events) {
+    appendProgressMarkdown(markdownPath, event);
+  }
+}
+
 function rebuildProgressReport(projectRoot, slug) {
   const executionPath = executionDir(projectRoot, slug);
   const events = readJsonLines(path.join(executionPath, "progress-log.jsonl"));
@@ -500,12 +679,14 @@ function rebuildProgressReport(projectRoot, slug) {
   const firstTimestamp = firstEventTimestamp(events);
   const lastTimestamp = lastEventTimestamp(events);
   const completedTurns = events.filter((event) => event.action === "turn-stop");
+  const interruptedTurns = events.filter((event) => event.action === "turn-interrupted");
+  const endedTurns = [...completedTurns, ...interruptedTurns].sort((a, b) => String(a.timestamp ?? "").localeCompare(String(b.timestamp ?? "")));
   const roleCommands = events.filter((event) => event.action === "role-command");
-  const activeMs = sum(completedTurns.map((event) => Number(event.duration_ms) || 0));
+  const activeMs = sum(endedTurns.map((event) => Number(event.duration_ms) || 0));
   const elapsedMs = firstTimestamp && lastTimestamp ? Math.max(0, Date.parse(lastTimestamp) - Date.parse(firstTimestamp)) : 0;
   const idleMs = Math.max(0, elapsedMs - activeMs);
-  const byRole = groupDurations(completedTurns, (event) => event.role ?? "unknown");
-  const byPhase = groupNestedDurations(completedTurns);
+  const byRole = groupDurations(endedTurns, (event) => event.role ?? "unknown");
+  const byPhase = groupNestedDurations(endedTurns);
   const openTurns = collectOpenTurns(events);
   const generatedAt = nowIso();
 
@@ -524,6 +705,7 @@ function rebuildProgressReport(projectRoot, slug) {
       `- Active turn time: ${formatDuration(activeMs)}`,
       `- Observed idle or paused time: ${formatDuration(idleMs)}`,
       `- Completed turns: ${completedTurns.length}`,
+      `- Interrupted turns: ${interruptedTurns.length}`,
       `- Prompt entries: ${promptEvents.length}`,
       "",
       "## Time By Role",
@@ -624,6 +806,8 @@ function progressSummary(entry) {
       return `Turn ${entry.iteration ?? "?"} started for \`${entry.role ?? "unknown"}\`.`;
     case "turn-stop":
       return `Turn ${entry.iteration ?? "?"} stopped after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+    case "turn-interrupted":
+      return `Turn ${entry.iteration ?? "?"} was interrupted after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:
@@ -667,8 +851,8 @@ function formatFieldValue(key, value) {
 
 function collectOpenTurns(events) {
   const starts = events.filter((event) => event.action === "turn-start");
-  const stoppedKeys = new Set(events.filter((event) => event.action === "turn-stop").map(turnKey));
-  return starts.filter((event) => !stoppedKeys.has(turnKey(event)));
+  const endedKeys = new Set(events.filter((event) => event.action === "turn-stop" || event.action === "turn-interrupted").map(turnKey));
+  return starts.filter((event) => !endedKeys.has(turnKey(event)));
 }
 
 function groupDurations(events, keyFn) {

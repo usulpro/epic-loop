@@ -222,6 +222,8 @@ Every implementation continuation must be recorded inside the epic workspace. Pr
 
 Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `execution/latest-engineer-report.md` and automatically returns control to `techlead`.
 
+If a bound implementation session receives a new `UserPromptSubmit` while a turn is still open, treat the open turn as interrupted. Record `turn-interrupted`, set the loop status to `interrupted`, and do not auto-continue until a new implementation start/resume explicitly rebinds or restarts the loop. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
+
 `techlead` owns tactical orchestration:
 
 - verify whether the previous task is truly closed

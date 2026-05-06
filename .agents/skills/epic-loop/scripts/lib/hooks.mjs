@@ -20,7 +20,7 @@ import {
   slugify,
   writeJson,
 } from "./common.mjs";
-import { maybeBuildImplementationContinuation } from "./loop.mjs";
+import { markInterruptedTurnIfNeeded, maybeBuildImplementationContinuation } from "./loop.mjs";
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.dirname(LIB_DIR);
@@ -397,6 +397,7 @@ export function handleHook(rawInput, flags = {}) {
   writeJson(path.join(sessionRoot(projectRoot), "last-hook-event.json"), eventRecord);
   updateSessionState(projectRoot, payload, eventPath);
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
+  markInterruptedTurnIfNeeded(projectRoot, payload, binding);
 
   const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding);
   if (continuation) {

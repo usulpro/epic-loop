@@ -52,6 +52,8 @@ Implementation observability is permanent. Each continuation prompt is appended 
 8. The `Stop` hook captures the engineer final message, stores it as the latest engineer report, and automatically starts the next techlead turn.
 9. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
 
+If the user interrupts a running implementation turn, a later `UserPromptSubmit` in the same bound session marks that open turn as `turn-interrupted`, sets the loop status to `interrupted`, and prevents silent auto-continuation. If implementation is restarted while an older open turn exists, the old turn is closed as interrupted without inventing active duration.
+
 On the first techlead turn in a newly started implementation loop, there is no previous engineer turn to close. In that case, techlead should say so explicitly, orient on epic state, and choose the first honest implementation step.
 
 ## Techlead Turn Expectations
