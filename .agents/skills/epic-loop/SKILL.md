@@ -174,6 +174,9 @@ Epic-loop stores all mutable project-local state under `.epic-loop/`. Epic works
 - `execution/progress-log.jsonl`: structured implementation lifecycle event log.
 - `execution/progress-log.md`: append-only readable lifecycle event log mirroring `progress-log.jsonl`.
 - `execution/progress-report.md`: generated readable progress report with elapsed time, active turn time, role time, phase/task grouping, and role commands.
+- `execution/engineer-reports.md`: append-only readable log of final engineer messages captured from `Stop` hooks.
+- `execution/engineer-reports.jsonl`: structured final engineer message log for tooling.
+- `execution/latest-engineer-report.md`: latest final engineer message for the next techlead turn.
 
 Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
 
@@ -217,6 +220,8 @@ When implementation starts, the first hook-driven continuation must be `techlead
 
 Every implementation continuation must be recorded inside the epic workspace. Prompt text goes to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events and timing go to `execution/progress-log.jsonl` and readable `execution/progress-log.md`, with `execution/progress-report.md` regenerated from the structured event log.
 
+Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `execution/latest-engineer-report.md` and automatically returns control to `techlead`.
+
 `techlead` owns tactical orchestration:
 
 - verify whether the previous task is truly closed
@@ -239,16 +244,11 @@ node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --r
 
 `engineer` owns tactical execution:
 
-- implement the brief
-- verify the change at the right level
-- update task-related artifacts
-- return blockers or mismatches to `techlead`
-
-At the end of every engineer turn, `engineer` must return control to `techlead`:
-
-```bash
-node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --role techlead --reason "engineer turn complete"
-```
+- receives a normal task brief only
+- implements the requested slice
+- verifies the change at the right level
+- reports changed files, verification, blockers, gaps, or follow-up notes
+- stops after the final report; the hook returns control to `techlead`
 
 `execution-brief.md` or `prompt.md` is optional. Create it when the task is long, handoff-heavy, hook-driven, or likely to span turns.
 

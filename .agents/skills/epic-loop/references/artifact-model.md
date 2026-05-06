@@ -139,6 +139,8 @@ Use `execution-brief.md` or `prompt.md` only when task handoff needs a file arti
 
 Use `execution/progress-log.md` as the append-only human-readable mirror of `execution/progress-log.jsonl`. Use `execution/progress-report.md` for regenerated aggregate timing and grouping.
 
+Use `execution/engineer-reports.md` and `execution/engineer-reports.jsonl` for final engineer messages captured from `Stop` hooks. `execution/latest-engineer-report.md` is replaced on each engineer stop so the next techlead turn can read the latest factual report quickly.
+
 ## File Ownership Guidance
 
 Prefer append-only updates for logs and registers. Rewrite broad planning docs only in shaping or reset mode, and preserve historical context when old decisions might explain existing code.

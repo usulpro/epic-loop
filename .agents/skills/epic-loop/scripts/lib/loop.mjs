@@ -9,6 +9,7 @@ const WAITING_FOR_TURN_TRANSITION = "awaiting-transition";
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "templates", "implementation-techlead-prompt.md");
+const LATEST_ENGINEER_REPORT_RELATIVE_PATH = "execution/latest-engineer-report.md";
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
   current_role: "Current role",
@@ -192,6 +193,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
   const prompt = role === "techlead" ? buildTechleadPrompt(slug, iteration) : buildEngineerPrompt(projectRoot, slug, loop, iteration);
   const promptFile = role === "engineer" ? loop.prompt_file ?? null : TECHLEAD_PROMPT_TEMPLATE_PATH;
+  const followingRole = role === "engineer" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
 
   writeJson(runtimePath, {
     ...runtime,
@@ -203,7 +205,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       iteration,
       last_continuation_at: timestamp,
       last_session_id: payload.session_id ?? null,
-      next_role: WAITING_FOR_TURN_TRANSITION,
+      next_role: followingRole,
       status: "running",
     },
     implementation_submode: role,
@@ -213,7 +215,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   appendLoopLog(projectRoot, {
     action: "turn-start",
     iteration,
-    next_role: WAITING_FOR_TURN_TRANSITION,
+    next_role: followingRole,
     phase: runtime.active_phase ?? null,
     prompt_file: promptFile,
     role,
@@ -263,6 +265,9 @@ export function readImplementationLoops(projectRoot) {
         progress_log_markdown_path: path.join(executionPath, "progress-log.md"),
         progress_log_path: path.join(executionPath, "progress-log.jsonl"),
         progress_report_path: path.join(executionPath, "progress-report.md"),
+        engineer_reports: countLines(path.join(executionPath, "engineer-reports.jsonl")),
+        engineer_reports_path: path.join(executionPath, "engineer-reports.md"),
+        latest_engineer_report_path: path.join(executionPath, "latest-engineer-report.md"),
         prompt_entries: countLines(path.join(executionPath, "prompt-log.jsonl")),
         prompt_log_path: path.join(executionPath, "prompt-log.md"),
         slug,
@@ -273,11 +278,13 @@ export function readImplementationLoops(projectRoot) {
 
 function buildTechleadPrompt(slug, iteration) {
   const promptPath = `.epic-loop/epics/${slug}/execution/current-engineer-prompt.md`;
+  const latestEngineerReportPath = `.epic-loop/epics/${slug}/${LATEST_ENGINEER_REPORT_RELATIVE_PATH}`;
 
   return renderTemplate(fs.readFileSync(TECHLEAD_PROMPT_TEMPLATE_PATH, "utf8"), {
     EngineerPromptPath: promptPath,
     EpicSlug: slug,
     Iteration: String(iteration),
+    LatestEngineerReportPath: latestEngineerReportPath,
   });
 }
 
@@ -287,26 +294,22 @@ function buildEngineerPrompt(projectRoot, slug, loop, iteration) {
   const promptText = absolutePromptPath && fs.existsSync(absolutePromptPath) ? fs.readFileSync(absolutePromptPath, "utf8").trim() : "";
 
   return [
-    `[$epic-loop] Implementation loop: engineer turn ${iteration} for \`${slug}\`.`,
+    `Focused implementation task ${iteration}.`,
     "",
-    "Act as engineer only. Execute the techlead brief below without widening the task.",
+    "Execute the task brief below. Keep the work narrow and do not widen the scope.",
     "",
-    promptText ? "## Techlead Brief" : "## Techlead Brief Missing",
+    promptText ? "## Task Brief" : "## Task Brief Missing",
     "",
-    promptText || "No engineer prompt file was found. Stop and return control to techlead.",
+    promptText || "No task brief was found. Report that the brief is missing and stop.",
     "",
-    "Engineer responsibilities:",
-    "- implement only the requested slice",
-    "- follow existing project patterns",
-    "- run the verification requested by the brief",
-    "- update task-level epic artifacts with facts, not optimism",
-    "- record blockers or mismatches instead of silently redesigning the task",
+    "## Report",
     "",
-    "At the end, return control to techlead by running:",
+    "When finished, reply with a concise factual report:",
     "",
-    `node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "${slug}" --role techlead --reason "engineer turn complete"`,
-    "",
-    "Then report the engineering result briefly and stop.",
+    "- changed files",
+    "- implemented behavior",
+    "- verification run and results",
+    "- blockers, gaps, or follow-up notes",
   ].join("\n");
 }
 
@@ -362,9 +365,12 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   }
 
   const durationMs = durationMsBetween(loop.active_turn_started_at, timestamp);
+  const engineerReport = loop.current_role === "engineer" ? appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp) : null;
   const stoppedLoop = {
     ...loop,
     active_turn_stopped_at: timestamp,
+    last_engineer_report_at: engineerReport?.timestamp ?? loop.last_engineer_report_at ?? null,
+    last_engineer_report_path: engineerReport?.latest_report_path ?? loop.last_engineer_report_path ?? null,
     last_stop_session_id: payload.session_id ?? null,
     last_stop_turn_id: payload.turn_id ?? null,
   };
@@ -420,6 +426,53 @@ function appendPromptMarkdown(filePath, entry) {
     ].join("\n"),
     "utf8",
   );
+}
+
+function appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp) {
+  const message = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+  if (!message) {
+    return null;
+  }
+
+  const executionPath = executionDir(projectRoot, slug);
+  const latestReportPath = path.join(executionPath, "latest-engineer-report.md");
+  const report = {
+    iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
+    message,
+    role: loop.current_role,
+    session_id: payload.session_id ?? null,
+    slug,
+    timestamp,
+    turn_id: payload.turn_id ?? null,
+  };
+
+  appendJsonLine(path.join(executionPath, "engineer-reports.jsonl"), report);
+  appendEngineerReportMarkdown(path.join(executionPath, "engineer-reports.md"), report);
+  writeText(latestReportPath, formatEngineerReport(report));
+
+  return {
+    latest_report_path: path.relative(projectRoot, latestReportPath),
+    timestamp,
+  };
+}
+
+function appendEngineerReportMarkdown(filePath, report) {
+  ensureMarkdownFile(filePath, "# Engineer Reports\n");
+  fs.appendFileSync(filePath, `\n${formatEngineerReport(report)}`, "utf8");
+}
+
+function formatEngineerReport(report) {
+  return [
+    `## ${report.timestamp} | turn ${report.iteration ?? "?"}`,
+    "",
+    `- Session: \`${report.session_id ?? "unknown"}\``,
+    `- Turn: \`${report.turn_id ?? "unknown"}\``,
+    "",
+    "````text",
+    report.message,
+    "````",
+    "",
+  ].join("\n");
 }
 
 function appendProgressMarkdown(filePath, entry) {

@@ -21,6 +21,7 @@ Read the current epic state:
 - `.epic-loop/epics/-<<*{{EpicSlug}}*>>-/implementation-log.md`
 - `.epic-loop/epics/-<<*{{EpicSlug}}*>>-/decision-log.md`
 - `.epic-loop/epics/-<<*{{EpicSlug}}*>>-/risk-register.md`
+- `-<<*{{LatestEngineerReportPath}}*>>-` if it exists
 
 Read the role references before acting:
 
@@ -137,6 +138,7 @@ Do not trust epic artifacts alone. Verify them against the live repository state
 
    The next engineer prompt must:
 
+   - be skill-agnostic: do not mention epic-loop, lifecycle mode, role routing, tracker closure, implementation logs, or `set-next-role`
    - choose one task type only:
      - implementation slice
      - investigation pass
@@ -145,11 +147,11 @@ Do not trust epic artifacts alone. Verify them against the live repository state
      - tactical detour pass
    - state the exact goal and why this is the right next move now
    - define scope boundaries, touched surfaces, and what not to widen
-   - name relevant files, code areas, docs, and tests
+   - name relevant files, code areas, technical docs, and tests
    - define the acceptance target
    - define the required evidence to bring back
    - call out known risks, suspicious areas, or challenge questions that must be answered
-   - state stop conditions that require returning to techlead rather than improvising a redesign
+   - state stop conditions as normal engineering blockers, without referencing role routing
 
    A good engineer prompt is executable, narrow, evidence-oriented, and hard to misread.
 

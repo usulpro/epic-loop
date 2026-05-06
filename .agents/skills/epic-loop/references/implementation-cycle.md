@@ -24,7 +24,7 @@ The reference files below support and deepen the runtime prompt, but they do not
 - Techlead role: [implementation-techlead-role.md](implementation-techlead-role.md)
 - Engineer role: [implementation-engineer-role.md](implementation-engineer-role.md)
 
-Load the relevant role reference before performing that role's turn.
+The techlead may read both role references to manage the loop and write task briefs. Engineer-facing prompts remain skill-agnostic and do not ask the engineer to read role references.
 
 ## Cycle Entry
 
@@ -46,9 +46,11 @@ Implementation observability is permanent. Each continuation prompt is appended 
 2. The agent binds the current session to the epic and implementation mode.
 3. The next `Stop` hook emits the first techlead prompt.
 4. The techlead inspects epic state and live repository evidence, then decides whether to close work, continue, pause, review, detour, or reset.
-5. If implementation should continue, techlead writes exactly one concrete engineer prompt and sets the next role to `engineer`.
-6. The engineer executes that prompt, verifies the slice, updates affected epic artifacts, and sets the next role back to `techlead`.
-7. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
+5. If implementation should continue, techlead writes exactly one concrete, skill-agnostic engineer prompt and sets the next role to `engineer`.
+6. The hook starts one engineer turn and immediately pre-sets the following role to `techlead`.
+7. The engineer executes that prompt, verifies the slice, reports the factual outcome, and stops.
+8. The `Stop` hook captures the engineer final message, stores it as the latest engineer report, and automatically starts the next techlead turn.
+9. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
 
 On the first techlead turn in a newly started implementation loop, there is no previous engineer turn to close. In that case, techlead should say so explicitly, orient on epic state, and choose the first honest implementation step.
 
@@ -90,7 +92,7 @@ The techlead must:
 
 ## Engineer Turn Expectations
 
-The engineer owns one concrete techlead brief.
+The engineer owns one concrete task brief and does not know about epic-loop runtime mechanics.
 
 The engineer may be asked to run one of these task types:
 
@@ -105,8 +107,8 @@ The engineer must:
 1. Execute only the requested slice.
 2. Follow existing project patterns and constraints.
 3. Bring back real evidence rather than optimistic summaries.
-4. Update the epic artifacts that changed.
-5. Return blockers, mismatches, or drift to techlead rather than silently redesigning the epic.
+4. Report changed files, implemented behavior, verification results, blockers, gaps, or follow-up notes.
+5. Stop after the report. Routing returns to techlead automatically.
 
 ## Closure Discipline
 
@@ -170,6 +172,7 @@ Leave the implementation cycle when:
 
 When techlead writes the next engineer prompt, it must be:
 
+- skill-agnostic, with no epic-loop, tracker, artifact, role-routing, handoff, or `set-next-role` instructions
 - narrow enough to execute safely
 - explicit about scope boundaries
 - explicit about acceptance

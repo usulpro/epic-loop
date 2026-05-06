@@ -158,6 +158,7 @@ When implementation should continue, techlead writes exactly one concrete engine
 
 That prompt must:
 
+- be skill-agnostic, with no epic-loop, tracker, artifact, role-routing, handoff, or `set-next-role` instructions
 - choose one task type only
 - state the exact goal
 - state why this is the next move now
@@ -166,7 +167,7 @@ That prompt must:
 - define acceptance target
 - define required evidence
 - call out known risks or challenge questions
-- define stop conditions that require returning to techlead
+- define stop conditions as normal engineering blockers
 
 The engineer prompt must be executable, narrow, evidence-oriented, and hard to misread.
 
