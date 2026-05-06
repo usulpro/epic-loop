@@ -11,7 +11,6 @@ export function debugState(flags = {}) {
   const bindingsPath = path.join(stateRoot, "session-bindings.json");
   const bindings = readJson(bindingsPath, { active_sessions: {}, sessions: {} });
   const currentSession = readCurrentCodexSession(root);
-  const loopLogPath = path.join(stateRoot, "loop-log.jsonl");
   const sessionStates = readSessionStates(path.join(stateRoot, "sessions"));
   const recentHookEvents = listRecentFiles(path.join(stateRoot, "hook-events"), Number.isFinite(limit) ? limit : 10);
 
@@ -20,8 +19,6 @@ export function debugState(flags = {}) {
     bindings_path: bindingsPath,
     current_session_candidate: currentSession,
     implementation_loops: readImplementationLoops(root),
-    loop_log: readJsonLinesTail(loopLogPath, Number.isFinite(limit) ? limit : 10),
-    loop_log_path: loopLogPath,
     recent_hook_events: recentHookEvents,
     root,
     session_states: sessionStates,
@@ -40,7 +37,6 @@ export function debugState(flags = {}) {
   console.log(`Implementation loops: ${payload.implementation_loops.length}`);
   console.log(`Recorded session states: ${sessionStates.length}`);
   console.log(`Recent hook events: ${recentHookEvents.length}`);
-  console.log(`Loop log entries: ${payload.loop_log.length}`);
 
   for (const event of recentHookEvents) {
     console.log(`- ${event.path} (${event.updated_at})`);
@@ -76,28 +72,6 @@ function listRecentFiles(dirPath, limit) {
     })
     .sort((a, b) => b.updated_at_ms - a.updated_at_ms)
     .slice(0, limit);
-}
-
-function readJsonLinesTail(filePath, limit) {
-  if (!fs.existsSync(filePath)) {
-    return [];
-  }
-
-  return fs
-    .readFileSync(filePath, "utf8")
-    .trim()
-    .split(/\r?\n/u)
-    .filter(Boolean)
-    .slice(-limit)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return {
-          raw: line,
-        };
-      }
-    });
 }
 
 function walkFiles(dirPath) {

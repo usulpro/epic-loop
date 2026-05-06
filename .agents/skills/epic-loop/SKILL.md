@@ -169,6 +169,10 @@ Epic-loop stores all mutable project-local state under `.epic-loop/`. Epic works
 - `docs/`: additional documentation pack for architecture, contracts, verification, and rollout.
 - `runtime-state.json`: lightweight machine-readable coordination state.
 - Optional `execution-brief.md` or `prompt.md` for handoff-heavy tasks.
+- `execution/prompt-log.md`: append-only readable log of implementation prompts by timestamp, session, role, and prompt text.
+- `execution/prompt-log.jsonl`: structured prompt log for tooling.
+- `execution/progress-log.jsonl`: structured implementation lifecycle event log.
+- `execution/progress-report.md`: generated readable progress report with elapsed time, active turn time, role time, phase/task grouping, and role commands.
 
 Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
 
@@ -207,6 +211,8 @@ Implementation uses a turn-by-turn `techlead -> engineer -> techlead` cycle.
 Do not enter implementation automatically from a slug-only resume. First report that the epic is ready, then wait for explicit confirmation to run implementation in the current session.
 
 When implementation starts, the first hook-driven continuation must be `techlead`. The `techlead` turn decides what happens next and must set the next role before stopping.
+
+Every implementation continuation must be recorded inside the epic workspace. Prompt text goes to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events and timing go to `execution/progress-log.jsonl`, with `execution/progress-report.md` regenerated from that event log.
 
 `techlead` owns tactical orchestration:
 

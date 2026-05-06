@@ -23,6 +23,8 @@ If another session was previously active for the same epic and mode, this bindin
 
 Binding starts the loop with `next_role: techlead`. The current user turn should stop after binding; the `Stop` hook continues the same session with the first techlead prompt.
 
+Implementation observability is permanent. Each continuation prompt is appended to `execution/prompt-log.md` and `execution/prompt-log.jsonl`. Lifecycle events are appended to `execution/progress-log.jsonl`; `execution/progress-report.md` is regenerated from that event log and groups completed turns by phase, task, and role.
+
 The techlead must:
 
 1. Check previous task closure:
