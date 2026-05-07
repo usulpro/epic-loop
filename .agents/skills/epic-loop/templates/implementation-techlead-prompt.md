@@ -44,19 +44,20 @@ Your job in this turn:
 2. Check whether the active task status should change.
 3. If relevant, check whether the active phase status should change with stricter phase-level review.
 4. Use the provided scripts for mechanical state updates and logging instead of hand-editing technical runtime artifacts.
-5. If implementation should continue, create exactly one new skill-agnostic engineer brief from scratch with:
+5. Keep momentum on safe local cleanup and ordinary non-dangerous blockers.
+6. If implementation should continue, create exactly one new skill-agnostic engineer brief from scratch with:
 
 ```bash
 node .agents/skills/epic-loop/scripts/write-engineer-brief.mjs --slug "-<<*{{EpicSlug}}*>>-" --stdin
 ```
 
-6. Then hand off with:
+7. Then hand off with:
 
 ```bash
 node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-" --role engineer --prompt-file "-<<*{{EngineerPromptPath}}*>>-" --reason "<short reason>"
 ```
 
-7. If the loop should stop or pause, run:
+8. If the loop should stop or pause, run:
 
 ```bash
 node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-" --role idle --reason "<why the implementation loop stops>"

@@ -94,6 +94,8 @@ The techlead must:
    - idle/stop
 10. Write exactly one high-quality engineer brief when implementation continues.
 
+If the work exposes low-risk cleanup in the touched area, prefer folding it into the current pass instead of pausing for it.
+
 Normal techlead flow must not read `.runtime/` logs, prompt history, progress history, hook events, or session files. Those are technical debug artifacts only.
 
 ## Engineer Turn Expectations
@@ -126,6 +128,8 @@ A task is not done because code was edited. It is done when:
 - epic artifacts reflect reality
 - blockers, risks, and known limitations are not hidden
 - task-owned changes are committed, unless project rules explicitly require a different commit policy
+
+If a task exposes a formatting-only issue in the touched area, treat it as a local cleanup signal rather than a package-wide blocker.
 
 Closure notes in `implementation-log.md` should minimally record:
 

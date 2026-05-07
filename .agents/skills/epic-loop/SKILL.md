@@ -213,6 +213,8 @@ When writing implementation tasks, always include:
 
 Design-like titles and `Docs:` links are not enough. If a task sounds like documentation-only but should change code or runtime behavior, rewrite it before execution.
 
+Implementation should stay biased toward safe completion: prefer leaving touched areas better than found, fold in low-risk formatting drift when it is local, and keep moving unless the remaining choice is genuinely risky or ambiguous.
+
 ## Implementation Rules
 
 Implementation uses a turn-by-turn `techlead -> engineer -> techlead` cycle.
@@ -257,6 +259,8 @@ node .agents/skills/epic-loop/scripts/set-next-role.mjs --slug "<epic-slug>" --r
 - verifies the change at the right level
 - reports changed files, verification, blockers, gaps, or follow-up notes
 - stops after the final report; the hook returns control to `techlead`
+
+When the engineer encounters low-risk formatting drift inside the touched area, it should usually fold it into the same pass rather than turn it into a blocker; if cleanup would widen the slice, record it as a narrow follow-up.
 
 Use `write-engineer-brief.mjs` for engineer handoffs. Do not keep handoff prompts in the human-facing epic root.
 

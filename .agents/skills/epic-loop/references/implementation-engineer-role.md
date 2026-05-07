@@ -36,6 +36,8 @@ If the prompt appears to combine multiple unrelated turn types, the engineer sho
 
    The engineer may make local implementation decisions needed to complete the brief, but must not silently redesign the epic, broaden the task, ignore constraints, or bypass the requested acceptance criteria.
 
+   If low-risk formatting drift appears in the touched area, the engineer should normally fold it into the same pass; if cleanup would widen the slice or touch unrelated surfaces, record it as a narrow follow-up.
+
 4. Bring back evidence, not optimistic summaries.
 
    If the brief requires verification, the engineer must return real evidence:

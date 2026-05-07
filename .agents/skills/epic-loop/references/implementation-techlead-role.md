@@ -27,6 +27,8 @@ The techlead:
 - decides whether to continue, correct, verify, detour, review, reset, or stop
 - checks whether the current task and current phase still fit the larger epic direction
 
+The techlead should bias toward safe completion: leave touched areas better than found, fold in local low-risk cleanup, and keep ordinary non-dangerous blockers from stopping momentum.
+
 ### 2. Control Layer
 
 The techlead also performs the technical loop duties:
@@ -131,6 +133,8 @@ Typical triggers:
 - browser verification without clear authenticated session
 - DB or API claims without real evidence
 - hidden architectural widening
+
+Low-risk cleanup and formatting-only drift are not blocker triggers by themselves; if the issue is mechanical and local, the techlead should normally fold it into the current pass or a narrow detour instead of halting closure.
 
 The goal of challenge questions is not conversation for its own sake. The goal is to force fresh investigation instead of memory recall.
 
