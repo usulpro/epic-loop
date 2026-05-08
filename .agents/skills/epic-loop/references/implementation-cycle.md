@@ -110,6 +110,10 @@ The engineer may be asked to run one of these task types:
 - verification pass
 - tactical detour pass
 
+The techlead may also mark an already `done` task as `need-review` when a recheck is required before the closure can be trusted again.
+That is a review signal, not a fresh implementation start.
+For `need-review` tasks, the checkbox on the tracker indicates review state: `[ ]` means the recheck is still pending, `[x]` means the recheck has been completed. The task status stays `need-review`.
+
 The engineer must:
 
 1. Execute only the requested slice.
@@ -128,6 +132,9 @@ A task is not done because code was edited. It is done when:
 - epic artifacts reflect reality
 - blockers, risks, and known limitations are not hidden
 - task-owned changes are committed, unless project rules explicitly require a different commit policy
+
+If a task was already `done` but now needs another verification pass, do not reopen it as `todo`.
+Mark it `need-review`, recheck the closed work, then keep it `need-review` with `[x]` when the review is complete or split out the missing work.
 
 If a task exposes a formatting-only issue in the touched area, treat it as a local cleanup signal rather than a package-wide blocker.
 
@@ -158,6 +165,8 @@ Acceptable phase outcomes are:
 - close the phase
 - close the phase with explicit follow-ups
 - keep the phase open because the outcome is not honestly complete
+
+A phase with any `need-review` task is not honestly closed until every such task has its review state marked complete or is split into explicit follow-up work.
 
 ## Reset Ladder
 

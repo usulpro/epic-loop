@@ -35,11 +35,13 @@ This is not a one-shot documentation generator. It is a short-iteration dialogue
    - start with a skeleton
    - add sections as topics become clear
    - split docs only when the distinction helps future work
+   - keep session-readable docs under 900 lines per file; split and cross-reference when they grow larger
 
 5. Introduce phases when there is enough clarity:
    - create coarse phases first
    - add tasks after phase intent is stable
    - avoid file-by-file implementation scripts too early
+   - give every tracker task a short title and number it as `T{phase}.{task}`
 
 ## Agent Responsibility
 
@@ -57,6 +59,13 @@ Each implementation task must contain:
 - implementation surface: schema, API, runtime, CLI, UI, sync pipeline, tests, etc.
 - acceptance criteria: behavior, contract, or verification
 - relevant docs
+
+When you write the tracker line, use:
+
+- `- [ ] T3.2 [Short Title]`
+- `Kind: implementation | Status: todo`
+
+Keep the title brief and task-shaped. Put the detailed outcome, surface, acceptance, and docs in the bullets below the task.
 
 Weak task:
 
@@ -85,3 +94,5 @@ Shaping can run:
 - to prepare future phases while another session implements the current phase
 
 When shaping changes active implementation assumptions, update `state-of-epic.md`, `decision-log.md`, and `tracker.md` clearly.
+
+After major documentation updates, run the epic artifact limit checker for the affected slug so oversized readable files are caught early.

@@ -24,7 +24,7 @@ If the result is `setup-required`, do not ask the shaping/resume question yet. U
 - **Automatic setup**: if `.codex/hooks.json` is writable and the user explicitly approves setup, run `node .agents/skills/epic-loop/scripts/install-hooks.mjs`.
 - **Manual setup**: if `.codex/hooks.json` is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
 
-Do not edit global Codex config from this skill. If `doctor` reports that `codex_hooks` is missing or disabled, explain where it appears to be missing and ask the user before changing any project-local config.
+Do not edit global Codex config from this skill. If `doctor` reports that `hooks` is missing or disabled, explain where it appears to be missing and ask the user before changing any project-local config.
 
 Keep the user-facing setup message ultra-short. Do not paste the full doctor output unless the user asks for details. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics in the normal flow.
 
@@ -183,6 +183,14 @@ Global routing/session runtime lives under `.epic-loop/.runtime/`.
 
 Read [references/artifact-model.md](references/artifact-model.md) when creating or repairing an epic workspace.
 
+Readable epic artifacts that can enter session context should stay under 900 lines per file. If a file grows beyond that limit, split it into smaller parts and add a short cross-reference file so the agent can re-enter without reading a giant document. This rule applies to human-facing epic artifacts and docs, not to hidden technical/runtime files that never enter the session context.
+
+After major documentation updates, run:
+
+```bash
+node .agents/skills/epic-loop/scripts/check-epic-artifact-limits.mjs --slug "<epic-slug>"
+```
+
 ## Mode References
 
 Load the detailed reference for the active mode:
@@ -210,6 +218,16 @@ When writing implementation tasks, always include:
 - implementation surface
 - acceptance criteria based on behavior, contract, or verification
 - relevant docs
+
+Tracker tasks should be written as:
+
+- `- [ ] T3.2 [Short Title]`
+- `Kind: implementation | Status: todo`
+
+Keep the title short and specific. Phase number and task number are part of the task label, not the title text.
+
+`need-review` is reserved for tasks that were already `done` but need another verification pass because a new blocker, new evidence, or a user request changed the trust level. Do not use it for untouched work; use `todo` for work that has not been completed yet.
+For `need-review` tasks, the checkbox means review state: `[ ]` means the recheck is still pending, `[x]` means the review pass has been completed. The task status stays `need-review` in both cases.
 
 Design-like titles and `Docs:` links are not enough. If a task sounds like documentation-only but should change code or runtime behavior, rewrite it before execution.
 
@@ -310,6 +328,12 @@ node .agents/skills/epic-loop/scripts/install-hooks.mjs
 The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
 
 The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+
+After updating human-readable epic docs, run the artifact limit checker for the affected epic slug:
+
+```bash
+node .agents/skills/epic-loop/scripts/check-epic-artifact-limits.mjs --slug "<epic-slug>"
+```
 
 Bind a Codex session to an epic explicitly when running parallel sessions:
 

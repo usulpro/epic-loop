@@ -67,7 +67,7 @@ function parseCodexHooksFeature(configPath) {
       continue;
     }
 
-    const featureMatch = line.match(/^codex_hooks\s*=\s*(true|false)\s*$/u);
+    const featureMatch = line.match(/^hooks\s*=\s*(true|false)\s*$/u);
     if (featureMatch) {
       return {
         exists: true,
@@ -264,7 +264,7 @@ export function doctor(flags = {}) {
   const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
   const status = {
-    codexHooksFeature: feature,
+    hooksFeature: feature,
     command: hookConfig.command,
     hookConfig: {
       exists: hookConfig.exists,
@@ -304,11 +304,11 @@ export function doctor(flags = {}) {
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
 
   if (feature.enabled === true) {
-    console.log(`codex_hooks feature: enabled via ${feature.scope} config ${feature.source}`);
+    console.log(`hooks feature: enabled via ${feature.scope} config ${feature.source}`);
   } else if (feature.enabled === false) {
-    console.log(`codex_hooks feature: disabled via ${feature.scope} config ${feature.source}`);
+    console.log(`hooks feature: disabled via ${feature.scope} config ${feature.source}`);
   } else {
-    console.log("codex_hooks feature: unknown; add codex_hooks = true under [features] in the active Codex config/profile.");
+    console.log("hooks feature: unknown; add hooks = true under [features] in the active Codex config/profile.");
   }
 
   console.log(`Hook target exists: ${fs.existsSync(HOOK_SCRIPT_PATH) ? "yes" : "no"}`);
@@ -352,7 +352,7 @@ export function installHooks(flags = {}) {
 
   if (next.changes.length === 0) {
     console.log(`Epic-loop hooks already installed: ${hooksPath}`);
-    console.log("Requires codex_hooks = true in the active Codex config/profile.");
+    console.log("Requires hooks = true in the active Codex config/profile.");
     return;
   }
 
@@ -364,7 +364,7 @@ export function installHooks(flags = {}) {
   writeJson(hooksPath, next.document);
 
   console.log(`Installed project-local epic-loop hooks: ${hooksPath}`);
-  console.log("Requires codex_hooks = true in the active Codex config/profile.");
+  console.log("Requires hooks = true in the active Codex config/profile.");
 }
 
 export function handleHook(rawInput, flags = {}) {

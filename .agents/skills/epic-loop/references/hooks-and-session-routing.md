@@ -36,11 +36,11 @@ The hook command points to the installed skill script and handles:
 - `UserPromptSubmit`
 - `Stop`
 
-The Codex feature flag `codex_hooks = true` must still be enabled in the active Codex config/profile. The project-local hook config controls which hook command runs for this project.
+The Codex feature flag `hooks = true` must still be enabled in the active Codex config/profile. The project-local hook config controls which hook command runs for this project.
 
 If `.codex/hooks.json` is not writable from the current Codex session, do not attempt workarounds. Give the user the install command and ask them to run it from a writable project checkout or host terminal.
 
-If `codex_hooks` is not enabled, tell the user where the feature appears to be missing. Do not edit global `~/.codex/config.toml` from a project skill. Project-local config may be edited only after explicit user approval and only when it is writable.
+If `hooks` is not enabled, tell the user where the feature appears to be missing. Do not edit global `~/.codex/config.toml` from a project skill. Project-local config may be edited only after explicit user approval and only when it is writable.
 
 User-facing setup messages should be tiny. Normal flow is:
 
@@ -63,7 +63,7 @@ The installer must be conservative:
 - support `--dry-run` without writing files
 - keep mutable runtime state out of `.codex/`
 
-The installer does not fix every Codex feature/profile configuration. Its job is project-local `.codex/hooks.json`. `doctor` reports whether `codex_hooks` appears enabled through project or global `[features]`; if the user launches Codex with a custom profile, the user may need to enable `codex_hooks = true` in that active profile.
+The installer does not fix every Codex feature/profile configuration. Its job is project-local `.codex/hooks.json`. `doctor` reports whether `hooks` appears enabled through project or global `[features]`; if the user launches Codex with a custom profile, the user may need to enable `hooks = true` in that active profile.
 
 ## Hook Payload
 

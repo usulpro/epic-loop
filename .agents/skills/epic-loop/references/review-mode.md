@@ -54,10 +54,19 @@ If the original conversation context is unavailable, state that limitation and r
 
 5. Produce outcomes:
    - confirm alignment
+   - mark previously `done` tasks as `need-review` when a recheck is needed before closure can be trusted again
    - create follow-up tasks
    - update docs
    - update decision log or risks
    - return to shaping or implementation
+
+## `need-review` Handling
+
+When review mode finds a closed task that should be checked again, mark it `need-review` instead of reopening it as `todo`.
+That tells techlead the work was already completed once, but the closure now needs another verification pass because of new evidence, a removed blocker, or direct user instruction.
+For `need-review` tasks, the checkbox tracks the review state: `[ ]` means the review is still pending, `[x]` means the review pass has been completed.
+If the recheck confirms the task, leave the task status as `need-review` and mark the checkbox `[x]`.
+If the recheck exposes missing work, keep the review completed if it was already done, then create follow-up work or reopen implementation only for the missing slice.
 
 ## Non-Goals
 

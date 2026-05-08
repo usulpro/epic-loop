@@ -49,6 +49,7 @@ node .agents/skills/epic-loop/scripts/role-summary.mjs --slug "<epic-slug>"
 node .agents/skills/epic-loop/scripts/start-task.mjs --slug "<epic-slug>" --task-id "<task-id>"
 node .agents/skills/epic-loop/scripts/close-task.mjs --slug "<epic-slug>" --task-id "<task-id>"
 node .agents/skills/epic-loop/scripts/set-task-status.mjs --slug "<epic-slug>" --task-id "<task-id>" --status "<status>"
+node .agents/skills/epic-loop/scripts/set-task-review-status.mjs --slug "<epic-slug>" --task-id "<task-id>" --review-status "<pending|done>"
 node .agents/skills/epic-loop/scripts/start-phase.mjs --slug "<epic-slug>" --phase-id "<phase-id>"
 node .agents/skills/epic-loop/scripts/close-phase.mjs --slug "<epic-slug>" --phase-id "<phase-id>"
 node .agents/skills/epic-loop/scripts/append-implementation-log.mjs --slug "<epic-slug>" --task "<task>" --verdict "<verdict>"
@@ -149,6 +150,11 @@ A task is not done because code was edited. It is done when:
 - blockers, risks, and known limitations are not hidden
 - task-owned changes are committed, unless project rules explicitly require a different commit policy
 
+`need-review` is a post-`done` status, not a replacement for unfinished work. Use it when a closed task needs another verification pass because new evidence, a cleared blocker, or a user request changed the trust level.
+It should trigger a review pass on the already completed task, not a fresh `todo` restart.
+For `need-review` tasks, the checkbox on the tracker indicates review state: `[ ]` means the recheck is still pending, `[x]` means the recheck has been completed. The task status stays `need-review`.
+After doc-heavy changes, check that readable epic files still fit the 900-line limit and split them if a file becomes too large.
+
 Closure notes in `implementation-log.md` should minimally record:
 
 - what changed
@@ -176,6 +182,8 @@ Phase closure outcomes:
 - close the phase
 - close the phase with explicit follow-ups
 - keep the phase open because the phase outcome is not honestly complete
+
+A phase with any `need-review` task is not honestly closed until every such task has its review state marked complete or is split into explicit follow-up work.
 
 ## Reset And Detour Judgment
 

@@ -48,10 +48,13 @@ devserver.log
 .primeui/temp
 .primeui/project.json
 
+# epic-loop runtime
+.epic-loop/.runtime/
+.epic-loop/epics/*/.runtime/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 node_modules/
 
 .codex/tmp
-

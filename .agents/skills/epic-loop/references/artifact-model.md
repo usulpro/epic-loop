@@ -57,12 +57,34 @@ Purpose: human-readable roadmap projection.
 Track:
 
 - phases and tasks
+- task labels like `T3.2` where the first number is the phase number and the second number is the task number within that phase
+- a short task title in brackets on the task line
 - task kind: `implementation`, `verification`, `review`, `follow-up`, `architecture-reset`, `documentation-only`
-- status: `todo`, `doing`, `blocked`, `partially-satisfied`, `deferred`, `reset-required`, `done`
+- status: `todo`, `doing`, `need-review`, `blocked`, `partially-satisfied`, `deferred`, `reset-required`, `done`
 - expected system outcome
 - implementation surface
 - acceptance criteria
 - relevant docs
+
+Task lines should start like:
+
+```text
+- [ ] T3.2 [Short Title]
+Kind: follow-up | Status: todo
+```
+
+For `need-review` tasks, the checkbox is the review state:
+
+```text
+- [ ] T3.2 [Short Title]
+Kind: review | Status: need-review
+
+- [x] T3.2 [Short Title]
+Kind: review | Status: need-review
+```
+
+Use `need-review` only for tasks that were already `done` and now need another verification pass because of new evidence, an external blocker clearing, or a user-requested recheck.
+For `need-review` tasks, the checkbox is the review state: `[ ]` means the recheck is pending, `[x]` means the recheck has been completed. The task status remains `need-review` either way.
 
 `tracker.md` is rendered from `.runtime/roadmap-state.json`. Use task and phase scripts for mechanical status changes.
 
@@ -129,6 +151,14 @@ Create only documents that help the epic:
 - migration or rollout
 - verification plan
 - operations or support notes
+
+Readable docs that may enter session context should stay under 900 lines per file. If a doc grows beyond that limit, split it into smaller parts and add a short cross-reference or index file so the agent can navigate the pack without loading one oversized document. This rule does not apply to hidden runtime/debug files or other technical artifacts that never enter normal session context.
+
+Use the checker after updating docs:
+
+```bash
+node .agents/skills/epic-loop/scripts/check-epic-artifact-limits.mjs --slug "<epic-slug>"
+```
 
 ### `.runtime/runtime-state.json`
 
