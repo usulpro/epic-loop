@@ -1,237 +1,148 @@
-# Epic Loop Development Lab
+# epic-loop
 
-This repository is a local development and testing lab for the `epic-loop` Codex skill.
+> A Codex skill for running long autonomous coding sessions without losing the plot.
 
-The Next.js project in this checkout is only a fixture. It exists so the skill can be tested against a realistic codebase with real files, scripts, routes, components, formatting, typecheck, build output, hooks, dirty state, and long-running implementation sessions. The application itself is not the product of this repository.
+epic-loop splits a single Codex session into two roles — **techlead** and **engineer** — that hand off through the Codex Stop hook. The techlead plans, the engineer executes, the loop runs until the work is actually done. Epic state lives on disk, so sessions can be resumed by anyone, at any time.
 
-This is worth stating plainly:
+---
 
-- the skill is the product
-- the fixture app is disposable
-- the local epic state is test evidence and runtime support
+## The problem
 
-If the fixture app vanished tomorrow, but the skill became better, the project would still have succeeded.
+Long autonomous coding sessions waste hours on human glue:
 
-## Primary Goal
+- Manually prompting the agent for the next step
+- Reviewing output before deciding what comes next
+- Picking and scoping the next task
+- Writing a precise prompt to get the model to do it well
+- Repeat
 
-The only valuable product here is the local skill:
+These are repeatable patterns. They don't need a human in the loop — they need the right orchestration.
 
-```text
-.agents/skills/epic-loop/
+When Codex shipped hooks — particularly the **Stop hook**, which can return a continuation prompt to the same session — the orchestration became possible. epic-loop is the skill that makes it usable.
+
+---
+
+## How it works
+
+A single Codex session alternates between two roles, driven by the Stop hook:
+
+```
+single Codex session:
+
+  techlead  ──writes prompt for──▶  engineer
+      ▲                                 │
+      └────────── Stop hook ────────────┘
 ```
 
-The lab is used to design, implement, and verify:
+**techlead role.** Gets a standard prompt every turn: read epic state, do the formal work (task tracking, git commits, review, doc analysis), decide what comes next, and write a precise custom prompt for the engineer's next turn. Hands off via the Stop hook.
 
-- long-lived epic workspaces
-- project-local Codex hook setup
-- session binding and routing
-- shaping, implementation, review, and reset modes
-- techlead / engineer implementation cycles
-- runtime logging and human-facing artifacts
-- context-pressure reduction for long autonomous work
-- recovery from interrupted or failed sessions
+**engineer role.** Gets a focused, custom prompt for one task. Executes it. Hands back to techlead.
 
-The lab is not used to build a polished standalone application. Any app work here is in service of skill quality.
+**Single session.** Both roles run in the same Codex session — no second process, no inter-process plumbing. The Stop hook is what makes the alternation possible.
 
-## Project Model
+**Durable epic state.** Each epic lives at `.epic-loop/epics/<slug>/` with its own docs, tracker, decisions, and progress logs. Sessions die, contexts compact, machines crash — the epic survives. Any developer can resume any epic in any session.
 
-Treat this repository as three layers:
+---
 
-```text
-.agents/skills/epic-loop/   reusable skill source
-.epic-loop/                 local test epic workspaces and runtime state
-src/, package.json, etc.    disposable Next.js fixture app
-```
+## Modes
 
-The skill source is the thing being developed.
+- **Implementation** — the techlead/engineer loop described above
+- **Planning** — shaping new epics: creating docs, decomposing tasks
+- **Review** — verifying completed work
 
-The `.epic-loop/` directory is test data and runtime state for exercising the skill. Human-facing epic artifacts may be useful during tests; runtime/debug artifacts are not product work.
+Modes are explicit. The skill knows which mode it's in and adapts behavior accordingly.
 
-The Next.js app is a realistic fixture. Modify it only when a skill test requires real implementation work, diffs, verification, or failure recovery.
+---
 
-## What Success Looks Like
+## Why this design
 
-Success in this repository means the following are improving over time:
+**Engineer focuses on one task at a time.** Engineer turns are scoped and clean. The engineer doesn't know about the loop, the tracker, or epic-loop internals — it just executes the prompt it received.
 
-- long-lived epic work survives session boundaries cleanly
-- shaping, implementation, review, and reset remain distinct and legible
-- techlead and engineer roles stay behaviorally clean
-- mechanical state changes move into scripts and structured state
-- runtime/debug traces stay available without polluting normal role context
-- the framework remains understandable even as the implementation grows
-- context pressure goes down rather than up as the system matures
+**The loop won't stop until the work is done.** A stop criterion is set up front. Until it fires, the Stop hook keeps the session going.
 
-Success does **not** mean:
+**Survives context compaction.** Long task lists run cleanly through compaction because each engineer turn gets a freshly composed, scoped prompt — not accumulated session history.
 
-- a prettier fixture app
-- broader app feature coverage for its own sake
-- keeping old experiments alive indefinitely
-- preserving technical scaffolding that roles no longer need
+**Resumable.** Epics commit to git. Documentation, prompts, and progress are part of the repo. A new developer can pick up an in-flight epic in a new session without context loss.
 
-## Important Paths
+**Flexible.** Any process you can describe as a sequence of tracked tasks can run through epic-loop. Long task lists work especially well.
 
-```text
-.agents/skills/epic-loop/SKILL.md
-.agents/skills/epic-loop/references/
-.agents/skills/epic-loop/templates/
-.agents/skills/epic-loop/scripts/
-.agents/skills/epic-loop/scripts/lib/
+---
 
-.epic-loop/epics/<slug>/
-.epic-loop/epics/<slug>/.runtime/
-.epic-loop/.runtime/
+## Requirements
 
-.codex/hooks.json
-```
+- Codex with hooks support
+- Node.js (skill scripts are `.mjs`)
+- A project where you want to run long autonomous coding sessions
 
-## Common Skill Commands
+---
 
-Check technical readiness:
+## Installation
+
+epic-loop is a project-local Codex skill. Drop the skill into `.agents/skills/epic-loop/` in your project, then set up the project-local hooks:
 
 ```bash
-node .agents/skills/epic-loop/scripts/doctor.mjs --json
-```
+# Check technical readiness
+node .agents/skills/epic-loop/scripts/doctor.mjs
 
-Install project-local hooks:
-
-```bash
+# Install project-local Codex hooks
 node .agents/skills/epic-loop/scripts/install-hooks.mjs
+
+# Bind the current session to an epic
+node .agents/skills/epic-loop/scripts/bind-session.mjs \
+  --current --slug "<epic-slug>" --mode implementation
 ```
 
-List local epics:
+Unbound sessions are silent no-ops — epic-loop only activates for sessions explicitly bound to an epic.
 
-```bash
-node .agents/skills/epic-loop/scripts/list-epics.mjs --json
+---
+
+## Epic structure
+
+Each epic at `.epic-loop/epics/<slug>/` contains:
+
+```
+state-of-epic.md        # human-facing current state
+tracker.md              # task list and status
+implementation-log.md   # what happened, in human-readable form
+decision-log.md         # decisions and rationale
+risk-register.md        # known risks
+docs/                   # epic-scoped documentation
+.runtime/               # machine state and debug traces (hidden from role context)
 ```
 
-Bind the current session to an implementation epic:
+Human-facing artifacts and machine runtime are separated by design. Roles read the former; the latter exists for debugging and replay without polluting prompt context.
+
+---
+
+## Useful commands
 
 ```bash
-node .agents/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
-```
+# List local epics
+node .agents/skills/epic-loop/scripts/list-epics.mjs
 
-Inspect loop runtime/debug state:
-
-```bash
-node .agents/skills/epic-loop/scripts/debug.mjs --json
-```
-
-Get compact role-facing state:
-
-```bash
+# Compact role-facing state for the current epic
 node .agents/skills/epic-loop/scripts/role-summary.mjs --slug "<epic-slug>"
+
+# Inspect runtime/debug state
+node .agents/skills/epic-loop/scripts/debug.mjs
 ```
 
-## Fixture Commands
+---
 
-Use the fixture app commands only when a test scenario needs app-level verification:
+## Status
 
-```bash
-pnpm format
-pnpm lint
-pnpm typecheck
-pnpm build
-pnpm dev
-```
+Experimental and actively used. The skill is the product; the rest of this repository (a Next.js app) is a fixture used to test the skill against a realistic codebase with real builds, hooks, linting, and long-running sessions.
 
-Do not treat fixture app failures as automatically higher priority than skill behavior. First decide whether the failure matters to the current skill test.
+If you're reading the source, the skill lives at `.agents/skills/epic-loop/`.
 
-## Development Principles
+---
 
-The skill is being designed as an orchestration system, not a document generator.
+## Related
 
-Core principles:
+- [`codex-bee`](https://github.com/usulpro/codex-bee) — earlier work on long-running Codex sessions; epic-loop is the next iteration, built around the Stop hook rather than a session wrapper.
 
-- Keep long-lived epic intent recoverable across sessions.
-- Separate human-facing truth from machine/runtime traces.
-- Prefer script-driven deterministic transitions over model-edited mechanical markdown.
-- Keep engineer turns skill-agnostic.
-- Keep techlead turns responsible for orchestration, closure, task selection, phase state, commits, and review.
-- Make hooks project-local and opt-in by session.
-- Treat unbound sessions as silent no-ops.
-- Optimize for context hygiene in long-running loops.
-- Preserve rich debug data without making it part of normal role-facing reads.
-- Avoid compatibility layers, migrations, and fallback support unless explicitly requested for the current design step.
+---
 
-Two principles matter especially in this lab:
+## License
 
-### 1. Behavior First
-
-The most important thing is how the agent behaves over time:
-
-- what it reads
-- what it ignores
-- how it closes work
-- how it decides to continue, question, review, or reset
-- how much context it consumes to stay effective
-
-Prompting quality, role clarity, and orchestration discipline are first-class design concerns.
-
-### 2. Infrastructure Supports Behavior
-
-Scripts, runtime state, and hidden debug traces matter only insofar as they support the intended behavior of the skill.
-
-Good infrastructure should:
-
-- reduce context pressure
-- reduce manual markdown patching
-- reduce role confusion
-- make truth easier to preserve
-- stay mostly invisible to engineer-facing work
-
-If infrastructure starts leaking into normal role prompts or normal role reading paths, that is a design problem, not just a technical inconvenience.
-
-## Runtime And Git Hygiene
-
-Runtime/debug artifacts should stay hidden from normal work:
-
-```text
-.epic-loop/.runtime/
-.epic-loop/epics/*/.runtime/
-```
-
-Normal role-facing epic files are:
-
-```text
-state-of-epic.md
-tracker.md
-implementation-log.md
-decision-log.md
-risk-register.md
-docs/**
-```
-
-When testing produces noisy runtime files, prefer changing the skill so runtime data is routed correctly instead of manually curating noise.
-
-Human-facing truth and machine-facing runtime data should remain separate. That separation is part of the product design of `epic-loop`, not just a repository cleanup preference.
-
-## What Not To Do
-
-- Do not turn the fixture app into a product.
-- Do not optimize the Next.js app unless the skill test requires it.
-- Do not put internal development policy into reusable skill docs unless that policy is part of the user-facing skill behavior.
-- Do not add Python scripts for the skill; use Node.js.
-- Do not rely on chat memory as the durable source of epic state.
-- Do not make engineer prompts aware of epic-loop routing, tracker closure, or hook mechanics.
-- Do not read prompt/progress logs in normal implementation flow; use compact summaries.
-
-Also avoid:
-
-- treating technical debug traces as normal source-of-truth for role behavior
-- solving prompting problems only with more scripts
-- solving infrastructure problems only with more prompt text
-
-This lab exists to find the right boundary between the two.
-
-## Current Status
-
-This lab is intentionally experimental. The skill is still evolving, and test epics may contain interrupted sessions, stale artifacts, and partially migrated runtime data. Treat those as test material for improving `epic-loop`, not as application backlog.
-
-The repository should gradually become better at:
-
-- preserving intent
-- preserving truth
-- preserving role clarity
-- preserving context budget
-
-Those are the real quality axes here.
+MIT
