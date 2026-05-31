@@ -1,8 +1,10 @@
 # epic-loop
 
-> A Codex skill for running long autonomous coding sessions without losing the plot.
+> A Codex / Claude Code skill for running long autonomous coding sessions without losing the plot.
 
-epic-loop splits a single Codex session into two roles — **techlead** and **engineer** — that hand off through the Codex Stop hook. The techlead plans, the engineer executes, the loop runs until the work is actually done. Epic state lives on disk, so sessions can be resumed by anyone, at any time.
+epic-loop splits a single agent session into two roles — **techlead** and **engineer** — that hand off through the **Stop hook**. The techlead plans, the engineer executes, the loop runs until the work is actually done. Epic state lives on disk, so sessions can be resumed by anyone, at any time.
+
+It runs on **Codex** or **Claude Code**: both expose the same Stop-hook continuation contract, so the same skill drives the loop on either platform (one platform per session). The scripts auto-detect the platform and also accept an explicit `--platform codex|claude`.
 
 ---
 
@@ -18,16 +20,16 @@ Long autonomous coding sessions waste hours on human glue:
 
 These are repeatable patterns. They don't need a human in the loop — they need the right orchestration.
 
-When Codex shipped hooks — particularly the **Stop hook**, which can return a continuation prompt to the same session — the orchestration became possible. epic-loop is the skill that makes it usable.
+Hooks make the orchestration possible — particularly the **Stop hook**, which can return a continuation prompt to the same session. Codex and Claude Code both expose this contract (`{ "decision": "block", "reason": "<next prompt>" }`), so epic-loop is the skill that makes it usable on either one.
 
 ---
 
 ## How it works
 
-A single Codex session alternates between two roles, driven by the Stop hook:
+A single agent session (Codex or Claude Code) alternates between two roles, driven by the Stop hook:
 
 ```
-single Codex session:
+single agent session:
 
   techlead  ──writes prompt for──▶  engineer
       ▲                                 │
@@ -38,7 +40,7 @@ single Codex session:
 
 **engineer role.** Gets a focused, custom prompt for one task. Executes it. Hands back to techlead.
 
-**Single session.** Both roles run in the same Codex session — no second process, no inter-process plumbing. The Stop hook is what makes the alternation possible.
+**Single session.** Both roles run in the same agent session — no second process, no inter-process plumbing. The Stop hook is what makes the alternation possible.
 
 **Durable epic state.** Each epic lives at `.epic-loop/epics/<slug>/` with its own docs, tracker, decisions, and progress logs. Sessions die, contexts compact, machines crash — the epic survives. Any developer can resume any epic in any session.
 
@@ -70,7 +72,7 @@ Modes are explicit. The skill knows which mode it's in and adapts behavior accor
 
 ## Requirements
 
-- Codex with hooks support
+- **Codex** (with `hooks = true` enabled) **or Claude Code** — either provides the Stop hook
 - Node.js (skill scripts are `.mjs`)
 - A project where you want to run long autonomous coding sessions
 
@@ -78,13 +80,16 @@ Modes are explicit. The skill knows which mode it's in and adapts behavior accor
 
 ## Installation
 
-epic-loop is a project-local Codex skill. Drop the skill into `.agents/skills/epic-loop/` in your project, then set up the project-local hooks:
+epic-loop is a project-local skill. Drop the skill into `.agents/skills/epic-loop/` in your project. For Claude Code discoverability it is also exposed at `.claude/skills/epic-loop` (a symlink to the same source). Then set up the project-local hooks:
 
 ```bash
-# Check technical readiness
+# Check technical readiness (auto-detects Codex vs Claude Code)
 node .agents/skills/epic-loop/scripts/doctor.mjs
 
-# Install project-local Codex hooks
+# Install project-local hooks
+#   Codex      -> .codex/hooks.json
+#   Claude Code -> .claude/settings.json
+# Add --platform codex|claude to override auto-detection.
 node .agents/skills/epic-loop/scripts/install-hooks.mjs
 
 # Bind the current session to an epic

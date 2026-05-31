@@ -21,23 +21,27 @@ If the result is `ready`, continue to local epic discovery.
 
 If the result is `setup-required`, do not ask the shaping/resume question yet. Use a very short setup exchange and do not mention internal diagnostics unless the user asks.
 
-- **Automatic setup**: if `.codex/hooks.json` is writable and the user explicitly approves setup, run `node .agents/skills/epic-loop/scripts/install-hooks.mjs`.
-- **Manual setup**: if `.codex/hooks.json` is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
+`doctor` auto-detects the platform (Codex or Claude Code) and checks the matching
+hook config — `.codex/hooks.json` for Codex, `.claude/settings.json` for Claude
+Code. The setup steps below apply to whichever platform is active.
 
-Do not edit global Codex config from this skill. If `doctor` reports that `hooks` is missing or disabled, explain where it appears to be missing and ask the user before changing any project-local config.
+- **Automatic setup**: if the platform hook config is writable and the user explicitly approves setup, run `node .agents/skills/epic-loop/scripts/install-hooks.mjs`.
+- **Manual setup**: if the platform hook config is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
+
+Do not edit global Codex config from this skill. If `doctor` reports that `hooks` is missing or disabled, explain where it appears to be missing and ask the user before changing any project-local config. (Claude Code needs no feature flag; this disabled-feature case only applies to Codex.)
 
 Keep the user-facing setup message ultra-short. Do not paste the full doctor output unless the user asks for details. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics in the normal flow.
 
 Use this shape when setup is possible but not yet approved:
 
 ```text
-проверила: epic-loop needs to add project-local Codex hooks. Install them now?
+проверила: epic-loop needs to add project-local hooks. Install them now?
 ```
 
-Use this shape when the current session cannot write `.codex/hooks.json`:
+Use this shape when the current session cannot write the platform hook config:
 
 ```text
-проверила: hooks need setup, but this session cannot write `.codex/hooks.json`.
+проверила: hooks need setup, but this session cannot write the hook config.
 
 cd <project-root>
 node .agents/skills/epic-loop/scripts/install-hooks.mjs
@@ -46,7 +50,7 @@ node .agents/skills/epic-loop/scripts/install-hooks.mjs
 Use this shape when the user asked to install and the automatic install failed:
 
 ```text
-попробовала установить hooks, но `.codex/hooks.json` is not writable here.
+попробовала установить hooks, но the hook config is not writable here.
 
 cd <project-root>
 node .agents/skills/epic-loop/scripts/install-hooks.mjs
@@ -319,15 +323,42 @@ When parallel work may collide, read current files immediately before editing an
 
 ## Hooks
 
-Use project-local hooks for epic-loop work. Install them from the project root with:
+epic-loop runs on either **Codex** or **Claude Code** through the same `Stop`
+hook mechanism. The scripts auto-detect the platform (Claude Code sets
+`CLAUDECODE=1`; otherwise Codex is assumed), or you can force it with
+`--platform codex|claude` on `doctor`, `install-hooks`, and `bind-session`.
+
+Use project-local hooks for epic-loop work. Install them from the project root
+with:
 
 ```bash
 node .agents/skills/epic-loop/scripts/install-hooks.mjs
 ```
 
-The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
+The installer routes `SessionStart`, `UserPromptSubmit`, and `Stop` events to the
+epic-loop hook handler in the platform's config file:
 
-The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+- **Codex** → `.codex/hooks.json` (also requires `hooks = true` under
+  `[features]` in the active Codex config/profile).
+- **Claude Code** → `.claude/settings.json` (no feature flag needed; the
+  installer deep-merges the `hooks` block and preserves existing settings such as
+  `permissions` and MCP config).
+
+In both cases the installer preserves unrelated hooks, adds missing epic-loop
+event entries, and updates stale epic-loop hook commands when the skill path or
+platform changed.
+
+The hook handler is strict opt-in: it writes state only when `session_id` is
+already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound
+sessions must be a silent no-op. Keep the platform hook config as static config;
+all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be
+read-only in sandboxed sessions.
+
+The continuation contract is identical on both platforms: the `Stop` hook prints
+`{ "decision": "block", "reason": "<next prompt>" }`, which re-prompts the same
+session. Codex supplies the engineer's final message as `last_assistant_message`
+in the `Stop` payload; Claude Code does not, so the handler reads it from the
+session transcript (`transcript_path`) instead.
 
 After updating human-readable epic docs, run the artifact limit checker for the affected epic slug:
 

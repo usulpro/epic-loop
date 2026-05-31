@@ -4,8 +4,36 @@ import process from "node:process";
 
 export const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
 export const MODES = ["shaping", "implementation", "review", "reset"];
+export const PLATFORMS = ["codex", "claude"];
 export const CODEX_HOOKS_RELATIVE_PATH = path.join(".codex", "hooks.json");
 export const CODEX_CONFIG_RELATIVE_PATH = path.join(".codex", "config.toml");
+export const CLAUDE_SETTINGS_RELATIVE_PATH = path.join(".claude", "settings.json");
+
+export function hookConfigRelativePath(platform) {
+  return platform === "claude" ? CLAUDE_SETTINGS_RELATIVE_PATH : CODEX_HOOKS_RELATIVE_PATH;
+}
+
+export function detectPlatform(flags = {}, root = process.cwd()) {
+  const explicit = typeof flags.platform === "string" ? flags.platform.trim().toLowerCase() : "";
+  if (explicit) {
+    if (!PLATFORMS.includes(explicit)) {
+      throw new Error(`Invalid --platform "${explicit}". Expected one of: ${PLATFORMS.join(", ")}.`);
+    }
+    return explicit;
+  }
+
+  if (process.env.CLAUDECODE === "1" || process.env.CLAUDE_PROJECT_DIR) {
+    return "claude";
+  }
+
+  const hasCodexHooks = fs.existsSync(path.join(root, CODEX_HOOKS_RELATIVE_PATH));
+  const hasClaudeSettings = fs.existsSync(path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH));
+  if (hasClaudeSettings && !hasCodexHooks) {
+    return "claude";
+  }
+
+  return "codex";
+}
 
 export function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/u, "+00:00");
@@ -425,6 +453,102 @@ function getMtimeMs(filePath) {
 function parseDateMs(value) {
   const timestamp = Date.parse(value ?? "");
   return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function claudeProjectsDir(projectRoot) {
+  const encoded = String(projectRoot).replace(/[/\\]/gu, "-");
+  return path.join(process.env.HOME ?? "", ".claude", "projects", encoded);
+}
+
+export function readCurrentClaudeSession(projectRoot) {
+  const projectDir = claudeProjectsDir(projectRoot);
+  if (!fs.existsSync(projectDir)) {
+    return null;
+  }
+
+  const candidates = [];
+  for (const entry of fs.readdirSync(projectDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) {
+      continue;
+    }
+
+    const filePath = path.join(projectDir, entry.name);
+    candidates.push({
+      captured_at: null,
+      hook_event_name: null,
+      prompt: null,
+      session_id: entry.name.slice(0, -".jsonl".length),
+      source: "claude-transcript",
+      transcript_path: filePath,
+      turn_id: null,
+      updated_at_ms: getMtimeMs(filePath) ?? 0,
+    });
+  }
+
+  candidates.sort((a, b) => b.updated_at_ms - a.updated_at_ms);
+  return candidates[0] ?? null;
+}
+
+export function readCurrentSession(platform, projectRoot) {
+  return platform === "claude" ? readCurrentClaudeSession(projectRoot) : readCurrentCodexSession(projectRoot);
+}
+
+function extractAssistantText(content) {
+  if (typeof content === "string") {
+    return content.trim();
+  }
+  if (!Array.isArray(content)) {
+    return "";
+  }
+  return content
+    .filter((part) => part && part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("\n")
+    .trim();
+}
+
+export function readClaudeTranscriptLastAssistantMessage(transcriptPath) {
+  if (!transcriptPath || !fs.existsSync(transcriptPath)) {
+    return "";
+  }
+
+  const lines = fs.readFileSync(transcriptPath, "utf8").split(/\r?\n/u);
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      continue;
+    }
+
+    const item = readJsonLine(line);
+    if (!item || item.type !== "assistant" || !item.message) {
+      continue;
+    }
+
+    const text = extractAssistantText(item.message.content);
+    if (text) {
+      return text;
+    }
+  }
+
+  return "";
+}
+
+export function readLastAssistantMessage(platform, payload) {
+  if (platform === "claude") {
+    return readClaudeTranscriptLastAssistantMessage(payload?.transcript_path);
+  }
+  return typeof payload?.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+}
+
+export function detectPlatformFromPayload(payload) {
+  if (payload && typeof payload.last_assistant_message === "string") {
+    return "codex";
+  }
+  const transcript = payload?.transcript_path;
+  if (typeof transcript === "string" && transcript.includes(`${path.sep}.claude${path.sep}`)) {
+    return "claude";
+  }
+  return "codex";
 }
 
 export function formatList(values) {

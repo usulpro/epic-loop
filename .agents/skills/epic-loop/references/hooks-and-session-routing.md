@@ -52,6 +52,34 @@ User-facing setup messages should be tiny. Normal flow is:
 
 Do not show full `doctor` output by default. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics unless the user asks. If install was attempted and failed, say that explicitly in one sentence.
 
+## Platform Targets (Codex and Claude Code)
+
+epic-loop drives the same loop on Codex and Claude Code because both expose the
+same `Stop`-hook continuation contract. `doctor`, `install-hooks`, `bind-session`,
+and `debug` auto-detect the platform (Claude Code sets `CLAUDECODE=1`; otherwise
+Codex is assumed) and accept an explicit `--platform codex|claude` override.
+
+What differs by platform:
+
+| Concern | Codex | Claude Code |
+| --- | --- | --- |
+| Hook config file | `.codex/hooks.json` | `.claude/settings.json` (shared file; installer deep-merges the `hooks` block and preserves other keys) |
+| Feature flag | `hooks = true` under `[features]` | none required |
+| Hook command | `node …/hook.mjs --platform codex` | `node …/hook.mjs --platform claude` |
+| `--current` session source | `.codex/tmp/last-hook-capture.json`, then `~/.codex/sessions/**/*.jsonl` | newest `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl` (filename is the session id) |
+| Engineer report source on `Stop` | `payload.last_assistant_message` | last `assistant` entry read from `transcript_path` |
+
+What is identical: the hook config entry shape, the stdin payload fields the
+handler routes on (`session_id`, `cwd`, `hook_event_name`, `transcript_path`,
+`stop_hook_active`), the three events, the silent-no-op-when-unbound rule, the
+binding store, and the continuation contract `{ "decision": "block", "reason":
+"<next prompt>" }`. Only the platform-specific install/detection code branches;
+`hook.mjs` and the loop engine are shared unchanged.
+
+For Claude Code discoverability the skill is exposed at `.claude/skills/epic-loop`
+as a symlink to the single source of truth in `.agents/skills/epic-loop`, so there
+is no duplicated copy to drift.
+
 ## Installer Behavior
 
 The installer must be conservative:
@@ -67,15 +95,18 @@ The installer does not fix every Codex feature/profile configuration. Its job is
 
 ## Hook Payload
 
-Codex hook payloads are JSON on stdin. Observed useful fields:
+Codex and Claude Code hook payloads are JSON on stdin. Shared useful fields:
 
 - `session_id`
-- `turn_id`
 - `transcript_path`
 - `cwd`
 - `hook_event_name`
+- `stop_hook_active`
 - `prompt` for `UserPromptSubmit`
-- `last_assistant_message` for `Stop`
+
+Codex-only fields the handler tolerates but does not require: `turn_id`, and
+`last_assistant_message` for `Stop`. On Claude Code there is no
+`last_assistant_message`; the engineer report is read from `transcript_path`.
 
 Route by `session_id` first. Use `cwd` as the project root boundary. Use `turn_id` only as event identity inside a registered session.
 

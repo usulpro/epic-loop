@@ -1,16 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { readCurrentCodexSession, readJson, resolveRoot, sessionRoot } from "./common.mjs";
+import { detectPlatform, readCurrentSession, readJson, resolveRoot, sessionRoot } from "./common.mjs";
 import { readImplementationLoops } from "./loop.mjs";
 
 export function debugState(flags = {}) {
   const root = resolveRoot(flags.root);
+  const platform = detectPlatform(flags, root);
   const limit = Number.parseInt(flags.limit ?? "10", 10);
   const stateRoot = sessionRoot(root);
   const bindingsPath = path.join(stateRoot, "session-bindings.json");
   const bindings = readJson(bindingsPath, { active_sessions: {}, sessions: {} });
-  const currentSession = readCurrentCodexSession(root);
+  const currentSession = readCurrentSession(platform, root);
   const sessionStates = readSessionStates(path.join(stateRoot, "sessions"));
   const recentHookEvents = listRecentFiles(path.join(stateRoot, "hook-events"), Number.isFinite(limit) ? limit : 10);
 
@@ -18,6 +19,7 @@ export function debugState(flags = {}) {
     active_sessions: bindings.active_sessions ?? {},
     bindings_path: bindingsPath,
     current_session_candidate: currentSession,
+    platform,
     implementation_loops: readImplementationLoops(root),
     recent_hook_events: recentHookEvents,
     root,
@@ -31,6 +33,7 @@ export function debugState(flags = {}) {
   }
 
   console.log(`Project: ${root}`);
+  console.log(`Platform: ${platform}`);
   console.log(`Bindings: ${fs.existsSync(bindingsPath) ? bindingsPath : "none"}`);
   console.log(`Current session candidate: ${currentSession?.session_id ?? "none"}`);
   console.log(`Active sessions: ${Object.keys(payload.active_sessions).length > 0 ? JSON.stringify(payload.active_sessions) : "none"}`);

@@ -4,12 +4,13 @@ import path from "node:path";
 import {
   MODES,
   appendGitignore,
+  detectPlatform,
   epicRuntimeRoot,
   epicSlugify,
   epicsRoot,
   ensureDir,
   nowIso,
-  readCurrentCodexSession,
+  readCurrentSession,
   readJson,
   requireFlag,
   resolveRoot,
@@ -193,10 +194,13 @@ export function status(flags = {}, positionals = []) {
 
 export function bindSession(flags = {}) {
   const root = resolveRoot(flags.root);
-  const currentSession = flags.current ? readCurrentCodexSession(root) : null;
+  const platform = detectPlatform(flags, root);
+  const currentSession = flags.current ? readCurrentSession(platform, root) : null;
 
   if (flags.current && !currentSession) {
-    throw new Error("Cannot detect current Codex session from .codex/tmp/last-hook-capture.json. Pass --session-id explicitly.");
+    const detectionSource =
+      platform === "claude" ? `~/.claude/projects/<encoded-cwd>/*.jsonl for ${root}` : ".codex/tmp/last-hook-capture.json";
+    throw new Error(`Cannot detect current ${platform} session from ${detectionSource}. Pass --session-id explicitly.`);
   }
 
   const sessionId = currentSession?.session_id ?? requireFlag(flags, "session-id");
@@ -244,7 +248,7 @@ export function bindSession(flags = {}) {
     bound_at: boundAt,
     epic_slug: slug,
     mode,
-    source: currentSession ? "current-codex-session" : "explicit-session-id",
+    source: currentSession ? `current-${platform}-session` : "explicit-session-id",
     turn_id: currentSession?.turn_id ?? null,
   };
   activeSessions[activeKey] = sessionId;

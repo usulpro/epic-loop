@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, readJson, readLastAssistantMessage, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 const LOOP_ROLES = ["techlead", "engineer", "idle"];
@@ -139,7 +139,7 @@ export function setNextRole(flags = {}) {
   }
 }
 
-export function maybeBuildImplementationContinuation(projectRoot, payload, binding) {
+export function maybeBuildImplementationContinuation(projectRoot, payload, binding, platform = "codex") {
   if (payload.hook_event_name !== "Stop" || binding.mode !== "implementation") {
     return null;
   }
@@ -151,7 +151,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   let runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   let loop = normalizeObject(runtime.implementation_loop);
 
-  ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
+  ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp, platform));
 
   if (loop.status !== "running") {
     appendLoopLog(projectRoot, {
@@ -477,13 +477,13 @@ function renderTemplate(template, values) {
   return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template).trim();
 }
 
-function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp) {
+function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp, platform = "codex") {
   if (!loop.current_role || !loop.active_turn_started_at || loop.active_turn_stopped_at) {
     return { loop, runtime };
   }
 
   const durationMs = durationMsBetween(loop.active_turn_started_at, timestamp);
-  const engineerReport = loop.current_role === "engineer" ? appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp) : null;
+  const engineerReport = loop.current_role === "engineer" ? appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp, platform) : null;
   const stoppedLoop = {
     ...loop,
     active_turn_stopped_at: timestamp,
@@ -601,8 +601,8 @@ function appendPromptMarkdown(filePath, entry) {
   );
 }
 
-function appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp) {
-  const message = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+function appendEngineerReportIfPresent(projectRoot, slug, loop, payload, timestamp, platform = "codex") {
+  const message = readLastAssistantMessage(platform, payload);
   if (!message) {
     return null;
   }

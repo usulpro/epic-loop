@@ -4,13 +4,15 @@ import { fileURLToPath } from "node:url";
 
 import {
   CODEX_CONFIG_RELATIVE_PATH,
-  CODEX_HOOKS_RELATIVE_PATH,
   HOOK_EVENTS,
   canReadPath,
   canWritePath,
+  detectPlatform,
+  detectPlatformFromPayload,
   epicRuntimeRoot,
   eventTimestamp,
   formatList,
+  hookConfigRelativePath,
   nowIso,
   readJson,
   readJsonStrict,
@@ -26,8 +28,8 @@ const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.dirname(LIB_DIR);
 const HOOK_SCRIPT_PATH = path.join(SCRIPTS_DIR, "hook.mjs");
 
-export function buildHookCommand() {
-  return `node ${shellQuote(HOOK_SCRIPT_PATH)}`;
+export function buildHookCommand(platform = "codex") {
+  return `node ${shellQuote(HOOK_SCRIPT_PATH)} --platform ${platform}`;
 }
 
 function isEpicLoopHookCommand(command) {
@@ -115,10 +117,10 @@ function normalizeHookDocument(document) {
   return document && typeof document === "object" && !Array.isArray(document) ? document : {};
 }
 
-function buildHooksDocument(existingDocument) {
+function buildHooksDocument(existingDocument, platform = "codex") {
   const normalizedDocument = normalizeHookDocument(existingDocument);
   const hooks = normalizedDocument.hooks && typeof normalizedDocument.hooks === "object" && !Array.isArray(normalizedDocument.hooks) ? normalizedDocument.hooks : {};
-  const command = buildHookCommand();
+  const command = buildHookCommand(platform);
   const changes = [];
 
   for (const eventName of HOOK_EVENTS) {
@@ -201,11 +203,22 @@ function buildHooksDocument(existingDocument) {
   };
 }
 
-function inspectHookConfig(root) {
-  const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
+function featureCheck(platform, root) {
+  if (platform === "claude") {
+    return {
+      enabled: true,
+      scope: "n/a",
+      source: null,
+    };
+  }
+  return inspectCodexHooksFeature(root);
+}
+
+function inspectHookConfig(root, platform = "codex") {
+  const hooksPath = path.join(root, hookConfigRelativePath(platform));
   const strict = readJsonStrict(hooksPath);
   const writable = canWritePath(hooksPath);
-  const command = buildHookCommand();
+  const command = buildHookCommand(platform);
 
   if (strict.error) {
     return {
@@ -257,13 +270,15 @@ function inspectHookConfig(root) {
 
 export function doctor(flags = {}) {
   const root = resolveRoot(flags.root);
-  const hookConfig = inspectHookConfig(root);
-  const feature = inspectCodexHooksFeature(root);
+  const platform = detectPlatform(flags, root);
+  const hookConfig = inspectHookConfig(root, platform);
+  const feature = featureCheck(platform, root);
   const runtimeWritable = canWritePath(sessionRoot(root));
   const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
   const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
   const status = {
+    platform,
     hooksFeature: feature,
     command: hookConfig.command,
     hookConfig: {
@@ -295,6 +310,7 @@ export function doctor(flags = {}) {
   }
 
   console.log(`Epic-loop hook readiness: ${ready ? "ready" : "setup-required"}`);
+  console.log(`Platform: ${platform}`);
   console.log(`Project root: ${root}`);
   console.log(`Hook config: ${hookConfig.exists ? hookConfig.hooksPath : `${hookConfig.hooksPath} (missing)`}`);
   console.log(`Hook command: ${hookConfig.command}`);
@@ -303,7 +319,9 @@ export function doctor(flags = {}) {
   console.log(`Hook config writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
 
-  if (feature.enabled === true) {
+  if (platform === "claude") {
+    console.log("hooks feature: enabled (Claude Code needs no feature flag)");
+  } else if (feature.enabled === true) {
     console.log(`hooks feature: enabled via ${feature.scope} config ${feature.source}`);
   } else if (feature.enabled === false) {
     console.log(`hooks feature: disabled via ${feature.scope} config ${feature.source}`);
@@ -333,17 +351,19 @@ export function doctor(flags = {}) {
 
 export function installHooks(flags = {}) {
   const root = resolveRoot(flags.root);
-  const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
+  const platform = detectPlatform(flags, root);
+  const hooksPath = path.join(root, hookConfigRelativePath(platform));
   const strict = readJsonStrict(hooksPath);
 
   if (strict.error) {
     throw new Error(`Cannot update invalid JSON in ${hooksPath}: ${strict.error}`);
   }
 
-  const next = buildHooksDocument(strict.value ?? {});
+  const next = buildHooksDocument(strict.value ?? {}, platform);
+  const featureNote = platform === "codex" ? "Requires hooks = true in the active Codex config/profile." : null;
 
   if (flags["dry-run"]) {
-    console.log(`Dry run: ${hooksPath}`);
+    console.log(`Dry run (${platform}): ${hooksPath}`);
     console.log(`Hook command: ${next.command}`);
     console.log(`Events that would change: ${formatList(next.changes)}`);
     console.log(JSON.stringify(next.document, null, 2));
@@ -351,8 +371,10 @@ export function installHooks(flags = {}) {
   }
 
   if (next.changes.length === 0) {
-    console.log(`Epic-loop hooks already installed: ${hooksPath}`);
-    console.log("Requires hooks = true in the active Codex config/profile.");
+    console.log(`Epic-loop hooks already installed (${platform}): ${hooksPath}`);
+    if (featureNote) {
+      console.log(featureNote);
+    }
     return;
   }
 
@@ -363,8 +385,10 @@ export function installHooks(flags = {}) {
 
   writeJson(hooksPath, next.document);
 
-  console.log(`Installed project-local epic-loop hooks: ${hooksPath}`);
-  console.log("Requires hooks = true in the active Codex config/profile.");
+  console.log(`Installed project-local epic-loop hooks (${platform}): ${hooksPath}`);
+  if (featureNote) {
+    console.log(featureNote);
+  }
 }
 
 export function handleHook(rawInput, flags = {}) {
@@ -380,6 +404,7 @@ export function handleHook(rawInput, flags = {}) {
   }
 
   const projectRoot = resolveRoot(payload.cwd ?? flags.root);
+  const platform = typeof flags.platform === "string" && flags.platform.trim() ? flags.platform.trim().toLowerCase() : detectPlatformFromPayload(payload);
   const sessionId = String(payload.session_id ?? "no-session");
   const binding = getSessionBinding(projectRoot, sessionId);
 
@@ -399,7 +424,7 @@ export function handleHook(rawInput, flags = {}) {
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
   markInterruptedTurnIfNeeded(projectRoot, payload, binding);
 
-  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding);
+  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding, platform);
   if (continuation) {
     console.log(JSON.stringify(continuation));
   }
