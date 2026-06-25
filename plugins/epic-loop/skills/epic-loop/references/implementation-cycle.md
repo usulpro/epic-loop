@@ -88,7 +88,8 @@ The techlead must:
    - update `state-of-epic.md`
    - update `decision-log.md` and `risk-register.md` when needed
    - commit every honestly closed task
-   - create intermediate checkpoint commits inside large, risky, or multi-step tasks when that preserves a clearer recovery and audit trail
+   - include task-related epic artifact updates in the task commit instead of creating standalone housekeeping commits
+   - create intermediate checkpoint commits inside large, risky, or multi-step tasks when that is an intentional technical decision
 8. Apply stricter standards to phase closure than task closure.
 9. Choose the next move:
    - housekeeping pass
@@ -223,14 +224,19 @@ The engineer brief should be created from scratch each turn through `write-engin
 
 If a commit skill is available in the session, techlead should prefer using it. Otherwise techlead should follow the repository's normal git workflow with standard git commands.
 
+The default target is one meaningful commit per completed task. A task commit should describe the actual product, code, docs, or verification change. Do not name the commit only after the epic, task number, task title, or tracker bookkeeping.
+
 Apply commit discipline:
 
 - review `git status` and relevant diffs first
 - commit only task-owned changes
+- treat epic artifact updates caused by closing or documenting the task as task-owned changes
+- include task-related tracker, state, implementation-log, decision-log, risk-register, or task-doc cleanup in the task commit
+- do not create separate commits only to capture epic housekeeping, tracker cleanup, log updates, compaction stubs, or other epic tracking files
 - never sweep unrelated dirty files into the task commit
 - if unrelated changes from parallel work are present, prefer excluding them and still producing a clean task-owned commit
 - if it is unclear whether surrounding dirty files are safe to leave out or include, stop and ask the user rather than guessing
 - do not treat a task as honestly closed until the task-owned commit exists
-- create intermediate checkpoint commits during a still-open task when the work is large, risky, multi-step, or about to branch into fixes or rollbacks
+- create intermediate checkpoint commits during a still-open task only when the work is large, risky, multi-step, or about to branch into fixes or rollbacks, and the extra commit is a conscious technical decision
 - if a commit is made, record the commit hash in `implementation-log.md`
 - if an intermediate commit is made while the task remains open, record the checkpoint hash and the remaining scope

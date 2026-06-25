@@ -77,10 +77,10 @@ For `implementation-start-housekeeping`, the manager must:
 - inspect `git status` and relevant diffs
 - confirm the working tree state is explicit
 - run the applicable baseline checks named by local project instructions
-- determine whether obvious supporting artifacts should be committed before implementation proceeds
+- classify obvious supporting artifacts so techlead can fold task-related cleanup into the appropriate task commit
 - surface ambiguities to techlead when pending files cannot be safely classified
 
-The manager may commit obvious housekeeping-support artifacts, such as epic tracker/docs updates, only when that classification is genuinely clear from repository context and epic state. If there is ambiguity, report it to techlead instead of guessing.
+The manager must not create standalone commits only for epic tracker/docs updates, logs, compaction stubs, or other housekeeping-support artifacts. If artifact changes are clearly tied to a task, report that classification to techlead so they can be included in the task commit. If there is ambiguity, report it to techlead instead of guessing.
 
 ## Compaction Rules
 

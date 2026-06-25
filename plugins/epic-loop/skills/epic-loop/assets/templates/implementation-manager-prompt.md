@@ -37,8 +37,9 @@ Your job in this turn:
 2. If this is implementation-start housekeeping, verify branch state, baseline checks, and pending-file disposition.
 3. If this is phase-closure or implementation-end housekeeping, compact inactive non-doc artifact layers when justified by the compaction rules.
 4. Do not compact active layers or any `docs/**` files.
-5. Preserve a clear audit trail for any archive files or housekeeping commits you create.
-6. Stop after the report. Routing returns automatically to techlead.
+5. Preserve a clear audit trail for any archive files you create.
+6. Do not create standalone housekeeping commits only for epic artifacts; classify task-related cleanup for techlead instead.
+7. Stop after the report. Routing returns automatically to techlead.
 
 Report briefly and stop:
 

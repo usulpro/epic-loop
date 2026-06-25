@@ -251,6 +251,7 @@ If a bound implementation session receives a new `UserPromptSubmit` while a turn
 - produce a short execution brief
 - escalate blockers, architecture drift, or unclear tasks
 - create or require a concrete phase-level `verification` task before closing a phase if one is missing
+- enforce task commit discipline: every honestly closed task must have a meaningful task commit, while epic artifact cleanup belongs in that task commit rather than a separate housekeeping commit
 - explicitly trigger manager housekeeping before implementation start, after honest phase completion, and before final implementation exit
 
 Use `node <skill-dir>/scripts/role-summary.mjs --slug "<epic-slug>"` for compact loop state plus latest manager and engineer reports. Do not read prompt/progress runtime logs during normal implementation flow.

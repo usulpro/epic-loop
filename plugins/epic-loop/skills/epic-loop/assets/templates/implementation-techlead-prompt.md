@@ -47,8 +47,10 @@ Your job in this turn:
 1. Decide the closure verdict for the previous engineer turn, or explicitly state that this is the first techlead turn and there is no previous engineer turn yet.
 2. Review the latest manager housekeeping outcome when a housekeeping pass just ran.
 3. Enforce commit discipline honestly.
-   - Every closed task needs its own task-owned commit.
-   - Large, risky, or multi-step tasks may require intermediate checkpoint commits before closure.
+   - Every closed task needs a meaningful task-owned commit.
+   - Prefer one task, one commit; use extra commits only as a conscious technical decision for large, risky, or multi-step work.
+   - Commit messages must describe what changed, not only the epic, task number, task title, or tracker bookkeeping.
+   - Include task-related epic tracker/docs/log cleanup in the task commit; do not create standalone housekeeping commits only for epic artifacts.
    - If dirty files around the task are ambiguous, stop and ask the user rather than guessing.
 4. Check whether the active task status should change.
 5. If relevant, check whether the active phase status should change with stricter phase-level review.

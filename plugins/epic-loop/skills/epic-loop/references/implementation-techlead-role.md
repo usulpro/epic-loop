@@ -38,6 +38,7 @@ The techlead also performs the technical loop duties:
 - append closure notes with `append-implementation-log.mjs`
 - update `state-of-epic.md`, `decision-log.md`, and `risk-register.md` when needed
 - make the required commits for task closure and intermediate checkpoints
+- fold task-related epic artifact cleanup into the task commit instead of creating standalone housekeeping commits
 - write the next engineer brief
 - hand the loop to `engineer`, trigger `manager` housekeeping, or set it `idle`
 
@@ -210,11 +211,17 @@ Do not use manager housekeeping as a substitute for reset, review, or real produ
 
 ## Commit Discipline
 
-Every honestly closed task must end with a commit of the task-owned changes.
+Every honestly closed task must end with a meaningful commit of the task-owned changes.
 
 This rule still applies when the branch also contains other uncommitted artifacts. The techlead must isolate and commit the task-owned changes rather than waiting for the branch to become globally clean.
 
-Intermediate commits are also required inside a still-open task when:
+The ideal shape is one task, one commit. The commit message must describe what was actually done, such as the behavior, code path, docs contract, or verification surface changed. Do not use a message that is only about the epic, task number, task title, or tracker bookkeeping.
+
+Epic artifact changes created while closing or documenting the task are part of that task's commit. Include relevant updates to `tracker.md`, `state-of-epic.md`, `implementation-log.md`, `decision-log.md`, `risk-register.md`, or task docs in the task commit when they belong to the same completed task.
+
+Do not create standalone commits only to preserve epic housekeeping, tracker cleanup, log updates, compaction stubs, or other epic tracking files. Housekeeping-only changes should either be folded into the relevant task commit or left for the next task commit if they are not needed to close the current task.
+
+Additional commits inside a still-open task are allowed only when they are a conscious technical decision, for example when:
 
 - the task is large, long-running, or clearly split into multiple meaningful steps
 - the current state is a useful checkpoint before a risky next step
