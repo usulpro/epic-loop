@@ -16,30 +16,21 @@ Long autonomous coding sessions often need repeated human coordination:
 
 `epic-loop` makes that orchestration explicit and durable.
 
-## How It Works
+## How Implementation Works
 
-A single Codex session moves through three roles, driven by the Stop hook:
+Implementation mode runs as a single Codex session with two visible roles. The Stop hook keeps the loop moving: each techlead turn uses a fixed governance prompt, and each engineer turn receives the task-specific brief the techlead wrote for that exact slice.
 
-```text
-single Codex session:
 
-  techlead --writes brief for--> engineer --Stop hook--> manager
-      ^                         |                         |
-      +------- Stop hook -------+------- Stop hook --------+
-```
+**Techlead role.** Owns the implementation loop. It reads compact epic state and live repository evidence, reviews the latest engineer report, decides whether work is honestly closed, chooses the next step, updates human-facing epic artifacts, makes commit decisions, and writes exactly one focused engineer brief when implementation should continue.
 
-**Manager role.** Handles implementation housekeeping: branch-state baseline, pending-file disposition, artifact hygiene, and compaction of inactive non-doc history. It does not implement product code or choose product direction.
-
-**Techlead role.** Governs the loop: reads compact epic state, checks live repository evidence, reviews the previous turn, decides whether work is honestly closed, maintains human-facing artifacts, enforces commit discipline, and writes one precise engineer brief when work should continue.
-
-**Engineer role.** Gets a focused, skill-agnostic prompt for one task. It executes, verifies, reports changed files and evidence, then stops.
+**Engineer role.** Owns execution of one concrete brief. It follows project patterns, keeps scope narrow, makes local implementation decisions inside the brief, verifies the result with real evidence, reports changed files, blockers, and gaps, then stops. Routing returns to techlead automatically.
 
 Each epic lives in the target project at `.epic-loop/epics/<slug>/`. Human-facing files preserve state, tracker, implementation notes, decisions, risks, and docs. Hidden `.runtime/` files support hook routing and debugging without becoming default role context.
 
 ## Modes
 
 - **Shaping**: clarify the epic, capture intent, create docs, decompose phases and tasks.
-- **Implementation**: run the manager/techlead/engineer loop.
+- **Implementation**: run the hook-driven techlead/engineer loop.
 - **Review**: check completed work against original intent, not only the latest docs.
 - **Reset**: replace stale architecture, roadmap, or assumptions with a controlled new baseline.
 - **Resume**: re-enter an existing epic from disk-backed artifacts.
@@ -142,7 +133,7 @@ node <skill-dir>/scripts/write-engineer-brief.mjs \
 
 # Route the next implementation turn.
 node <skill-dir>/scripts/set-next-role.mjs \
-  --slug "<epic-slug>" --role "<manager|engineer|idle>" \
+  --slug "<epic-slug>" --role "<engineer|idle>" \
   --reason "<short reason>"
 ```
 
