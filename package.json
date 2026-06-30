@@ -3,7 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "description": "Codex plugin for orchestrating long-lived epic-level software work across sessions.",
+  "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
   "license": "MIT",
+  "homepage": "https://github.com/usulpro/epic-loop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usulpro/epic-loop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usulpro/epic-loop/issues"
+  },
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate-epic-loop-package.mjs && for f in plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done",

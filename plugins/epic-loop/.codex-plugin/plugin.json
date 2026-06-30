@@ -1,18 +1,22 @@
 {
   "name": "epic-loop",
   "version": "0.1.0",
-  "description": "Orchestrate long-lived epic-level software work across sessions.",
+  "description": "Run large, multi-phase epics as long-running autonomous jobs, driven by Codex hooks and durable on-disk state.",
   "author": {
-    "name": "PrimeUI"
+    "name": "Oleg Proskurin",
+    "email": "usulpro@gmail.com",
+    "url": "https://github.com/usulpro"
   },
   "license": "MIT",
+  "homepage": "https://github.com/usulpro/epic-loop",
+  "repository": "https://github.com/usulpro/epic-loop",
   "keywords": ["codex", "skills", "epic", "automation", "hooks"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Epic Loop",
-    "shortDescription": "Orchestrate long-lived epic work",
-    "longDescription": "Run durable epic-level software work across Codex sessions with lifecycle modes, disk-backed artifacts, and a hook-driven manager, techlead, and engineer implementation loop.",
-    "developerName": "PrimeUI",
+    "shortDescription": "Run long-running, multi-phase epics autonomously",
+    "longDescription": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by Codex hooks and durable on-disk state.",
+    "developerName": "Oleg Proskurin",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "defaultPrompt": [
