@@ -21,10 +21,6 @@ pnpm-debug.log*
 
 # Codex local project state
 .codex/hooks.json
-.codex/tmp/
-
-# epic-loop runtime and local test workspaces
-.epic-loop/
 
 # Build/cache output
 coverage/
