@@ -47,9 +47,9 @@ If Codex hooks are not enabled, tell the user where the feature appears to be mi
 User-facing setup messages should be tiny. Normal flow is:
 
 ```text
-проверяю setup
-проверила: нужно добавить hooks. Install now?
-готово, hooks настроены. можем начинать epic.
+Checking setup.
+Hooks need to be added. Install now?
+Hooks are configured. We can start the epic.
 ```
 
 Do not show full `doctor` output by default. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics unless the user asks. If install was attempted and failed, say that explicitly in one sentence.

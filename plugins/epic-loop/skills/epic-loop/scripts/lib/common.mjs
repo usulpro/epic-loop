@@ -19,7 +19,7 @@ export function eventTimestamp(date = new Date()) {
 }
 
 export function slugify(value) {
-  const slug = transliterate(String(value ?? ""))
+  const slug = String(value ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "")
@@ -41,49 +41,6 @@ export function epicSlugify(value) {
     .join("-")
     .slice(0, 30)
     .replace(/-+$/u, "");
-}
-
-function transliterate(value) {
-  const map = {
-    а: "a",
-    б: "b",
-    в: "v",
-    г: "g",
-    д: "d",
-    е: "e",
-    ё: "e",
-    ж: "zh",
-    з: "z",
-    и: "i",
-    й: "i",
-    к: "k",
-    л: "l",
-    м: "m",
-    н: "n",
-    о: "o",
-    п: "p",
-    р: "r",
-    с: "s",
-    т: "t",
-    у: "u",
-    ф: "f",
-    х: "h",
-    ц: "ts",
-    ч: "ch",
-    ш: "sh",
-    щ: "sch",
-    ъ: "",
-    ы: "y",
-    ь: "",
-    э: "e",
-    ю: "yu",
-    я: "ya",
-  };
-
-  return value
-    .split("")
-    .map((char) => map[char.toLowerCase()] ?? char)
-    .join("");
 }
 
 export function titleFromDescription(description) {

@@ -33,13 +33,13 @@ Keep the user-facing setup message ultra-short. Do not paste the full doctor out
 Use this shape when setup is possible but not yet approved:
 
 ```text
-проверила: epic-loop needs to add project-local Codex hooks. Install them now?
+epic-loop needs to add project-local Codex hooks. Install them now?
 ```
 
 Use this shape when the current session cannot write `.codex/hooks.json`:
 
 ```text
-проверила: hooks need setup, but this session cannot write `.codex/hooks.json`.
+Hooks need setup, but this session cannot write `.codex/hooks.json`.
 
 cd <project-root>
 node <skill-dir>/scripts/install-hooks.mjs
@@ -48,7 +48,7 @@ node <skill-dir>/scripts/install-hooks.mjs
 Use this shape when the user asked to install and the automatic install failed:
 
 ```text
-попробовала установить hooks, но `.codex/hooks.json` is not writable here.
+I tried to install hooks, but `.codex/hooks.json` is not writable here.
 
 cd <project-root>
 node <skill-dir>/scripts/install-hooks.mjs
@@ -57,7 +57,7 @@ node <skill-dir>/scripts/install-hooks.mjs
 Use this shape after successful automatic setup:
 
 ```text
-готово, hooks настроены. можем начинать epic.
+Hooks are configured. We can start the epic.
 ```
 
 Use dry-run when the user wants to inspect the planned hook changes first:
@@ -75,7 +75,7 @@ node <skill-dir>/scripts/list-epics.mjs --json
 If local epics exist, show a compact list with each epic's title, slug, and how long ago it was updated. Then ask only:
 
 ```text
-какой epic продолжаем?
+Which epic should we continue?
 ```
 
 Do not show the lifecycle mode menu in this first response. If the user wants a new epic instead of an existing one, they will describe it.
@@ -83,7 +83,7 @@ Do not show the lifecycle mode menu in this first response. If the user wants a 
 If no local epics exist and the user has not described the desired epic yet, say:
 
 ```text
-локальных epic пока нет. давай обсудим, какой epic создаём.
+There are no local epics yet. Let's discuss which epic to create.
 ```
 
 Do not ask the user for a title or slug for a new epic. When the user describes the desired epic, generate the title and slug from that description and initialize the workspace:
@@ -92,17 +92,17 @@ Do not ask the user for a title or slug for a new epic. When the user describes 
 node <skill-dir>/scripts/init-epic.mjs --description "<user epic description>"
 ```
 
-Epic slugs must be compact: at most two slug words joined with `-`, and at most 30 characters total.
+Epic slugs must be compact: at most two slug words joined with `-`, and at most 30 characters total. Always derive the slug from an English basis: if the user's description is not in English, first choose a short English phrase that captures the epic intent, then slugify that English phrase.
 
 After creating an epic, report it plainly:
 
 ```text
-Эпик создан.
+Epic created.
 
-Папка: .epic-loop/epics/<slug>
+Folder: .epic-loop/epics/<slug>
 Slug: <slug>
 
-Используй этот slug, чтобы продолжить epic в новой сессии.
+Use this slug to continue the epic in a new session.
 ```
 
 Do not describe generated slugs as normal, normalized, fixed, renamed, corrected, or similar.
@@ -126,13 +126,13 @@ If the user provides a slug, resume from `.epic-loop/epics/{epic-slug}` in the c
 When the user invokes the skill with only an epic slug, treat it as resume/orientation, not permission to execute implementation. Read the re-entry artifacts, report the current state, and stop with a short readiness prompt. If the epic is ready for implementation, use this shape:
 
 ```text
-Эпик прочитан.
+Epic loaded.
 
-Папка: .epic-loop/epics/<slug>
+Folder: .epic-loop/epics/<slug>
 Slug: <slug>
-Состояние: готов к implementation.
+State: ready for implementation.
 
-Запускаю implementation в этой session?
+Start implementation in this session?
 ```
 
 Start implementation only after explicit confirmation from the user in the current session. When the user confirms, activate this session for hook routing:
