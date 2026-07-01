@@ -8,6 +8,7 @@ export const PLATFORMS = ["codex", "claude-code"];
 export const CODEX_HOOKS_RELATIVE_PATH = path.join(".codex", "hooks.json");
 export const CODEX_CONFIG_RELATIVE_PATH = path.join(".codex", "config.toml");
 export const CODEX_HOOK_CAPTURE_RELATIVE_PATH = path.join(".codex", "tmp", "last-hook-capture.json");
+export const CLAUDE_HOOK_CAPTURE_RELATIVE_PATH = path.join(".epic-loop", ".runtime", "claude-code-last-hook-capture.json");
 export const PLATFORM_CONFIG_RELATIVE_PATH = path.join(".epic-loop", ".runtime", "platform.json");
 // A hook capture written within this window is treated as the live session.
 const CURRENT_SESSION_CAPTURE_TTL_MS = 15 * 60 * 1000;
@@ -320,6 +321,27 @@ export function writeHookCapture(projectRoot, payload) {
   }
 }
 
+export function writeClaudeHookCapture(projectRoot, payload) {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    typeof payload.session_id !== "string" ||
+    typeof payload.cwd !== "string" ||
+    typeof payload.transcript_path !== "string"
+  ) {
+    return;
+  }
+
+  try {
+    writeJson(path.join(projectRoot, CLAUDE_HOOK_CAPTURE_RELATIVE_PATH), {
+      capturedAt: nowIso(),
+      payload,
+    });
+  } catch {
+    // Best effort: capturing the live session must never break the hook itself.
+  }
+}
+
 export function readCurrentCodexSession(projectRoot) {
   const candidates = [];
   const capturePath = path.join(projectRoot, CODEX_HOOK_CAPTURE_RELATIVE_PATH);
@@ -356,6 +378,32 @@ export function readCurrentCodexSession(projectRoot) {
 
   candidates.sort((a, b) => b.updated_at_ms - a.updated_at_ms);
   return candidates[0] ?? null;
+}
+
+export function readCurrentClaudeSession(projectRoot) {
+  const capturePath = path.join(projectRoot, CLAUDE_HOOK_CAPTURE_RELATIVE_PATH);
+  const capture = readJson(capturePath, null);
+  const payload = capture && typeof capture === "object" && capture.payload && typeof capture.payload === "object" ? capture.payload : null;
+
+  if (!payload || payload.cwd !== projectRoot || typeof payload.session_id !== "string" || typeof payload.transcript_path !== "string") {
+    return null;
+  }
+
+  const capturedMs = parseDateMs(capture.capturedAt);
+  if (capturedMs === null || Date.now() - capturedMs > CURRENT_SESSION_CAPTURE_TTL_MS) {
+    return null;
+  }
+
+  return {
+    captured_at: capture.capturedAt ?? null,
+    hook_event_name: payload.hook_event_name ?? null,
+    prompt: payload.prompt ?? null,
+    session_id: payload.session_id,
+    source: "claude-hook-capture",
+    transcript_path: payload.transcript_path,
+    turn_id: payload.turn_id ?? null,
+    updated_at_ms: getMtimeMs(payload.transcript_path) ?? capturedMs,
+  };
 }
 
 function findLatestCodexTranscriptSession(projectRoot) {

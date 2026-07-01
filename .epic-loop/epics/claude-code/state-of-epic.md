@@ -4,7 +4,7 @@ Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
-Active phase: TBD
+Active phase: Phase 3 - Claude Session Binding And Loop Runtime
 Active task: TBD
 
 ## Current State
@@ -28,6 +28,8 @@ Active task: TBD
 - Phase 2 Task 3 is closed with public CLI contract verification for Codex and
   Claude Code platform setup paths.
 - Phase 2 is closed.
+- Phase 3 Task 1 is closed with Claude-aware current-session detection for
+  implementation binding.
 
 ## Blockers
 
@@ -35,4 +37,5 @@ Active task: TBD
 
 ## Next Action
 
-- Run phase-closure housekeeping before starting Phase 3.
+- Start Phase 3 Task 2: exercise the manager -> techlead -> engineer loop on
+  Claude Code hook payloads.

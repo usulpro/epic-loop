@@ -70,9 +70,9 @@ Epic: Claude Code Harness
 
 ### Phase 3: Claude Session Binding And Loop Runtime
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Add Claude-aware current-session detection for implementation binding.
+- [x] Kind: implementation | Status: done | Add Claude-aware current-session detection for implementation binding.
   - Outcome: `bind-session --current` can safely bind a Claude Code session when fresh hook-capture data identifies the current session.
   - Surface: `scripts/lib/common.mjs`, `scripts/lib/epics.mjs`, hook capture state, bind-session CLI, tests.
   - Acceptance: A fresh Claude Code hook capture with `session_id` and `transcript_path` can bind implementation mode; stale or ambiguous captures require explicit `--session-id`; Codex current-session fallback remains unchanged.

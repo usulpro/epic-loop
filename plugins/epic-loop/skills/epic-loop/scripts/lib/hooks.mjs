@@ -22,6 +22,7 @@ import {
   shellQuote,
   slugify,
   writeHookCapture,
+  writeClaudeHookCapture,
   writeJson,
   writeRuntimePlatform,
 } from "./common.mjs";
@@ -754,6 +755,8 @@ export function handleHook(rawInput, flags = {}) {
   // binding falls back to an mtime guess that misfires across parallel sessions.
   if (platform === "codex") {
     writeHookCapture(projectRoot, payload);
+  } else if (platform === "claude-code") {
+    writeClaudeHookCapture(projectRoot, payload);
   }
 
   const binding = getSessionBinding(projectRoot, sessionId);

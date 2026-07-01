@@ -9,6 +9,7 @@ import {
   epicsRoot,
   ensureDir,
   nowIso,
+  readCurrentClaudeSession,
   readCurrentCodexSession,
   readJson,
   requireRuntimePlatform,
@@ -195,16 +196,17 @@ export function status(flags = {}, positionals = []) {
 export function bindSession(flags = {}) {
   const root = resolveRoot(flags.root);
   let currentSession = null;
+  let currentPlatform = null;
 
   if (flags.current) {
-    const platform = requireRuntimePlatform(root);
-    if (platform !== "codex") {
-      throw new Error("Cannot detect current Claude Code session yet. Pass --session-id explicitly.");
-    }
-    currentSession = readCurrentCodexSession(root);
+    currentPlatform = requireRuntimePlatform(root);
+    currentSession = currentPlatform === "claude-code" ? readCurrentClaudeSession(root) : readCurrentCodexSession(root);
   }
 
   if (flags.current && !currentSession) {
+    if (currentPlatform === "claude-code") {
+      throw new Error("Cannot detect current Claude Code session from a fresh hook capture. Pass --session-id explicitly.");
+    }
     throw new Error("Cannot detect current Codex session from .codex/tmp/last-hook-capture.json. Pass --session-id explicitly.");
   }
 
@@ -253,7 +255,7 @@ export function bindSession(flags = {}) {
     bound_at: boundAt,
     epic_slug: slug,
     mode,
-    source: currentSession ? "current-codex-session" : "explicit-session-id",
+    source: currentSession ? (currentSession.source === "claude-hook-capture" ? "current-claude-code-session" : "current-codex-session") : "explicit-session-id",
     turn_id: currentSession?.turn_id ?? null,
   };
   activeSessions[activeKey] = sessionId;

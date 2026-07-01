@@ -343,7 +343,145 @@ test("bind-session current lookup requires explicit platform selection", () => {
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
     const claudeCurrent = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", "bind-platform", "--mode", "implementation"]);
     assert.equal(claudeCurrent.status, 1);
-    assert.match(claudeCurrent.stderr, /Cannot detect current Claude Code session yet\. Pass --session-id explicitly\./u);
+    assert.match(claudeCurrent.stderr, /Pass --session-id explicitly\./u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bind-session current lookup preserves Codex hook capture behavior", () => {
+  const root = makeTempRoot("bind-codex-current-");
+  const slug = "bind-codex";
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Codex current project", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+
+    const capture = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: "codex-current-session",
+        turn_id: "turn-current",
+      }),
+    });
+    assertSuccess(capture);
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
+    assertSuccess(bind);
+    assert.match(bind.stdout, /Active implementation session for bind-codex: codex-current-session/u);
+
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions["codex-current-session"].source, "current-codex-session");
+    assert.equal(bindings.sessions["codex-current-session"].turn_id, "turn-current");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bind-session current lookup uses fresh Claude Code hook captures", () => {
+  const root = makeTempRoot("bind-claude-current-");
+  const slug = "bind-claude";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"ready\"}}\n", "utf8");
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Claude current project", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+
+    const capture = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: "claude-current-session",
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+    assertSuccess(capture);
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
+    assertSuccess(bind);
+    assert.match(bind.stdout, /Active implementation session for bind-claude: claude-current-session/u);
+
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions["claude-current-session"].source, "current-claude-code-session");
+    assert.equal(bindings.active_sessions[`${slug}:implementation`], "claude-current-session");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bind-session current lookup rejects unusable Claude Code captures", () => {
+  const cases = [
+    {
+      name: "stale",
+      capture: (root) => ({
+        capturedAt: "2000-01-01T00:00:00+00:00",
+        payload: {
+          cwd: root,
+          session_id: "stale-session",
+          transcript_path: path.join(root, "transcript.jsonl"),
+        },
+      }),
+    },
+    {
+      name: "malformed",
+      capture: (root) => ({
+        capturedAt: new Date().toISOString(),
+        payload: {
+          cwd: root,
+          session_id: "malformed-session",
+        },
+      }),
+    },
+    {
+      name: "wrong-root",
+      capture: (root) => ({
+        capturedAt: new Date().toISOString(),
+        payload: {
+          cwd: path.join(root, "other"),
+          session_id: "wrong-root-session",
+          transcript_path: path.join(root, "transcript.jsonl"),
+        },
+      }),
+    },
+  ];
+
+  for (const testCase of cases) {
+    const root = makeTempRoot(`bind-claude-${testCase.name}-`);
+    const slug = `bind-claude-${testCase.name}`;
+
+    try {
+      assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", `Bind Claude ${testCase.name} project`, "--slug", slug, "--no-gitignore"]));
+      assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+
+      const capturePath = path.join(root, ".epic-loop", ".runtime", "claude-code-last-hook-capture.json");
+      fs.mkdirSync(path.dirname(capturePath), { recursive: true });
+      fs.writeFileSync(capturePath, `${JSON.stringify(testCase.capture(root), null, 2)}\n`, "utf8");
+
+      const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
+      assert.equal(bind.status, 1);
+      assert.match(bind.stderr, /Pass --session-id explicitly\./u);
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
+  }
+});
+
+test("bind-session preserves explicit session-id binding on Claude Code", () => {
+  const root = makeTempRoot("bind-claude-explicit-");
+  const slug = "bind-claude";
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Claude explicit project", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--session-id", "explicit-claude-session", "--slug", slug, "--mode", "implementation"]);
+    assertSuccess(bind);
+
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions["explicit-claude-session"].source, "explicit-session-id");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
