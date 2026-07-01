@@ -46,7 +46,7 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
   - Acceptance: Tests run scripts in isolated temp projects and assert exit codes, stdout/stderr contracts, generated files, and no-op behavior for unbound sessions.
   - Docs: `docs/unit-test-plan.md`.
 
-- [ ] Kind: verification | Status: todo | Verify the deterministic unit suite and repo validation together.
+- [x] Kind: verification | Status: done | Verify the deterministic unit suite and repo validation together.
   - Outcome: Unit coverage is stable and integrated with existing validation.
   - Surface: Test command, `pnpm run validate`, coverage output if configured.
   - Acceptance: Run the unit test command and `pnpm run validate`; evidence includes passing command output, coverage summary or explicit tested-surface list, and no committed runtime/debug artifacts.

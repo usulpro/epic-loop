@@ -57,3 +57,18 @@
   - pnpm run validate passed
 - Residual risk: Phase-level combined verification still needs to record final evidence, tested surface list, and ignored runtime/debug artifact status.
 - Next move: Start Phase 1 Task 4: verify the deterministic unit suite and repo validation together.
+
+## 2026-07-01T10:03:18+00:00 - closed
+
+- Phase: Phase 1 - Deterministic Unit Test Foundation
+- Task: Phase 1 Task 4 - Verify the deterministic unit suite and repo validation together
+- Verdict: closed
+- Changed:
+  - Recorded Phase 1 verification evidence and tested-surface list in docs/unit-test-plan.md
+  - Confirmed runtime/debug artifact paths remain ignored and are not tracked or staged
+- Verification:
+  - pnpm run test:unit passed with 12 tests
+  - pnpm run validate passed
+  - git status --short --ignored showed .codex/, .epic-loop/.runtime/, and .epic-loop/epics/test-coverage/.runtime/ only as ignored paths
+- Residual risk: No formal coverage percentage is configured; Phase 1 uses explicit tested-surface evidence instead.
+- Next move: Start Phase 1 Task 5: review the stop boundary before Phase 2.

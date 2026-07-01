@@ -44,3 +44,17 @@ The phase-level verification should record:
 - `pnpm run validate` result;
 - coverage summary or explicit tested-surface list;
 - confirmation that runtime/debug artifacts were not committed.
+
+## Phase 1 Verification Evidence
+
+- Unit test command: `pnpm run test:unit` passed with 12 tests.
+- Repository validation command: `pnpm run validate` passed.
+- Coverage format: no formal coverage percentage is configured; this phase uses an explicit tested-surface list.
+- Tested surfaces:
+  - `common.mjs`: slug/path helpers, argument parsing, JSON fallback behavior, idempotent writes, gitignore updates, required flag errors.
+  - `init-epic.mjs`: CLI workspace creation in an isolated temporary project.
+  - `roadmap.mjs`: roadmap creation, task state transitions, runtime active state sync, tracker rendering fragments, invalid task/status/phase errors, follow-up task rendering.
+  - `doctor.mjs` and `install-hooks.mjs`: setup-required and ready JSON contracts, hook generation, hook event coverage, idempotent install behavior.
+  - `start-task.mjs`, `write-engineer-brief.mjs`, and `set-next-role.mjs`: public process contracts for task start, brief writing, and engineer role handoff.
+  - `hook.mjs`: unbound session no-op behavior and deterministic bound `Stop` continuation routing.
+- Runtime/debug artifact status: `git status --short --ignored` shows `.codex/`, `.epic-loop/.runtime/`, and `.epic-loop/epics/test-coverage/.runtime/` only as ignored paths, not as tracked or staged changes.
