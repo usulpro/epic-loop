@@ -353,6 +353,127 @@ function inspectHookConfig(root) {
   };
 }
 
+function inspectClaudeHookConfig(root) {
+  const settingsPath = path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH);
+  const strict = readJsonStrict(settingsPath);
+  const writable = canWritePath(settingsPath);
+  const command = buildHookCommand();
+
+  if (strict.error) {
+    return {
+      command,
+      error: strict.error,
+      exists: strict.exists,
+      invalid: true,
+      missingEvents: HOOK_EVENTS,
+      path: settingsPath,
+      ready: false,
+      staleEvents: [],
+      writable,
+    };
+  }
+
+  const document = normalizeHookDocument(strict.value);
+  const hooks = document.hooks && typeof document.hooks === "object" && !Array.isArray(document.hooks) ? document.hooks : {};
+  const missingEvents = [];
+  const staleEvents = [];
+
+  for (const eventName of HOOK_EVENTS) {
+    const entries = Array.isArray(hooks[eventName]) ? hooks[eventName] : [];
+    const commands = entries.flatMap((entry) => {
+      if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+        return [];
+      }
+      return entry.hooks.map((hook) => hook?.command).filter((value) => typeof value === "string");
+    });
+
+    if (!commands.includes(command)) {
+      missingEvents.push(eventName);
+    }
+
+    if (commands.some((value) => isEpicLoopHookCommand(value) && value !== command)) {
+      staleEvents.push(eventName);
+    }
+  }
+
+  return {
+    command,
+    error: null,
+    exists: strict.exists,
+    invalid: false,
+    missingEvents,
+    path: settingsPath,
+    ready: missingEvents.length === 0 && staleEvents.length === 0,
+    staleEvents,
+    writable,
+  };
+}
+
+function inspectClaudeStopHookBlockCap(env = process.env) {
+  const envVar = "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP";
+  const rawValue = env[envVar];
+
+  if (rawValue === undefined || rawValue === "") {
+    return {
+      envVar,
+      rawValue: rawValue ?? null,
+      ready: false,
+      reason: "missing",
+      recommended: false,
+      value: null,
+      warning: null,
+    };
+  }
+
+  if (!/^\d+$/u.test(String(rawValue))) {
+    return {
+      envVar,
+      rawValue,
+      ready: false,
+      reason: "invalid",
+      recommended: false,
+      value: null,
+      warning: null,
+    };
+  }
+
+  const value = Number(rawValue);
+
+  if (value !== 0 && value < 20) {
+    return {
+      envVar,
+      rawValue,
+      ready: false,
+      reason: "below-minimum",
+      recommended: false,
+      value,
+      warning: null,
+    };
+  }
+
+  if (value >= 20 && value <= 50) {
+    return {
+      envVar,
+      rawValue,
+      ready: true,
+      reason: null,
+      recommended: false,
+      value,
+      warning: "Loop mode may stop early and require manual continuation when CLAUDE_CODE_STOP_HOOK_BLOCK_CAP is between 20 and 50.",
+    };
+  }
+
+  return {
+    envVar,
+    rawValue,
+    ready: true,
+    reason: null,
+    recommended: true,
+    value,
+    warning: null,
+  };
+}
+
 export function doctor(flags = {}) {
   const root = resolveRoot(flags.root);
   const platformConfig =
@@ -454,17 +575,24 @@ function doctorCodex(root, platformConfig, flags = {}) {
 }
 
 function doctorClaudeCode(root, platformConfig, flags = {}) {
+  const hookConfig = inspectClaudeHookConfig(root);
+  const blockCap = inspectClaudeStopHookBlockCap();
   const runtimeWritable = canWritePath(sessionRoot(root));
   const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
-  const settingsPath = path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH);
-  const settingsWritable = canWritePath(settingsPath);
+  const ready = hookConfig.ready && !hookConfig.invalid && blockCap.ready && runtimeWritable.ok && scriptReadable.ok;
+  const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
   const status = {
     claudeCodeHookConfig: {
-      path: settingsPath,
-      ready: false,
-      writable: settingsWritable,
+      error: hookConfig.error,
+      exists: hookConfig.exists,
+      invalid: hookConfig.invalid,
+      missingEvents: hookConfig.missingEvents,
+      path: hookConfig.path,
+      ready: hookConfig.ready,
+      staleEvents: hookConfig.staleEvents,
+      writable: hookConfig.writable,
     },
-    command: buildHookCommand(),
+    command: hookConfig.command,
     hookTarget: {
       exists: fs.existsSync(HOOK_SCRIPT_PATH),
       path: HOOK_SCRIPT_PATH,
@@ -477,13 +605,15 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
       value: platformConfig.platform,
     },
     projectRoot: root,
-    ready: false,
+    ready,
     runtimeState: {
       path: sessionRoot(root),
       writable: runtimeWritable,
     },
-    setupPossible: settingsWritable.ok,
-    status: "setup-required",
+    setupPossible,
+    status: ready ? "ready" : "setup-required",
+    stopHookBlockCap: blockCap,
+    warnings: blockCap.warning ? [blockCap.warning] : [],
   };
 
   if (flags.json) {
@@ -491,12 +621,40 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
     return;
   }
 
-  console.log("Epic-loop hook readiness: setup-required");
+  console.log(`Epic-loop hook readiness: ${ready ? "ready" : "setup-required"}`);
   console.log(`Project root: ${root}`);
   console.log(`Runtime platform: claude-code (${platformConfigPath(root)})`);
-  console.log(`Hook command: ${buildHookCommand()}`);
-  console.log(`Claude Code settings: ${settingsPath}`);
-  console.log("Claude Code hook installation and readiness checks will be added by the Claude hook setup task.");
+  console.log(`Hook command: ${hookConfig.command}`);
+  console.log(`Claude Code settings: ${hookConfig.exists ? hookConfig.path : `${hookConfig.path} (missing)`}`);
+  console.log(`Required events missing: ${formatList(hookConfig.missingEvents)}`);
+  console.log(`Stale epic-loop hook entries: ${formatList(hookConfig.staleEvents)}`);
+  console.log(`Claude Code settings writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
+  console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
+  console.log(`Hook target exists: ${fs.existsSync(HOOK_SCRIPT_PATH) ? "yes" : "no"}`);
+  console.log(`Hook target readable: ${scriptReadable.ok ? "yes" : `no (${scriptReadable.reason})`}`);
+  console.log(
+    `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: ${
+      blockCap.ready ? `${blockCap.value}${blockCap.recommended ? "" : " (accepted with warning)"}` : `setup-required (${blockCap.reason})`
+    }`,
+  );
+  if (blockCap.warning) {
+    console.log(`Warning: ${blockCap.warning}`);
+  }
+
+  if (ready) {
+    console.log("Next: continue epic-loop lifecycle setup.");
+    return;
+  }
+
+  if (setupPossible) {
+    console.log("Next: configure Claude Code hooks and block cap:");
+    console.log(`  ${buildInstallHooksCommand()}`);
+    console.log("  export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0");
+    return;
+  }
+
+  console.log("Next: setup must be run from a writable project checkout or host terminal:");
+  console.log(`  ${buildInstallHooksCommand()}`);
 }
 
 export function installHooks(flags = {}) {

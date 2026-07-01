@@ -56,7 +56,7 @@ Epic: Claude Code Harness
   - Acceptance: Installing Claude hooks adds `SessionStart`, `UserPromptSubmit`, and `Stop` command hooks to project-local `.claude/settings.json` and invokes the shared hook script; existing unrelated Claude settings and hooks remain intact; dry-run output shows the planned change.
   - Docs: `docs/platform-adapter-contract.md`, `docs/claude-api.md`.
 
-- [ ] Kind: implementation | Status: todo | Add platform-config-driven doctor readiness checks for Codex and Claude Code.
+- [x] Kind: implementation | Status: done | Add platform-config-driven doctor readiness checks for Codex and Claude Code.
   - Outcome: Doctor reads the selected runtime platform and reports actionable setup status for Codex or Claude Code.
   - Surface: `scripts/lib/hooks.mjs`, `scripts/doctor.mjs`, env inspection, JSON readiness contract, tests.
   - Acceptance: Doctor fails with an exact `doctor.mjs --platform codex|claude-code --json` fix when platform config is missing and no `--platform` was provided; Codex doctor output remains backward compatible after `codex` is selected; Claude doctor reports missing/stale project-local `.claude/settings.json` hooks; Claude doctor accepts `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0` or `>=20`, warns for `20..50` that loop mode may stop early and require manual continuation, and treats missing, invalid, or values below `20` as setup-required.

@@ -22,14 +22,15 @@ Active task: TBD
 - Phase 1 is closed.
 - Phase 2 Task 1 is closed with Claude Code project-local hook installation for
   `.claude/settings.json`.
+- Phase 2 Task 2 is closed with platform-config-driven doctor readiness checks
+  for Codex and Claude Code, including Claude hook config and stop hook block
+  cap status.
 
 ## Blockers
 
 - No implementation blocker recorded.
-- Before hard-coding Claude Code readiness behavior, confirm the targeted Claude
-  Code CLI version and `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` policy.
 
 ## Next Action
 
-- Start Phase 2 Task 2: add platform-config-driven doctor readiness checks for
-  Codex and Claude Code.
+- Start Phase 2 Task 3: verify platform selection, hook installer, and doctor
+  contracts for Codex and Claude Code temp projects.

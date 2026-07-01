@@ -66,3 +66,8 @@
 
 - Task: Phase 2 Task 1 - Claude Code hook installer
 - Verdict: Closed. Added Claude Code project-local .claude/settings.json hook installation for SessionStart, UserPromptSubmit, and Stop using the shared hook command. Installer preserves unrelated top-level settings and hook entries, repairs stale epic-loop hook commands, supports dry-run without writing files, and remains idempotent. Existing Codex install behavior remains covered. Verification: pnpm run test:unit passed 21/21; pnpm run validate passed. Residual gaps intentionally deferred: Claude doctor readiness and CLAUDE_CODE_STOP_HOOK_BLOCK_CAP policy.
+
+## 2026-07-01T15:19:07+00:00 - closed: implemented platform-config-driven Claude Code doctor readiness for project-local settings and stop-hook block cap policy while preserving Codex doctor compatibility. Verification rerun by techlead: pnpm run test:unit passed 22/22; pnpm run validate passed with epic-loop package validation. Residual scope intentionally deferred: current-session binding, runtime cap recording, manager cap-proximity routing, docs packaging, and manual Claude CLI smoke tests. Commit: task-owned closure commit.
+
+- Task: Phase 2 Task 2 - Add platform-config-driven doctor readiness checks for Codex and Claude Code
+- Verdict: closed: implemented platform-config-driven Claude Code doctor readiness for project-local settings and stop-hook block cap policy while preserving Codex doctor compatibility. Verification rerun by techlead: pnpm run test:unit passed 22/22; pnpm run validate passed with epic-loop package validation. Residual scope intentionally deferred: current-session binding, runtime cap recording, manager cap-proximity routing, docs packaging, and manual Claude CLI smoke tests. Commit: task-owned closure commit.

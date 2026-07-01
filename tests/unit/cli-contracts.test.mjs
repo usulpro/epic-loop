@@ -61,14 +61,129 @@ test("doctor exposes a Claude Code platform readiness boundary", () => {
   const root = makeTempRoot("doctor-claude-");
 
   try {
-    const result = runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]);
+    const result = runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: undefined,
+      },
+    });
     assertSuccess(result);
     const status = JSON.parse(result.stdout);
     assert.equal(status.platform, "claude-code");
     assert.equal(status.ready, false);
     assert.equal(status.status, "setup-required");
     assert.match(status.claudeCodeHookConfig.path, /\.claude\/settings\.json$/u);
+    assert.equal(status.claudeCodeHookConfig.exists, false);
+    assert.deepEqual(status.claudeCodeHookConfig.missingEvents, ["SessionStart", "UserPromptSubmit", "Stop"]);
+    assert.equal(status.stopHookBlockCap.envVar, "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP");
+    assert.equal(status.stopHookBlockCap.ready, false);
+    assert.equal(status.stopHookBlockCap.reason, "missing");
     assert.equal(readJsonFile(path.join(root, ".epic-loop", ".runtime", "platform.json")).platform, "claude-code");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("doctor reports Claude Code hook readiness and block cap status", () => {
+  const root = makeTempRoot("doctor-claude-ready-");
+
+  try {
+    assertSuccess(
+      runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"], {
+        env: {
+          CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+        },
+      }),
+    );
+    assertSuccess(runNodeScript("install-hooks.mjs", ["--root", root]));
+
+    const ready = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+    });
+    assertSuccess(ready);
+    const readyStatus = JSON.parse(ready.stdout);
+    assert.equal(readyStatus.platform, "claude-code");
+    assert.equal(readyStatus.ready, true);
+    assert.equal(readyStatus.status, "ready");
+    assert.deepEqual(readyStatus.claudeCodeHookConfig.missingEvents, []);
+    assert.deepEqual(readyStatus.claudeCodeHookConfig.staleEvents, []);
+    assert.equal(readyStatus.stopHookBlockCap.ready, true);
+    assert.equal(readyStatus.stopHookBlockCap.recommended, true);
+    assert.equal(readyStatus.stopHookBlockCap.value, 0);
+
+    const finite = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "20",
+      },
+    });
+    assertSuccess(finite);
+    const finiteStatus = JSON.parse(finite.stdout);
+    assert.equal(finiteStatus.ready, true);
+    assert.equal(finiteStatus.stopHookBlockCap.ready, true);
+    assert.equal(finiteStatus.stopHookBlockCap.recommended, false);
+    assert.match(finiteStatus.stopHookBlockCap.warning, /may stop early and require manual continuation/u);
+    assert.deepEqual(finiteStatus.warnings, [finiteStatus.stopHookBlockCap.warning]);
+
+    const low = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "19",
+      },
+    });
+    assertSuccess(low);
+    const lowStatus = JSON.parse(low.stdout);
+    assert.equal(lowStatus.ready, false);
+    assert.equal(lowStatus.status, "setup-required");
+    assert.equal(lowStatus.stopHookBlockCap.reason, "below-minimum");
+
+    const invalid = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "many",
+      },
+    });
+    assertSuccess(invalid);
+    const invalidStatus = JSON.parse(invalid.stdout);
+    assert.equal(invalidStatus.ready, false);
+    assert.equal(invalidStatus.stopHookBlockCap.reason, "invalid");
+
+    const missing = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: undefined,
+      },
+    });
+    assertSuccess(missing);
+    const missingStatus = JSON.parse(missing.stdout);
+    assert.equal(missingStatus.ready, false);
+    assert.equal(missingStatus.stopHookBlockCap.reason, "missing");
+
+    const settingsPath = path.join(root, ".claude", "settings.json");
+    const settings = readJsonFile(settingsPath);
+    settings.hooks.SessionStart[0].hooks[0].command = "node /old/epic-loop/hook.mjs";
+    fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+
+    const stale = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+    });
+    assertSuccess(stale);
+    const staleStatus = JSON.parse(stale.stdout);
+    assert.equal(staleStatus.ready, false);
+    assert.equal(staleStatus.status, "setup-required");
+    assert.deepEqual(staleStatus.claudeCodeHookConfig.staleEvents, ["SessionStart"]);
+    assert.deepEqual(staleStatus.claudeCodeHookConfig.missingEvents, ["SessionStart"]);
+
+    fs.writeFileSync(settingsPath, "{", "utf8");
+    const malformed = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+    });
+    assertSuccess(malformed);
+    const malformedStatus = JSON.parse(malformed.stdout);
+    assert.equal(malformedStatus.ready, false);
+    assert.equal(malformedStatus.claudeCodeHookConfig.invalid, true);
+    assert.deepEqual(malformedStatus.claudeCodeHookConfig.missingEvents, ["SessionStart", "UserPromptSubmit", "Stop"]);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -232,6 +347,10 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
 
     fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
     fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), "{\"platform\":\"auto\"}\n", "utf8");
+
+    const doctorInvalid = runNodeScript("doctor.mjs", ["--root", root, "--json"]);
+    assert.equal(doctorInvalid.status, 1);
+    assert.match(doctorInvalid.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
 
     const hookInvalid = runNodeScript("hook.mjs", ["--root", root], {
       input: JSON.stringify({

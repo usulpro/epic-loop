@@ -17,9 +17,19 @@ export function makeTempRoot(prefix) {
 }
 
 export function runNodeScript(scriptName, args = [], options = {}) {
+  const env = { ...process.env };
+  for (const [key, value] of Object.entries(options.env ?? {})) {
+    if (value === undefined || value === null) {
+      delete env[key];
+      continue;
+    }
+    env[key] = value;
+  }
+
   return spawnSync(process.execPath, [scriptPath(scriptName), ...args], {
     cwd: options.cwd ?? repoRoot,
     encoding: "utf8",
+    env,
     input: options.input,
   });
 }
