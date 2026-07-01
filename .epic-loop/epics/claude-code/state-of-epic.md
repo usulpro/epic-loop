@@ -3,7 +3,7 @@
 Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
-Current mode: implementation
+Current mode: idle
 Active phase: TBD
 Active task: TBD
 
@@ -48,6 +48,7 @@ Active task: TBD
 - Phase 5 Task 2 is closed with the final Codex regression smoke passing after
   the Claude Code changes.
 - Phase 5 is closed.
+- Implementation mode is complete after final implementation-end housekeeping.
 
 ## Blockers
 
@@ -55,5 +56,5 @@ Active task: TBD
 
 ## Next Action
 
-- Manager performs mandatory implementation-end housekeeping before final
-  implementation exit.
+- Implementation loop is idle after all roadmap phases closed and final
+  housekeeping passed.
