@@ -30,3 +30,5 @@ build/
 
 .claude
 .codex
+.epic-loop/.runtime/
+.epic-loop/epics/*/.runtime/
