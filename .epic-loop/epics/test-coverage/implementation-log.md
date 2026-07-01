@@ -26,3 +26,17 @@
   - pnpm run validate passed
 - Residual risk: Broad helper/state-transition and CLI/hook coverage intentionally deferred to the next Phase 1 tasks.
 - Next move: Start Phase 1 Task 2: cover core helper functions and state transitions.
+
+## 2026-07-01T09:56:46+00:00 - closed
+
+- Phase: Phase 1 - Deterministic Unit Test Foundation
+- Task: Phase 1 Task 2 - Cover core helper functions and state transitions
+- Verdict: closed
+- Changed:
+  - Expanded common.mjs unit tests for slug fallback, JSON fallback, writeJson, writeOnce, appendGitignore, and requireFlag behavior
+  - Added roadmap.mjs module tests for roadmap creation, start/close task transitions, runtime sync, tracker fragments, invalid input errors, and follow-up task rendering
+- Verification:
+  - pnpm run test:unit passed with 8 tests
+  - pnpm run validate passed
+- Residual risk: Broad CLI contracts and hook routing remain intentionally deferred to Phase 1 Task 3. Roadmap helper stdout appears as TAP comments during tests but does not affect pass/fail behavior.
+- Next move: Start Phase 1 Task 3: cover baseline CLI scripts and hook routing contracts.

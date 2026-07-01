@@ -34,7 +34,7 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
   - Acceptance: A documented test command runs locally; the selected framework can import the script helper modules and execute CLI-level tests without requiring Codex hooks or live LLM calls.
   - Docs: `docs/unit-test-plan.md`.
 
-- [ ] Kind: implementation | Status: todo | Cover core helper functions and state transitions.
+- [x] Kind: implementation | Status: done | Cover core helper functions and state transitions.
   - Outcome: Engine primitives have tests for normal paths and meaningful edge cases.
   - Surface: Helper modules under `plugins/epic-loop/skills/epic-loop/scripts/lib/**`, runtime state readers/writers, tracker rendering, roadmap state handling.
   - Acceptance: Tests prove stable behavior for state creation, reads, updates, rendering, invalid input handling, and idempotent operations where applicable.
