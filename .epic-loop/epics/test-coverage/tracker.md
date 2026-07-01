@@ -26,9 +26,9 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
 
 ### Phase 1: Deterministic Unit Test Foundation
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Map deterministic engine surfaces and configure the unit test harness.
+- [x] Kind: implementation | Status: done | Map deterministic engine surfaces and configure the unit test harness.
   - Outcome: The repo can run focused unit tests for deterministic epic-loop behavior.
   - Surface: `package.json`, existing test config or new minimal test config, `plugins/epic-loop/skills/epic-loop/scripts/**`, test utilities.
   - Acceptance: A documented test command runs locally; the selected framework can import the script helper modules and execute CLI-level tests without requiring Codex hooks or live LLM calls.
