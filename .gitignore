@@ -27,3 +27,6 @@ coverage/
 dist/
 build/
 .cache/
+
+.claude
+.codex

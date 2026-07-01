@@ -15,10 +15,18 @@
   },
   "type": "module",
   "scripts": {
-    "validate": "node scripts/validate-epic-loop-package.mjs && for f in plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done",
+    "validate": "for f in scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done && node scripts/validate-epic-loop-package.mjs",
     "validate:epic-loop": "pnpm run validate",
-    "doctor:epic-loop": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --json"
+    "doctor:epic-loop": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --json",
+    "self-update": "node scripts/self-update-skill.mjs"
   },
-  "keywords": ["codex", "codex-plugin", "agent-skills", "epic", "automation", "hooks"],
-  "packageManager": "pnpm@10.11.0"
+  "keywords": [
+    "codex",
+    "codex-plugin",
+    "agent-skills",
+    "epic",
+    "automation",
+    "hooks"
+  ],
+  "packageManager": "pnpm@11.9.0"
 }

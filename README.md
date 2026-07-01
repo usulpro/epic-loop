@@ -117,6 +117,9 @@ Human-facing artifacts and machine runtime are separated by design. Roles read t
 # Validate this plugin repository.
 pnpm run validate
 
+# Sync the current skill into repo-local Codex and Claude Code skill folders.
+pnpm run self-update
+
 # List local epics in a target project.
 node <skill-dir>/scripts/list-epics.mjs
 
