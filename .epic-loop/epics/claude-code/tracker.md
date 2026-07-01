@@ -114,7 +114,7 @@ Epic: Claude Code Harness
 
 ### Phase 5: Runtime Acceptance
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: verification | Status: done | Run a disposable Claude Code runtime smoke test when the CLI environment is available.
   - Outcome: The Claude Code harness is proven through an actual Claude Code session, not only synthetic payload tests.
