@@ -37,6 +37,8 @@ Active task: TBD
 - Phase 3 is closed.
 - Phase 4 Task 1 is closed with dual-platform user-facing skill and reference
   documentation updated for Codex and Claude Code operation.
+- Phase 4 Task 2 is closed with package metadata and validation updated for
+  dual-platform hook support without bundled Claude hook assets.
 
 ## Blockers
 
@@ -44,5 +46,4 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 4 Task 2: update package validation for Claude Code plugin hook
-  assets and supported project-local install behavior.
+- Start Phase 4 Task 3: verify final package, docs, and regression suite.

@@ -27,6 +27,14 @@ const marketplace = readJson("marketplace.json");
 const plugin = readJson("plugins/epic-loop/.codex-plugin/plugin.json");
 
 if (marketplace) {
+  const marketplaceDescription = marketplace.interface?.description;
+  if (typeof marketplaceDescription === "string") {
+    expectIncludes(marketplaceDescription, "Codex or Claude Code hooks", "marketplace interface.description");
+    rejectIncludes(marketplaceDescription, "driven by Codex hooks", "marketplace interface.description");
+  } else {
+    errors.push("marketplace interface.description must be a non-empty string.");
+  }
+
   const entry = Array.isArray(marketplace.plugins) ? marketplace.plugins.find((item) => item?.name === "epic-loop") : null;
   if (!entry) {
     errors.push("marketplace.json must include an epic-loop plugin entry.");
@@ -44,6 +52,10 @@ if (plugin) {
   if (!plugin.version || typeof plugin.version !== "string") {
     errors.push("plugin version must be a non-empty string.");
   }
+  expectIncludes(plugin.description, "Codex or Claude Code hooks", "plugin description");
+  rejectIncludes(plugin.description, "driven by Codex hooks", "plugin description");
+  expectIncludes(plugin.interface?.longDescription, "Codex or Claude Code hooks", "plugin interface.longDescription");
+  rejectIncludes(plugin.interface?.longDescription, "driven by Codex hooks", "plugin interface.longDescription");
 }
 
 const skill = readText("plugins/epic-loop/skills/epic-loop/SKILL.md");
@@ -59,6 +71,9 @@ if (skill) {
   if (!skill.includes("<skill-dir>")) {
     errors.push("Packaged SKILL.md should use <skill-dir> for install-independent commands.");
   }
+  if (!skill.includes("project-local `.claude/settings.json`")) {
+    errors.push("Packaged SKILL.md must document project-local `.claude/settings.json` as the supported Claude Code install target.");
+  }
 }
 
 for (const relativePath of listFiles(skillRoot)) {
@@ -69,6 +84,20 @@ for (const relativePath of listFiles(skillRoot)) {
   }
   if (content.includes("templates/implementation-") && !content.includes("assets/templates/implementation-")) {
     errors.push(`${displayPath} references implementation templates outside assets/templates.`);
+  }
+  if (content.includes("${CLAUDE_PLUGIN_ROOT}")) {
+    errors.push(`${displayPath} references ${"${CLAUDE_PLUGIN_ROOT}"} before bundled Claude Code hooks are supported.`);
+  }
+}
+
+for (const absolutePath of listFiles(pluginRoot)) {
+  const displayPath = path.relative(root, absolutePath);
+  if (displayPath.endsWith("hooks/hooks.json")) {
+    errors.push(`${displayPath} is a bundled Claude Code hook asset; the supported Claude Code install target is project-local .claude/settings.json.`);
+  }
+  const content = fs.readFileSync(absolutePath, "utf8");
+  if (content.includes("${CLAUDE_PLUGIN_ROOT}")) {
+    errors.push(`${displayPath} references ${"${CLAUDE_PLUGIN_ROOT}"} before bundled Claude Code hooks are supported.`);
   }
 }
 
@@ -102,6 +131,18 @@ function readText(relativePath) {
 function expectEqual(actual, expected, label) {
   if (actual !== expected) {
     errors.push(`${label} must be ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`);
+  }
+}
+
+function expectIncludes(actual, expected, label) {
+  if (typeof actual !== "string" || !actual.includes(expected)) {
+    errors.push(`${label} must include ${JSON.stringify(expected)}.`);
+  }
+}
+
+function rejectIncludes(actual, rejected, label) {
+  if (typeof actual === "string" && actual.includes(rejected)) {
+    errors.push(`${label} must not include ${JSON.stringify(rejected)}.`);
   }
 }
 

@@ -100,7 +100,7 @@ Epic: Claude Code Harness
   - Acceptance: Docs explain platform selection, Claude hook trust review, block-cap setup, manager communication on cap-proximity stops, current-session binding behavior, and Codex compatibility; generated artifacts remain in English.
   - Docs: `docs/problem-framing.md`, `docs/platform-adapter-contract.md`, `docs/verification-plan.md`.
 
-- [ ] Kind: implementation | Status: todo | Update package validation for any Claude Code plugin hook assets.
+- [x] Kind: implementation | Status: done | Update package validation for any Claude Code plugin hook assets.
   - Outcome: The published plugin package validates the project-local Claude Code hook install behavior and does not imply unsupported bundled hook assets.
   - Surface: `plugins/epic-loop/`, `scripts/validate-epic-loop-package.mjs`, package metadata, tests.
   - Acceptance: Package validation and docs reflect project-local `.claude/settings.json` as the supported Claude Code install target; Codex plugin metadata remains valid.

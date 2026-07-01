@@ -2,7 +2,7 @@
   "name": "epic-loop-marketplace",
   "interface": {
     "displayName": "Epic Loop",
-    "description": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by Codex hooks and durable on-disk state."
+    "description": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by project-local Codex or Claude Code hooks and durable on-disk state."
   },
   "plugins": [
     {

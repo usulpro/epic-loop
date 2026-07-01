@@ -1,7 +1,7 @@
 {
   "name": "epic-loop",
   "version": "0.1.0",
-  "description": "Run large, multi-phase epics as long-running autonomous jobs, driven by Codex hooks and durable on-disk state.",
+  "description": "Run large, multi-phase epics as long-running autonomous jobs, driven by Codex or Claude Code hooks and durable on-disk state.",
   "author": {
     "name": "Oleg Proskurin",
     "email": "usulpro@gmail.com",
@@ -10,12 +10,12 @@
   "license": "MIT",
   "homepage": "https://github.com/usulpro/epic-loop",
   "repository": "https://github.com/usulpro/epic-loop",
-  "keywords": ["codex", "skills", "epic", "automation", "hooks"],
+  "keywords": ["codex", "claude-code", "skills", "epic", "automation", "hooks"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Epic Loop",
     "shortDescription": "Run long-running, multi-phase epics autonomously",
-    "longDescription": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by Codex hooks and durable on-disk state.",
+    "longDescription": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by project-local Codex or Claude Code hooks and durable on-disk state.",
     "developerName": "Oleg Proskurin",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
