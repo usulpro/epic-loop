@@ -15,6 +15,13 @@ const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md
 const LATEST_MANAGER_REPORT_RELATIVE_PATH = ".runtime/latest-manager-report.md";
 const CLAUDE_BLOCK_CAP_ENV = "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP";
 const CLAUDE_BLOCK_CAP_PROXIMITY_REMAINING = 1;
+const CLAUDE_MANUAL_CONTINUE_NOTE = [
+  "",
+  "## Claude Code Continuation Note",
+  "",
+  "Claude Code may mark the Stop hook reentry after this block as `stop_hook_active: true`; in that case epic-loop records this role's report but does not issue another block continuation in the same turn.",
+  "If the next role does not start automatically after your report, tell the user to send: `continue loop mode`.",
+].join("\n");
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
   current_role: "Current role",
@@ -164,6 +171,8 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   if (platform === "claude-code" && payload.stop_hook_active === true) {
     appendLoopLog(projectRoot, {
       action: "skip",
+      manual_continue_required: true,
+      next_role: loop.next_role ?? null,
       reason: "claude-stop-hook-reentry",
       session_id: payload.session_id ?? null,
       slug,
@@ -228,6 +237,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       : role === "techlead"
         ? buildTechleadPrompt(slug, iteration)
         : buildEngineerPrompt(projectRoot, slug, loop, iteration);
+  const platformPrompt = platform === "claude-code" ? appendClaudeManualContinueNote(prompt) : prompt;
   const promptFile =
     role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? loop.prompt_file ?? null : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
@@ -275,7 +285,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
 
   appendPromptLog(projectRoot, {
     iteration,
-    prompt,
+    prompt: platformPrompt,
     prompt_file: promptFile,
     role,
     session_id: payload.session_id ?? null,
@@ -286,7 +296,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
 
   return {
     decision: "block",
-    reason: prompt,
+    reason: platformPrompt,
   };
 }
 
@@ -784,7 +794,8 @@ function readAssistantReportMessage(projectRoot, payload) {
   const platform = readRuntimePlatform(projectRoot).platform;
 
   if (platform === "claude-code") {
-    return readLatestClaudeAssistantMessage(payload.transcript_path);
+    const payloadMessage = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+    return payloadMessage || readLatestClaudeAssistantMessage(payload.transcript_path);
   }
 
   if (platform === "codex") {
@@ -792,6 +803,10 @@ function readAssistantReportMessage(projectRoot, payload) {
   }
 
   return "";
+}
+
+function appendClaudeManualContinueNote(prompt) {
+  return `${prompt.trim()}\n${CLAUDE_MANUAL_CONTINUE_NOTE}`;
 }
 
 function readLatestClaudeAssistantMessage(transcriptPath) {

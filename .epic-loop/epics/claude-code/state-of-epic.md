@@ -4,8 +4,8 @@ Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
-Active phase: TBD
-Active task: TBD
+Active phase: Phase 5 - Runtime Acceptance
+Active task: Phase 5 Task 1 - Run a disposable Claude Code runtime smoke test when the CLI environment is available
 
 ## Current State
 
@@ -45,8 +45,10 @@ Active task: TBD
 
 ## Blockers
 
-- No implementation blocker recorded.
+- Phase 5 runtime smoke is still partially satisfied until the manual
+  continuation contract is verified through techlead and engineer turns.
 
 ## Next Action
 
-- Techlead review after Phase 4 closure housekeeping, then start Phase 5.
+- Engineer reruns disposable Claude Code runtime acceptance using the corrected
+  manual-continuation contract.

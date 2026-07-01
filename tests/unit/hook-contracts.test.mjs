@@ -226,6 +226,7 @@ test("Claude Code synthetic implementation flow binds current capture and routes
     const managerContinuation = JSON.parse(managerStop.stdout);
     assert.equal(managerContinuation.decision, "block");
     assert.match(managerContinuation.reason, /manager housekeeping turn 1/u);
+    assert.match(managerContinuation.reason, /continue loop mode/u);
     const managerRuntime = readJsonFile(runtimePath);
     assert.equal(managerRuntime.implementation_loop.current_role, "manager");
     assert.equal(managerRuntime.implementation_loop.next_role, "techlead");
@@ -351,6 +352,40 @@ test("Claude Code bound Stop captures latest assistant transcript report", () =>
     const report = fs.readFileSync(latestReportPath, "utf8");
     assert.match(report, /Latest assistant\nreport/u);
     assert.doesNotMatch(report, /Older assistant report/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code bound Stop prefers real payload assistant report over stale transcript", () => {
+  const root = makeTempRoot("hook-claude-payload-report-");
+  const slug = "payload-report";
+  const sessionId = "claude-payload-report-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "stale transcript report" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude payload report project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug, "manager");
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        last_assistant_message: "current payload manager report",
+        session_id: sessionId,
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(JSON.parse(result.stdout).decision, "block");
+    const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8");
+    assert.match(report, /current payload manager report/u);
+    assert.doesNotMatch(report, /stale transcript report/u);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -550,6 +585,55 @@ test("Claude Code Stop hook reentry does not issue another block", () => {
     assert.equal(nextRuntime.implementation_loop.current_role, null);
     assert.equal(nextRuntime.implementation_loop.next_role, "manager");
     assert.equal(nextRuntime.implementation_loop.claude_code_stop_hook_block_cap.consecutive_blocks, 0);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code Stop hook reentry captures the role report and leaves manual continuation queued", () => {
+  const root = makeTempRoot("hook-claude-reentry-report-");
+  const slug = "reentry-report";
+  const sessionId = "claude-reentry-report-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "stale reentry transcript" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude reentry report project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug, "manager");
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        last_assistant_message: "actual manager reentry report",
+        session_id: sessionId,
+        stop_hook_active: true,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(result.stdout, "");
+
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.current_role, "manager");
+    assert.equal(runtime.implementation_loop.next_role, "techlead");
+    assert.equal(runtime.implementation_loop.last_manager_report_path, ".epic-loop/epics/reentry-report/.runtime/latest-manager-report.md");
+    assert.ok(runtime.implementation_loop.active_turn_stopped_at);
+
+    const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8");
+    assert.match(report, /actual manager reentry report/u);
+    assert.doesNotMatch(report, /stale reentry transcript/u);
+
+    const progress = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "progress-log.jsonl"), "utf8");
+    assert.match(progress, /"reason":"claude-stop-hook-reentry"/u);
+    assert.match(progress, /"manual_continue_required":true/u);
+    assert.match(progress, /"next_role":"techlead"/u);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

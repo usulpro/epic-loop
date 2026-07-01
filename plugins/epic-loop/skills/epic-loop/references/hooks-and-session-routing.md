@@ -110,11 +110,12 @@ Codex-specific useful fields:
 Claude Code-specific useful fields:
 
 - `stop_hook_active` for `Stop`
+- `last_assistant_message` for `Stop` when provided by the CLI
 - `transcript_path` for assistant report capture and current-session detection
 
 Route by `session_id` first. Use `cwd` as the project root boundary. Use `turn_id` only as best-effort event identity when present.
 
-Codex report capture reads `last_assistant_message` from the `Stop` payload. Claude Code does not provide that field; report capture reads `transcript_path`, parses the JSONL transcript, and takes the latest assistant-role text entry.
+Codex report capture reads `last_assistant_message` from the `Stop` payload. Claude Code report capture prefers `last_assistant_message` when the CLI provides it, because it is the current Stop response; when that field is absent, it falls back to `transcript_path`, parses the JSONL transcript, and takes the latest assistant-role text entry.
 
 Unbound sessions are silent no-ops. If `session_id` is absent from `.epic-loop/.runtime/session-bindings.json`, the hook handler must exit without writing files.
 
@@ -181,12 +182,14 @@ Hooks can:
 - update project-local routing metadata
 - prepare the next submode marker for the manager/techlead/engineer cycle
 - continue the current session from `Stop` by returning `{ "decision": "block", "reason": "<prompt>" }`
+- record a completed Claude Code role report on a `stop_hook_active: true` reentry without issuing another same-turn block
 - give an external runner enough data to recover the right session when hook continuation did not run
 
 Hooks cannot be assumed to:
 
 - continue an already-running thread before the selected platform has loaded and trusted the hook
 - replace hook trust review or active-session hook loading
+- force Claude Code to accept multiple Stop-hook block continuations inside the same turn after the platform reports `stop_hook_active: true`
 - bypass Claude Code's finite Stop-hook block cap when `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` is not `0`
 
 ## Parallel Safety
