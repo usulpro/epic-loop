@@ -122,7 +122,7 @@ Epic: Claude Code Harness
   - Acceptance: A disposable epic enters implementation mode, emits manager housekeeping, hands to techlead, runs one engineer brief, captures reports from transcript JSONL, and leaves durable runtime evidence; if the CLI is unavailable, the implementation log records the unverified manual gap.
   - Docs: `docs/verification-plan.md`, `docs/claude-api.md`.
 
-- [ ] Kind: verification | Status: todo | Perform final Codex regression smoke test after Claude Code changes.
+- [x] Kind: verification | Status: done | Perform final Codex regression smoke test after Claude Code changes.
   - Outcome: The primary Codex path remains functional after dual-platform changes.
   - Surface: Current repo checkout, Codex doctor, hook readiness, temp epic, `pnpm run validate`, `pnpm run test:unit`.
   - Acceptance: Codex doctor remains ready in this checkout, a temp epic can be initialized and rendered, existing hook contract tests pass, and no Claude-only configuration is required for Codex users.
