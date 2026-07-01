@@ -1,0 +1,13 @@
+# Risk Register
+
+| Risk | Impact | Mitigation | Status |
+| --- | --- | --- | --- |
+| Claude Code hook behavior or env var semantics differ from the captured docs. | The port may pass synthetic tests but fail in a real Claude Code session. | Add an early task to verify version-specific facts against the targeted CLI/docs before hard-coding doctor behavior. | open |
+| Stop-hook block cap interrupts long implementation loops. | Autonomous implementation may stop after a finite number of continuations. | Accept `0` or `>=20`; recommend `0` or `>50`; warn clearly for `20..50` that the user may need to manually ask the agent to continue loop mode after the cap is reached. | open |
+| Claude Code reaches a finite Stop-hook block cap without a graceful message. | The platform can end the loop abruptly and leave the user unsure how to continue. | Record the effective cap at implementation start, detect when only the last safe continuations remain, hand off to manager, and have manager explain the stop and continuation command to the user. | open |
+| Transcript JSONL parsing misses the actual final assistant text shape. | Engineer/manager reports may not be captured, breaking techlead re-entry. | Build fixture tests for multiple plausible transcript entry shapes and run at least one real Claude Code Stop-hook verification. | open |
+| Hook installer overwrites existing Claude settings. | User hook configuration could be damaged. | Preserve unrelated hooks, use dry-run tests, and follow the same non-destructive pattern as Codex installer. | open |
+| Codex behavior regresses while introducing platform abstraction. | Existing plugin users lose the primary supported path. | Keep Codex as default, add regression tests for current doctor/install/bind/hook contracts, and run full validation. | open |
+| Current-session detection is ambiguous outside a fresh hook event. | `bind-session --current` may bind the wrong session or fail confusingly. | Prefer fresh hook capture with TTL; require explicit `--session-id` when current session cannot be determined safely. | open |
+| Runtime platform config is missing after cleanup or in a fresh checkout. | Platform-aware scripts cannot know whether to use Codex or Claude Code behavior. | Fail immediately with a transparent error and the exact `doctor.mjs --platform codex|claude-code --json` command. | open |
+| Codex and Claude Code sessions run against the same checkout concurrently. | One session can change the project runtime platform while another session is active. | Treat one platform per checkout as the supported initial model; use separate checkouts/sandboxes for parallel cross-platform testing. | open |
