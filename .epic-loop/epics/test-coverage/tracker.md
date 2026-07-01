@@ -26,7 +26,7 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
 
 ### Phase 1: Deterministic Unit Test Foundation
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Map deterministic engine surfaces and configure the unit test harness.
   - Outcome: The repo can run focused unit tests for deterministic epic-loop behavior.
