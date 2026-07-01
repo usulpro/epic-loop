@@ -40,3 +40,20 @@
   - pnpm run validate passed
 - Residual risk: Broad CLI contracts and hook routing remain intentionally deferred to Phase 1 Task 3. Roadmap helper stdout appears as TAP comments during tests but does not affect pass/fail behavior.
 - Next move: Start Phase 1 Task 3: cover baseline CLI scripts and hook routing contracts.
+
+## 2026-07-01T10:00:41+00:00 - closed
+
+- Phase: Phase 1 - Deterministic Unit Test Foundation
+- Task: Phase 1 Task 3 - Cover baseline CLI scripts and hook routing contracts
+- Verdict: closed
+- Changed:
+  - Added shared unit test spawn/temp-root helpers
+  - Added doctor and install-hooks CLI contract tests
+  - Added task and role handoff CLI contract tests
+  - Added hook.mjs unbound no-op and bound Stop continuation tests
+  - Reused helpers in the init-epic CLI smoke test
+- Verification:
+  - pnpm run test:unit passed with 12 tests
+  - pnpm run validate passed
+- Residual risk: Phase-level combined verification still needs to record final evidence, tested surface list, and ignored runtime/debug artifact status.
+- Next move: Start Phase 1 Task 4: verify the deterministic unit suite and repo validation together.

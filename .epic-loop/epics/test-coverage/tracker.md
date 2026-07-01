@@ -40,7 +40,7 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
   - Acceptance: Tests prove stable behavior for state creation, reads, updates, rendering, invalid input handling, and idempotent operations where applicable.
   - Docs: `docs/unit-test-plan.md`.
 
-- [ ] Kind: implementation | Status: todo | Cover baseline CLI scripts and hook routing contracts.
+- [x] Kind: implementation | Status: done | Cover baseline CLI scripts and hook routing contracts.
   - Outcome: Basic scripts are tested through their public CLI contracts, including success and failure cases.
   - Surface: `doctor.mjs`, `install-hooks.mjs`, `init-epic.mjs`, task/phase status scripts, role handoff scripts, `hook.mjs`.
   - Acceptance: Tests run scripts in isolated temp projects and assert exit codes, stdout/stderr contracts, generated files, and no-op behavior for unbound sessions.

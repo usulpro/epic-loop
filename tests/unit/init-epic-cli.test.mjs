@@ -1,27 +1,17 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const initEpicScript = path.join(repoRoot, "plugins", "epic-loop", "skills", "epic-loop", "scripts", "init-epic.mjs");
+import { assertSuccess, makeTempRoot, runNodeScript } from "./test-utils.mjs";
 
 test("init-epic CLI initializes an isolated temporary project", () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "epic-loop-init-"));
+  const tempRoot = makeTempRoot("init-");
 
   try {
-    const result = spawnSync(
-      process.execPath,
-      [initEpicScript, "--root", tempRoot, "--description", "Unit harness smoke project", "--no-gitignore"],
-      {
-        encoding: "utf8",
-      },
-    );
+    const result = runNodeScript("init-epic.mjs", ["--root", tempRoot, "--description", "Unit harness smoke project", "--no-gitignore"]);
 
-    assert.equal(result.status, 0, result.stderr);
+    assertSuccess(result);
     assert.match(result.stdout, /Epic initialized: unit-harness/u);
 
     const epicRoot = path.join(tempRoot, ".epic-loop", "epics", "unit-harness");
