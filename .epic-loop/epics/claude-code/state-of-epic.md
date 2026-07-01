@@ -17,6 +17,9 @@ Active task: TBD
   first platform adapter boundary in place.
 - Phase 1 Task 2 is closed with Claude Code transcript JSONL report capture
   feeding the existing manager/engineer report path.
+- Phase 1 Task 3 is closed with automated Codex and Claude Code payload fixture
+  verification passing.
+- Phase 1 is closed and awaiting mandatory phase-closure housekeeping.
 
 ## Blockers
 
@@ -26,5 +29,4 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 1 Task 3: verify platform adapter compatibility across Codex and
-  Claude Code payload fixtures.
+- Run phase-closure housekeeping before starting Phase 2.

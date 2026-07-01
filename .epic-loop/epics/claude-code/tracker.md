@@ -26,7 +26,7 @@ Epic: Claude Code Harness
 
 ### Phase 1: Platform Adapter Foundation
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Introduce doctor-driven runtime platform selection and a platform adapter boundary without changing Codex defaults.
   - Outcome: The first `doctor.mjs --platform codex|claude-code --json` call stores the selected platform in uncommitted runtime config, and platform-aware scripts use that value for Codex or Claude Code behavior.
@@ -40,7 +40,7 @@ Epic: Claude Code Harness
   - Acceptance: A Claude Code Stop payload with `transcript_path` appends the latest assistant report to the same runtime report files as Codex; malformed or missing transcript data fails softly without breaking continuation routing.
   - Docs: `docs/platform-adapter-contract.md`, `docs/claude-api.md`.
 
-- [ ] Kind: verification | Status: todo | Verify platform adapter compatibility across Codex and Claude Code payload fixtures.
+- [x] Kind: verification | Status: done | Verify platform adapter compatibility across Codex and Claude Code payload fixtures.
   - Outcome: The shared loop core is proven to accept both platform payload shapes without behavioral drift.
   - Surface: `tests/unit/hook-contracts.test.mjs`, `tests/unit/common.test.mjs`, synthetic transcript fixtures, `pnpm run test:unit`.
   - Acceptance: Run unit tests that cover Codex `last_assistant_message`, Claude Code `transcript_path`, missing optional fields, unbound sessions, and bound Stop continuation; evidence is passing test output and unchanged Codex assertions.

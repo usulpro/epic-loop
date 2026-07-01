@@ -134,3 +134,28 @@ test("bind-session current lookup requires explicit platform selection", () => {
     fs.rmSync(root, { force: true, recursive: true });
   }
 });
+
+test("platform-aware CLIs reject missing or invalid runtime platform config", () => {
+  const root = makeTempRoot("platform-aware-");
+
+  try {
+    const installMissing = runNodeScript("install-hooks.mjs", ["--root", root]);
+    assert.equal(installMissing.status, 1);
+    assert.match(installMissing.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+
+    fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), "{\"platform\":\"auto\"}\n", "utf8");
+
+    const hookInvalid = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: "invalid-platform-session",
+      }),
+    });
+    assert.equal(hookInvalid.status, 1);
+    assert.match(hookInvalid.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
