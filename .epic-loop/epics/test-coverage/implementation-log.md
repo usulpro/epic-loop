@@ -72,3 +72,18 @@
   - git status --short --ignored showed .codex/, .epic-loop/.runtime/, and .epic-loop/epics/test-coverage/.runtime/ only as ignored paths
 - Residual risk: No formal coverage percentage is configured; Phase 1 uses explicit tested-surface evidence instead.
 - Next move: Start Phase 1 Task 5: review the stop boundary before Phase 2.
+
+## 2026-07-01T10:05:26+00:00 - closed
+
+- Phase: Phase 1 - Deterministic Unit Test Foundation
+- Task: Phase 1 Task 5 - Stop after Phase 1 completion before continuing to eval fixture work
+- Verdict: closed
+- Changed:
+  - Confirmed Phase 1 tracker shows Tasks 1-4 done and boundary review active
+  - Confirmed state-of-epic requires stopping before Phase 2 and future explicit confirmation
+  - Updated state after closure to mark phase-closure housekeeping pending
+- Verification:
+  - git status --short --ignored showed runtime/debug paths only as ignored
+  - Phase 2 tracker tasks remain todo and were not started
+- Residual risk: Phase closure housekeeping is still required before treating Phase 1 as cleanly closed and before setting the loop idle.
+- Next move: Run phase-closure housekeeping, then stop before Phase 2.

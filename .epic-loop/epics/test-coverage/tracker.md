@@ -52,7 +52,7 @@ Epic: Test Coverage And Eval Pipeline For The Epic-loop
   - Acceptance: Run the unit test command and `pnpm run validate`; evidence includes passing command output, coverage summary or explicit tested-surface list, and no committed runtime/debug artifacts.
   - Docs: `docs/unit-test-plan.md`.
 
-- [ ] Kind: review | Status: todo | Stop after Phase 1 completion before continuing to eval fixture work.
+- [x] Kind: review | Status: done | Stop after Phase 1 completion before continuing to eval fixture work.
   - Outcome: Implementation pauses after the deterministic unit test foundation is complete.
   - Surface: Epic tracker, implementation loop routing, `state-of-epic.md` re-entry notes.
   - Acceptance: After Phase 1 verification is complete, the loop stops instead of starting Phase 2 automatically; the next session can resume only after explicit user confirmation.
