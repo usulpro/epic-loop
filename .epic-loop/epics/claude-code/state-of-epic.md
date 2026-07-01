@@ -15,6 +15,8 @@ Active task: TBD
   Claude Code support through thin platform-specific surfaces.
 - Phase 1 Task 1 is closed with explicit runtime platform selection and the
   first platform adapter boundary in place.
+- Phase 1 Task 2 is closed with Claude Code transcript JSONL report capture
+  feeding the existing manager/engineer report path.
 
 ## Blockers
 
@@ -24,5 +26,5 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 1 Task 2: implement Claude Code assistant report capture from
-  transcript JSONL.
+- Start Phase 1 Task 3: verify platform adapter compatibility across Codex and
+  Claude Code payload fixtures.

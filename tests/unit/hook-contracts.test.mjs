@@ -5,6 +5,54 @@ import { test } from "node:test";
 
 import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
 
+function writeSessionBinding(root, slug, sessionId) {
+  fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
+    `${JSON.stringify(
+      {
+        active_sessions: {
+          [`${slug}:implementation`]: sessionId,
+        },
+        sessions: {
+          [sessionId]: {
+            active: true,
+            epic_slug: slug,
+            mode: "implementation",
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
+function writeOpenImplementationTurn(root, slug, role = "engineer") {
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+  const runtime = readJsonFile(runtimePath);
+  fs.writeFileSync(
+    runtimePath,
+    `${JSON.stringify(
+      {
+        ...runtime,
+        implementation_loop: {
+          active_turn_started_at: "2026-07-01T00:00:00+00:00",
+          current_role: role,
+          iteration: 2,
+          next_role: "techlead",
+          status: "running",
+        },
+        mode: "implementation",
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
 test("hook CLI captures unbound sessions without writing epic-loop runtime records", () => {
   const root = makeTempRoot("hook-unbound-");
   const payload = {
@@ -61,27 +109,7 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
       "utf8",
     );
 
-    fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
-    fs.writeFileSync(
-      path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
-      `${JSON.stringify(
-        {
-          active_sessions: {
-            [`${slug}:implementation`]: sessionId,
-          },
-          sessions: {
-            [sessionId]: {
-              active: true,
-              epic_slug: slug,
-              mode: "implementation",
-            },
-          },
-        },
-        null,
-        2,
-      )}\n`,
-      "utf8",
-    );
+    writeSessionBinding(root, slug, sessionId);
 
     const result = runNodeScript("hook.mjs", ["--root", root], {
       input: JSON.stringify({
@@ -134,5 +162,132 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Codex bound Stop captures last_assistant_message reports", () => {
+  const root = makeTempRoot("hook-codex-report-");
+  const slug = "codex-report";
+  const sessionId = "codex-report-session";
+
+  try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Codex report project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug);
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        last_assistant_message: "Codex engineer report",
+        session_id: sessionId,
+        stop_hook_active: false,
+        turn_id: "codex-report-turn",
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(JSON.parse(result.stdout).decision, "block");
+    const latestReportPath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-engineer-report.md");
+    assert.match(fs.readFileSync(latestReportPath, "utf8"), /Codex engineer report/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code bound Stop captures latest assistant transcript report", () => {
+  const root = makeTempRoot("hook-claude-report-");
+  const slug = "claude-report";
+  const sessionId = "claude-report-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(
+      transcriptPath,
+      [
+        JSON.stringify({ role: "user", content: "ignored user text" }),
+        JSON.stringify({ message: { role: "assistant", content: [{ type: "text", text: "Older assistant report" }] } }),
+        "{malformed-json",
+        JSON.stringify({ type: "assistant", message: { content: "Middle assistant report" } }),
+        JSON.stringify({ role: "assistant", content: [{ text: "Latest assistant" }, { type: "text", text: "report" }] }),
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude report project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug, "manager");
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(JSON.parse(result.stdout).decision, "block");
+    const latestReportPath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md");
+    const report = fs.readFileSync(latestReportPath, "utf8");
+    assert.match(report, /Latest assistant\nreport/u);
+    assert.doesNotMatch(report, /Older assistant report/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code malformed or missing transcripts do not break continuation", () => {
+  const cases = [
+    {
+      name: "missing",
+      transcriptPath: "/tmp/epic-loop-missing-transcript.jsonl",
+    },
+    {
+      content: "{not-json\n",
+      name: "malformed",
+    },
+    {
+      content: `${JSON.stringify({ role: "user", content: "no assistant text" })}\n`,
+      name: "assistant-empty",
+      slug: "assistant-empty",
+    },
+  ];
+
+  for (const testCase of cases) {
+    const root = makeTempRoot(`hook-claude-${testCase.name}-`);
+    const slug = testCase.slug ?? `${testCase.name}-transcript`;
+    const sessionId = `${testCase.name}-session`;
+    const transcriptPath = testCase.transcriptPath ?? path.join(root, "transcript.jsonl");
+
+    try {
+      if (testCase.content !== undefined) {
+        fs.writeFileSync(transcriptPath, testCase.content, "utf8");
+      }
+      assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+      assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", `${testCase.name} transcript project`, "--slug", slug, "--no-gitignore"]));
+      writeOpenImplementationTurn(root, slug);
+      writeSessionBinding(root, slug, sessionId);
+
+      const result = runNodeScript("hook.mjs", ["--root", root], {
+        input: JSON.stringify({
+          cwd: root,
+          hook_event_name: "Stop",
+          session_id: sessionId,
+          stop_hook_active: false,
+          transcript_path: transcriptPath,
+        }),
+      });
+
+      assertSuccess(result);
+      assert.equal(JSON.parse(result.stdout).decision, "block");
+      assert.equal(fs.existsSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-engineer-report.md")), false);
+    } finally {
+      fs.rmSync(root, { force: true, recursive: true });
+    }
   }
 });

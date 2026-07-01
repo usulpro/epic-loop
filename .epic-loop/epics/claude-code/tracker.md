@@ -34,7 +34,7 @@ Epic: Claude Code Harness
   - Acceptance: Doctor writes runtime platform config when `--platform` is provided; platform-aware scripts fail clearly when platform config is missing or invalid; no script infers platform from payload shape, cwd, env, or config-file presence; Codex payloads still route exactly as before once `codex` is selected; Claude Code payload fixtures work once `claude-code` is selected; unbound sessions remain silent no-ops.
   - Docs: `docs/platform-adapter-contract.md`, `docs/claude-api.md`.
 
-- [ ] Kind: implementation | Status: todo | Implement Claude Code assistant report capture from transcript JSONL.
+- [x] Kind: implementation | Status: done | Implement Claude Code assistant report capture from transcript JSONL.
   - Outcome: Manager and engineer reports are captured on Claude Code Stop events even though `last_assistant_message` is absent.
   - Surface: `scripts/lib/loop.mjs`, transcript parsing helper, role report append path, transcript fixtures, tests.
   - Acceptance: A Claude Code Stop payload with `transcript_path` appends the latest assistant report to the same runtime report files as Codex; malformed or missing transcript data fails softly without breaking continuation routing.

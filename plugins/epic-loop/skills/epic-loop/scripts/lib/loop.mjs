@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, readJson, readRuntimePlatform, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 const LOOP_ROLES = ["manager", "techlead", "engineer", "idle"];
@@ -626,7 +626,7 @@ function appendPromptMarkdown(filePath, entry) {
 }
 
 function appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, reportRole) {
-  const message = typeof payload.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+  const message = readAssistantReportMessage(projectRoot, payload);
   if (!message) {
     return null;
   }
@@ -651,6 +651,76 @@ function appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, 
     latest_report_path: path.relative(projectRoot, latestReportPath),
     timestamp,
   };
+}
+
+function readAssistantReportMessage(projectRoot, payload) {
+  const platform = readRuntimePlatform(projectRoot).platform;
+
+  if (platform === "claude-code") {
+    return readLatestClaudeAssistantMessage(payload.transcript_path);
+  }
+
+  if (platform === "codex") {
+    return typeof payload.last_assistant_message === "string" ? payload.last_assistant_message.trim() : "";
+  }
+
+  return "";
+}
+
+function readLatestClaudeAssistantMessage(transcriptPath) {
+  if (typeof transcriptPath !== "string" || !transcriptPath) {
+    return "";
+  }
+
+  let content;
+  try {
+    content = fs.readFileSync(transcriptPath, "utf8");
+  } catch {
+    return "";
+  }
+
+  let latestMessage = "";
+  for (const line of content.split(/\r?\n/u)) {
+    if (!line.trim()) {
+      continue;
+    }
+
+    const item = readJsonLine(line);
+    if (!item || !isAssistantTranscriptItem(item)) {
+      continue;
+    }
+
+    const message = extractTranscriptText(item.message?.content ?? item.content ?? item.text);
+    if (message) {
+      latestMessage = message;
+    }
+  }
+
+  return latestMessage;
+}
+
+function isAssistantTranscriptItem(item) {
+  return item?.role === "assistant" || item?.type === "assistant" || item?.message?.role === "assistant" || item?.message?.type === "assistant";
+}
+
+function extractTranscriptText(value) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => extractTranscriptText(typeof item === "string" ? item : (item?.text ?? item?.content)))
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+  }
+
+  if (value && typeof value === "object") {
+    return extractTranscriptText(value.text ?? value.content);
+  }
+
+  return "";
 }
 
 function appendRoleReportMarkdown(filePath, reportRole, report) {
@@ -980,6 +1050,14 @@ function readJsonLines(filePath) {
       }
     })
     .filter(Boolean);
+}
+
+function readJsonLine(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
 }
 
 function appendJsonLine(filePath, value) {
