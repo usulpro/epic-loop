@@ -5,7 +5,7 @@ Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
 Active phase: Phase 5 - Runtime Acceptance
-Active task: Phase 5 Task 1 - Run a disposable Claude Code runtime smoke test when the CLI environment is available
+Active task: Phase 5 Task 2 - Perform final Codex regression smoke test after Claude Code changes
 
 ## Current State
 
@@ -42,13 +42,15 @@ Active task: Phase 5 Task 1 - Run a disposable Claude Code runtime smoke test wh
 - Phase 4 Task 3 is closed with final package, docs, and regression suite
   verification passing.
 - Phase 4 is closed.
+- Phase 5 Task 1 is closed with real Claude Code runtime acceptance verified
+  through manager, techlead, engineer execution, and engineer report capture
+  after the explicit hook root correction.
 
 ## Blockers
 
-- Phase 5 runtime smoke is still partially satisfied until the manual
-  continuation contract is verified through techlead and engineer turns.
+- No implementation blocker recorded.
 
 ## Next Action
 
-- Engineer reruns disposable Claude Code runtime acceptance using the corrected
-  manual-continuation contract.
+- Engineer performs the final Codex regression smoke test after the Claude Code
+  changes.

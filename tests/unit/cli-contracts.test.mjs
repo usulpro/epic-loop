@@ -71,6 +71,8 @@ test("doctor exposes a Claude Code platform readiness boundary", () => {
     assert.equal(status.platform, "claude-code");
     assert.equal(status.ready, false);
     assert.equal(status.status, "setup-required");
+    assert.match(status.command, /hook\.mjs' --root '/u);
+    assert.match(status.command, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
     assert.match(status.claudeCodeHookConfig.path, /\.claude\/settings\.json$/u);
     assert.equal(status.claudeCodeHookConfig.exists, false);
     assert.deepEqual(status.claudeCodeHookConfig.missingEvents, ["SessionStart", "UserPromptSubmit", "Stop"]);
@@ -273,6 +275,8 @@ test("install-hooks adds Claude Code project settings without damaging unrelated
       const epicLoopCommands = commands.filter((command) => /hook\.mjs/u.test(command) && /epic-loop/u.test(command));
       assert.equal(epicLoopCommands.length, 1);
       assert.match(epicLoopCommands[0], /plugins\/epic-loop\/skills\/epic-loop\/scripts\/hook\.mjs/u);
+      assert.match(epicLoopCommands[0], / --root /u);
+      assert.match(epicLoopCommands[0], new RegExp(root.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
     }
 
     const stopCommands = settings.hooks.Stop[0].hooks.map((hook) => hook.command);

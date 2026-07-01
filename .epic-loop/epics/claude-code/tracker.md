@@ -116,7 +116,7 @@ Epic: Claude Code Harness
 
 - Phase status: doing
 
-- [ ] Kind: verification | Status: partially-satisfied | Run a disposable Claude Code runtime smoke test when the CLI environment is available.
+- [x] Kind: verification | Status: done | Run a disposable Claude Code runtime smoke test when the CLI environment is available.
   - Outcome: The Claude Code harness is proven through an actual Claude Code session, not only synthetic payload tests.
   - Surface: Disposable project checkout, Claude Code CLI, `/hooks` trust flow, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, `.epic-loop/` artifacts.
   - Acceptance: A disposable epic enters implementation mode, emits manager housekeeping, hands to techlead, runs one engineer brief, captures reports from transcript JSONL, and leaves durable runtime evidence; if the CLI is unavailable, the implementation log records the unverified manual gap.

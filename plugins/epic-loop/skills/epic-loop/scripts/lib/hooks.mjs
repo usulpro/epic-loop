@@ -38,6 +38,10 @@ export function buildHookCommand() {
   return `node ${shellQuote(HOOK_SCRIPT_PATH)}`;
 }
 
+function buildClaudeHookCommand(root) {
+  return `${buildHookCommand()} --root ${shellQuote(root)}`;
+}
+
 function buildInstallHooksCommand(extraArgs = "") {
   return `node ${shellQuote(INSTALL_HOOKS_SCRIPT_PATH)}${extraArgs}`;
 }
@@ -213,10 +217,10 @@ function buildHooksDocument(existingDocument) {
   };
 }
 
-function buildClaudeSettingsDocument(existingDocument) {
+function buildClaudeSettingsDocument(existingDocument, root) {
   const normalizedDocument = normalizeHookDocument(existingDocument);
   const hooks = normalizedDocument.hooks && typeof normalizedDocument.hooks === "object" && !Array.isArray(normalizedDocument.hooks) ? normalizedDocument.hooks : {};
-  const command = buildHookCommand();
+  const command = buildClaudeHookCommand(root);
   const changes = [];
 
   for (const eventName of HOOK_EVENTS) {
@@ -358,7 +362,7 @@ function inspectClaudeHookConfig(root) {
   const settingsPath = path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH);
   const strict = readJsonStrict(settingsPath);
   const writable = canWritePath(settingsPath);
-  const command = buildHookCommand();
+  const command = buildClaudeHookCommand(root);
 
   if (strict.error) {
     return {
@@ -709,7 +713,7 @@ function installClaudeHooks(root, flags = {}) {
     throw new Error(`Cannot update invalid JSON in ${settingsPath}: ${strict.error}`);
   }
 
-  const next = buildClaudeSettingsDocument(strict.value ?? {});
+  const next = buildClaudeSettingsDocument(strict.value ?? {}, root);
 
   if (flags["dry-run"]) {
     console.log(`Dry run: ${settingsPath}`);
@@ -746,7 +750,7 @@ export function handleHook(rawInput, flags = {}) {
     };
   }
 
-  const projectRoot = resolveRoot(payload.cwd ?? flags.root);
+  const projectRoot = resolveRoot(flags.root ?? payload.cwd);
   const sessionId = String(payload.session_id ?? "no-session");
   const platform = requireRuntimePlatform(projectRoot);
 

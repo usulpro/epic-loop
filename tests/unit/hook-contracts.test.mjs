@@ -391,6 +391,45 @@ test("Claude Code bound Stop prefers real payload assistant report over stale tr
   }
 });
 
+test("Claude Code bound engineer Stop uses explicit hook root when payload cwd is not usable", () => {
+  const root = makeTempRoot("hook-claude-explicit-root-");
+  const slug = "explicit-root";
+  const sessionId = "claude-explicit-root-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "stale transcript report" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude explicit root project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug, "engineer");
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: path.join(root, "not-the-project-root"),
+        hook_event_name: "Stop",
+        last_assistant_message: "actual engineer report from payload",
+        session_id: sessionId,
+        stop_hook_active: true,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(result.stdout, "");
+
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.last_engineer_report_path, ".epic-loop/epics/explicit-root/.runtime/latest-engineer-report.md");
+    assert.equal(runtime.implementation_loop.next_role, "techlead");
+
+    const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-engineer-report.md"), "utf8");
+    assert.match(report, /actual engineer report from payload/u);
+    assert.doesNotMatch(report, /stale transcript report/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("Claude Code bound Stop records uncapped block cap metadata", () => {
   const root = makeTempRoot("hook-claude-cap-zero-");
   const slug = "cap-zero";
