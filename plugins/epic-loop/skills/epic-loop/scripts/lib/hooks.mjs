@@ -27,6 +27,7 @@ import {
 } from "./common.mjs";
 import { markInterruptedTurnIfNeeded, maybeBuildImplementationContinuation } from "./loop.mjs";
 
+const CLAUDE_SETTINGS_RELATIVE_PATH = path.join(".claude", "settings.json");
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.dirname(LIB_DIR);
 const HOOK_SCRIPT_PATH = path.join(SCRIPTS_DIR, "hook.mjs");
@@ -211,6 +212,93 @@ function buildHooksDocument(existingDocument) {
   };
 }
 
+function buildClaudeSettingsDocument(existingDocument) {
+  const normalizedDocument = normalizeHookDocument(existingDocument);
+  const hooks = normalizedDocument.hooks && typeof normalizedDocument.hooks === "object" && !Array.isArray(normalizedDocument.hooks) ? normalizedDocument.hooks : {};
+  const command = buildHookCommand();
+  const changes = [];
+
+  for (const eventName of HOOK_EVENTS) {
+    const entries = Array.isArray(hooks[eventName]) ? hooks[eventName] : [];
+    let changedEvent = false;
+    let exactInstalled = false;
+
+    const normalizedEntries = entries.map((entry) => {
+      if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+        return entry;
+      }
+
+      const nextHooks = [];
+
+      for (const hook of entry.hooks) {
+        if (!hook || typeof hook !== "object") {
+          nextHooks.push(hook);
+          continue;
+        }
+
+        if (hook.command === command) {
+          if (exactInstalled) {
+            changedEvent = true;
+            continue;
+          }
+          exactInstalled = true;
+          nextHooks.push(hook);
+          continue;
+        }
+
+        if (isEpicLoopHookCommand(hook.command)) {
+          changedEvent = true;
+          if (!exactInstalled) {
+            exactInstalled = true;
+            nextHooks.push({
+              ...hook,
+              command,
+              timeout: 30,
+              type: "command",
+            });
+          }
+          continue;
+        }
+
+        nextHooks.push(hook);
+      }
+
+      return {
+        ...entry,
+        hooks: nextHooks,
+      };
+    });
+
+    if (!exactInstalled) {
+      normalizedEntries.push({
+        matcher: "",
+        hooks: [
+          {
+            command,
+            timeout: 30,
+            type: "command",
+          },
+        ],
+      });
+      changedEvent = true;
+    }
+
+    if (changedEvent) {
+      changes.push(eventName);
+    }
+
+    hooks[eventName] = normalizedEntries;
+  }
+
+  normalizedDocument.hooks = hooks;
+
+  return {
+    changes,
+    command,
+    document: normalizedDocument,
+  };
+}
+
 function inspectHookConfig(root) {
   const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
   const strict = readJsonStrict(hooksPath);
@@ -368,7 +456,7 @@ function doctorCodex(root, platformConfig, flags = {}) {
 function doctorClaudeCode(root, platformConfig, flags = {}) {
   const runtimeWritable = canWritePath(sessionRoot(root));
   const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
-  const settingsPath = path.join(root, ".claude", "settings.json");
+  const settingsPath = path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH);
   const settingsWritable = canWritePath(settingsPath);
   const status = {
     claudeCodeHookConfig: {
@@ -416,7 +504,8 @@ export function installHooks(flags = {}) {
   const platform = requireRuntimePlatform(root);
 
   if (platform === "claude-code") {
-    throw new Error("Claude Code hook installation is not implemented yet. Run the Claude hook setup task before installing Claude hooks.");
+    installClaudeHooks(root, flags);
+    return;
   }
 
   const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
@@ -451,6 +540,39 @@ export function installHooks(flags = {}) {
 
   console.log(`Installed project-local epic-loop hooks: ${hooksPath}`);
   console.log("Requires hooks = true under [features] in the active Codex config/profile.");
+}
+
+function installClaudeHooks(root, flags = {}) {
+  const settingsPath = path.join(root, CLAUDE_SETTINGS_RELATIVE_PATH);
+  const strict = readJsonStrict(settingsPath);
+
+  if (strict.error) {
+    throw new Error(`Cannot update invalid JSON in ${settingsPath}: ${strict.error}`);
+  }
+
+  const next = buildClaudeSettingsDocument(strict.value ?? {});
+
+  if (flags["dry-run"]) {
+    console.log(`Dry run: ${settingsPath}`);
+    console.log(`Hook command: ${next.command}`);
+    console.log(`Events that would change: ${formatList(next.changes)}`);
+    console.log(JSON.stringify(next.document, null, 2));
+    return;
+  }
+
+  if (next.changes.length === 0) {
+    console.log(`Claude Code epic-loop hooks already installed: ${settingsPath}`);
+    return;
+  }
+
+  const writable = canWritePath(settingsPath);
+  if (!writable.ok) {
+    throw new Error(`Cannot write ${settingsPath}: ${writable.reason}`);
+  }
+
+  writeJson(settingsPath, next.document);
+
+  console.log(`Installed project-local Claude Code epic-loop hooks: ${settingsPath}`);
 }
 
 export function handleHook(rawInput, flags = {}) {

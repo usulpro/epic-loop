@@ -74,6 +74,93 @@ test("doctor exposes a Claude Code platform readiness boundary", () => {
   }
 });
 
+test("install-hooks adds Claude Code project settings without damaging unrelated entries", () => {
+  const root = makeTempRoot("install-claude-");
+
+  try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+
+    const settingsPath = path.join(root, ".claude", "settings.json");
+    const dryRun = runNodeScript("install-hooks.mjs", ["--root", root, "--dry-run"]);
+    assertSuccess(dryRun);
+    assert.match(dryRun.stdout, /Dry run:/u);
+    assert.match(dryRun.stdout, /SessionStart/u);
+    assert.equal(fs.existsSync(settingsPath), false);
+
+    fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+    fs.writeFileSync(
+      settingsPath,
+      `${JSON.stringify(
+        {
+          permissions: {
+            allow: ["Bash(echo:*)"],
+          },
+          hooks: {
+            Stop: [
+              {
+                matcher: "",
+                hooks: [
+                  {
+                    command: "echo unrelated",
+                    type: "command",
+                  },
+                  {
+                    command: "node /old/epic-loop/hook.mjs",
+                    timeout: 5,
+                    type: "command",
+                  },
+                ],
+              },
+            ],
+            PreToolUse: [
+              {
+                matcher: "Bash",
+                hooks: [
+                  {
+                    command: "echo pre-tool",
+                    type: "command",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const install = runNodeScript("install-hooks.mjs", ["--root", root]);
+    assertSuccess(install);
+    assert.match(install.stdout, /Installed project-local Claude Code epic-loop hooks/u);
+
+    const settings = readJsonFile(settingsPath);
+    assert.deepEqual(settings.permissions.allow, ["Bash(echo:*)"]);
+    assert.equal(settings.hooks.PreToolUse[0].hooks[0].command, "echo pre-tool");
+
+    for (const eventName of ["SessionStart", "UserPromptSubmit", "Stop"]) {
+      const entries = settings.hooks[eventName];
+      assert.equal(Array.isArray(entries), true);
+      const commands = entries.flatMap((entry) => entry.hooks.map((hook) => hook.command));
+      const epicLoopCommands = commands.filter((command) => /hook\.mjs/u.test(command) && /epic-loop/u.test(command));
+      assert.equal(epicLoopCommands.length, 1);
+      assert.match(epicLoopCommands[0], /plugins\/epic-loop\/skills\/epic-loop\/scripts\/hook\.mjs/u);
+    }
+
+    const stopCommands = settings.hooks.Stop[0].hooks.map((hook) => hook.command);
+    assert.deepEqual(stopCommands.filter((command) => command === "echo unrelated"), ["echo unrelated"]);
+    assert.equal(stopCommands.some((command) => command === "node /old/epic-loop/hook.mjs"), false);
+
+    const secondInstall = runNodeScript("install-hooks.mjs", ["--root", root]);
+    assertSuccess(secondInstall);
+    assert.match(secondInstall.stdout, /already installed/u);
+    assert.deepEqual(readJsonFile(settingsPath), settings);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("task and role handoff CLIs update public files through process contracts", () => {
   const root = makeTempRoot("handoff-");
 

@@ -48,9 +48,9 @@ Epic: Claude Code Harness
 
 ### Phase 2: Claude Hook Setup And Doctor
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Add Claude Code hook configuration generation while preserving existing settings.
+- [x] Kind: implementation | Status: done | Add Claude Code hook configuration generation while preserving existing settings.
   - Outcome: The installer can add epic-loop hooks for Claude Code without damaging unrelated Claude hook settings.
   - Surface: `scripts/lib/hooks.mjs`, `scripts/install-hooks.mjs`, project-local `.claude/settings.json` handling, tests.
   - Acceptance: Installing Claude hooks adds `SessionStart`, `UserPromptSubmit`, and `Stop` command hooks to project-local `.claude/settings.json` and invokes the shared hook script; existing unrelated Claude settings and hooks remain intact; dry-run output shows the planned change.

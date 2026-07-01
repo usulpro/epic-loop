@@ -4,7 +4,7 @@ Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
-Active phase: Phase 1 - Platform Adapter Foundation
+Active phase: Phase 2 - Claude Hook Setup And Doctor
 Active task: TBD
 
 ## Current State
@@ -19,7 +19,9 @@ Active task: TBD
   feeding the existing manager/engineer report path.
 - Phase 1 Task 3 is closed with automated Codex and Claude Code payload fixture
   verification passing.
-- Phase 1 is closed and awaiting mandatory phase-closure housekeeping.
+- Phase 1 is closed.
+- Phase 2 Task 1 is closed with Claude Code project-local hook installation for
+  `.claude/settings.json`.
 
 ## Blockers
 
@@ -29,4 +31,5 @@ Active task: TBD
 
 ## Next Action
 
-- Run phase-closure housekeeping before starting Phase 2.
+- Start Phase 2 Task 2: add platform-config-driven doctor readiness checks for
+  Codex and Claude Code.
