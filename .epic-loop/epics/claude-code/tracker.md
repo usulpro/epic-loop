@@ -48,7 +48,7 @@ Epic: Claude Code Harness
 
 ### Phase 2: Claude Hook Setup And Doctor
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Add Claude Code hook configuration generation while preserving existing settings.
   - Outcome: The installer can add epic-loop hooks for Claude Code without damaging unrelated Claude hook settings.
@@ -62,7 +62,7 @@ Epic: Claude Code Harness
   - Acceptance: Doctor fails with an exact `doctor.mjs --platform codex|claude-code --json` fix when platform config is missing and no `--platform` was provided; Codex doctor output remains backward compatible after `codex` is selected; Claude doctor reports missing/stale project-local `.claude/settings.json` hooks; Claude doctor accepts `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0` or `>=20`, warns for `20..50` that loop mode may stop early and require manual continuation, and treats missing, invalid, or values below `20` as setup-required.
   - Docs: `docs/platform-adapter-contract.md`, `docs/claude-api.md`, `docs/verification-plan.md`.
 
-- [ ] Kind: verification | Status: todo | Verify platform selection, hook installer, and doctor contracts for Codex and Claude Code temp projects.
+- [x] Kind: verification | Status: done | Verify platform selection, hook installer, and doctor contracts for Codex and Claude Code temp projects.
   - Outcome: Both platform setup paths are tested through public CLI contracts rather than private helper calls only.
   - Surface: `tests/unit/cli-contracts.test.mjs`, temp project fixtures, generated platform runtime config, generated hook settings, `pnpm run test:unit`.
   - Acceptance: Tests prove missing-platform errors, platform config writes, idempotent install, stale command repair, unrelated hook preservation, dry-run behavior, and doctor JSON status for both platforms; generated files are removed with temp roots.

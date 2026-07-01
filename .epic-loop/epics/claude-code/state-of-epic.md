@@ -4,7 +4,7 @@ Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
-Active phase: Phase 2 - Claude Hook Setup And Doctor
+Active phase: TBD
 Active task: TBD
 
 ## Current State
@@ -25,6 +25,9 @@ Active task: TBD
 - Phase 2 Task 2 is closed with platform-config-driven doctor readiness checks
   for Codex and Claude Code, including Claude hook config and stop hook block
   cap status.
+- Phase 2 Task 3 is closed with public CLI contract verification for Codex and
+  Claude Code platform setup paths.
+- Phase 2 is closed.
 
 ## Blockers
 
@@ -32,5 +35,4 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 2 Task 3: verify platform selection, hook installer, and doctor
-  contracts for Codex and Claude Code temp projects.
+- Run phase-closure housekeeping before starting Phase 3.

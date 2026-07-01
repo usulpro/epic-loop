@@ -125,6 +125,18 @@ test("doctor reports Claude Code hook readiness and block cap status", () => {
     assert.match(finiteStatus.stopHookBlockCap.warning, /may stop early and require manual continuation/u);
     assert.deepEqual(finiteStatus.warnings, [finiteStatus.stopHookBlockCap.warning]);
 
+    const recommendedFinite = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "51",
+      },
+    });
+    assertSuccess(recommendedFinite);
+    const recommendedFiniteStatus = JSON.parse(recommendedFinite.stdout);
+    assert.equal(recommendedFiniteStatus.ready, true);
+    assert.equal(recommendedFiniteStatus.stopHookBlockCap.ready, true);
+    assert.equal(recommendedFiniteStatus.stopHookBlockCap.recommended, true);
+    assert.equal(recommendedFiniteStatus.stopHookBlockCap.warning, null);
+
     const low = runNodeScript("doctor.mjs", ["--root", root, "--json"], {
       env: {
         CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "19",
