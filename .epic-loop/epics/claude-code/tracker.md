@@ -70,7 +70,7 @@ Epic: Claude Code Harness
 
 ### Phase 3: Claude Session Binding And Loop Runtime
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Add Claude-aware current-session detection for implementation binding.
   - Outcome: `bind-session --current` can safely bind a Claude Code session when fresh hook-capture data identifies the current session.
@@ -84,7 +84,7 @@ Epic: Claude Code Harness
   - Acceptance: A bound Claude Code Stop event returns a block continuation, sets the expected next role, records progress/runtime state, captures reports from transcript JSONL, records the effective `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` at implementation start, routes to manager when a finite cap is close to exhaustion, and respects `stop_hook_active` without infinite reentry.
   - Docs: `docs/platform-adapter-contract.md`, `docs/verification-plan.md`.
 
-- [ ] Kind: verification | Status: todo | Verify end-to-end synthetic Claude Code implementation routing.
+- [x] Kind: verification | Status: done | Verify end-to-end synthetic Claude Code implementation routing.
   - Outcome: The full hook-driven loop path is proven with realistic Claude Code payload fixtures before manual CLI verification.
   - Surface: `tests/unit/hook-contracts.test.mjs`, temp epic workspace, transcript JSONL fixture, `pnpm run test:unit`.
   - Acceptance: A test initializes an epic, binds a Claude session, sends SessionStart/UserPromptSubmit/Stop payloads, observes manager and techlead continuations, captures assistant reports, confirms no records are written for unbound sessions, and proves finite block-cap proximity produces a manager communication turn before forced stop.

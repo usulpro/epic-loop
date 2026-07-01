@@ -165,6 +165,121 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
   }
 });
 
+test("Claude Code synthetic implementation flow binds current capture and routes manager techlead engineer turns", () => {
+  const root = makeTempRoot("hook-claude-e2e-");
+  const slug = "claude-e2e";
+  const sessionId = "claude-e2e-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+
+  function writeTranscript(message) {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: message })}\n`, "utf8");
+  }
+
+  function runClaudeHook(hook_event_name, extra = {}) {
+    return runNodeScript("hook.mjs", ["--root", root], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name,
+        session_id: sessionId,
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+        ...extra,
+      }),
+    });
+  }
+
+  try {
+    writeTranscript("session capture ready");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude e2e project", "--slug", slug, "--no-gitignore"]));
+
+    const capture = runClaudeHook("SessionStart");
+    assertSuccess(capture);
+    assert.equal(capture.stdout, "");
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
+    assertSuccess(bind);
+    assert.match(bind.stdout, /Active implementation session for claude-e2e: claude-e2e-session/u);
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions[sessionId].source, "current-claude-code-session");
+
+    const boundSessionStart = runClaudeHook("SessionStart");
+    assertSuccess(boundSessionStart);
+    assert.equal(boundSessionStart.stdout, "");
+
+    const boundPromptSubmit = runClaudeHook("UserPromptSubmit", {
+      prompt: "Continue the synthetic implementation loop.",
+    });
+    assertSuccess(boundPromptSubmit);
+    assert.equal(boundPromptSubmit.stdout, "");
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), true);
+
+    writeTranscript("manager housekeeping finished");
+    const managerStop = runClaudeHook("Stop");
+    assertSuccess(managerStop);
+    const managerContinuation = JSON.parse(managerStop.stdout);
+    assert.equal(managerContinuation.decision, "block");
+    assert.match(managerContinuation.reason, /manager housekeeping turn 1/u);
+    const managerRuntime = readJsonFile(runtimePath);
+    assert.equal(managerRuntime.implementation_loop.current_role, "manager");
+    assert.equal(managerRuntime.implementation_loop.next_role, "techlead");
+    assert.equal(managerRuntime.implementation_loop.iteration, 1);
+
+    writeTranscript("Manager report from transcript");
+    const techleadStop = runClaudeHook("Stop");
+    assertSuccess(techleadStop);
+    const techleadContinuation = JSON.parse(techleadStop.stdout);
+    assert.equal(techleadContinuation.decision, "block");
+    assert.match(techleadContinuation.reason, /techlead turn 2/u);
+    assert.match(
+      fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8"),
+      /Manager report from transcript/u,
+    );
+    const techleadRuntime = readJsonFile(runtimePath);
+    assert.equal(techleadRuntime.implementation_loop.current_role, "techlead");
+    assert.equal(techleadRuntime.implementation_loop.next_role, "awaiting-transition");
+    assert.equal(techleadRuntime.implementation_loop.iteration, 2);
+
+    const brief = runNodeScript("write-engineer-brief.mjs", ["--root", root, "--slug", slug, "--stdin"], {
+      input: "Verify the synthetic Claude Code implementation route.\n",
+    });
+    assertSuccess(brief);
+    const setEngineer = runNodeScript("set-next-role.mjs", [
+      "--root",
+      root,
+      "--slug",
+      slug,
+      "--role",
+      "engineer",
+      "--prompt-file",
+      ".epic-loop/epics/claude-e2e/.runtime/current-engineer-prompt.md",
+      "--reason",
+      "unit-test-engineer-route",
+    ]);
+    assertSuccess(setEngineer);
+
+    writeTranscript("Techlead handoff complete");
+    const engineerStop = runClaudeHook("Stop");
+    assertSuccess(engineerStop);
+    const engineerContinuation = JSON.parse(engineerStop.stdout);
+    assert.equal(engineerContinuation.decision, "block");
+    assert.match(engineerContinuation.reason, /Focused implementation task 3/u);
+    assert.match(engineerContinuation.reason, /Verify the synthetic Claude Code implementation route/u);
+    const engineerRuntime = readJsonFile(runtimePath);
+    assert.equal(engineerRuntime.implementation_loop.current_role, "engineer");
+    assert.equal(engineerRuntime.implementation_loop.next_role, "techlead");
+    assert.equal(engineerRuntime.implementation_loop.iteration, 3);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("Codex bound Stop captures last_assistant_message reports", () => {
   const root = makeTempRoot("hook-codex-report-");
   const slug = "codex-report";
