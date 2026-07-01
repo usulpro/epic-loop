@@ -13,6 +13,8 @@ const MANAGER_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates",
 const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-techlead-prompt.md");
 const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md";
 const LATEST_MANAGER_REPORT_RELATIVE_PATH = ".runtime/latest-manager-report.md";
+const CLAUDE_BLOCK_CAP_ENV = "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP";
+const CLAUDE_BLOCK_CAP_PROXIMITY_REMAINING = 1;
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
   current_role: "Current role",
@@ -49,22 +51,24 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
     });
   }
 
+  const nextLoop = withClaudeBlockCapMetadata(projectRoot, {
+    ...loop,
+    current_role: null,
+    active_turn_started_at: null,
+    active_turn_stopped_at: null,
+    iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
+    last_reason: "implementation-start",
+    last_session_id: sessionId,
+    last_transition_at: timestamp,
+    last_transition_by: "bind-session",
+    next_role: "manager",
+    prompt_file: null,
+    status: "running",
+  }, timestamp);
+
   writeJson(runtimePath, {
     ...runtime,
-    implementation_loop: {
-      ...loop,
-      current_role: null,
-      active_turn_started_at: null,
-      active_turn_stopped_at: null,
-      iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
-      last_reason: "implementation-start",
-      last_session_id: sessionId,
-      last_transition_at: timestamp,
-      last_transition_by: "bind-session",
-      next_role: "manager",
-      prompt_file: null,
-      status: "running",
-    },
+    implementation_loop: nextLoop,
     implementation_submode: "manager",
     mode: "implementation",
     updated_at: timestamp,
@@ -152,8 +156,21 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   const runtimePath = runtimeStatePath(projectRoot, slug);
   let runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   let loop = normalizeObject(runtime.implementation_loop);
+  const platform = readRuntimePlatform(projectRoot).platform;
 
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
+  ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
+
+  if (platform === "claude-code" && payload.stop_hook_active === true) {
+    appendLoopLog(projectRoot, {
+      action: "skip",
+      reason: "claude-stop-hook-reentry",
+      session_id: payload.session_id ?? null,
+      slug,
+      timestamp,
+    });
+    return null;
+  }
 
   if (loop.status !== "running") {
     appendLoopLog(projectRoot, {
@@ -167,7 +184,8 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     return null;
   }
 
-  const role = loop.next_role;
+  const capProximityRoute = platform === "claude-code" ? getClaudeBlockCapProximityRoute(loop, timestamp) : null;
+  const role = capProximityRoute ? "manager" : loop.next_role;
   if (role === WAITING_FOR_TURN_TRANSITION) {
     appendLoopLog(projectRoot, {
       action: "skip",
@@ -206,7 +224,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
   const prompt =
     role === "manager"
-      ? buildManagerPrompt(slug, iteration, loop.last_reason ?? null)
+      ? buildManagerPrompt(slug, iteration, capProximityRoute?.reason ?? loop.last_reason ?? null)
       : role === "techlead"
         ? buildTechleadPrompt(slug, iteration)
         : buildEngineerPrompt(projectRoot, slug, loop, iteration);
@@ -214,19 +232,27 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? loop.prompt_file ?? null : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
 
-  writeJson(runtimePath, {
-    ...runtime,
-    implementation_loop: {
+  const nextLoop = incrementClaudeBlockCount(
+    {
       ...loop,
       active_turn_started_at: timestamp,
       active_turn_stopped_at: null,
       current_role: role,
       iteration,
       last_continuation_at: timestamp,
+      last_reason: capProximityRoute?.reason ?? loop.last_reason ?? null,
       last_session_id: payload.session_id ?? null,
       next_role: followingRole,
       status: "running",
     },
+    platform,
+    timestamp,
+    capProximityRoute,
+  );
+
+  writeJson(runtimePath, {
+    ...runtime,
+    implementation_loop: nextLoop,
     implementation_submode: role,
     updated_at: timestamp,
   });
@@ -237,6 +263,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     next_role: followingRole,
     phase: runtime.active_phase ?? null,
     prompt_file: promptFile,
+    reason: capProximityRoute?.reason ?? null,
     role,
     session_id: payload.session_id ?? null,
     slug,
@@ -434,6 +461,106 @@ function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
     ...(summary.active_phase !== undefined ? { active_phase: summary.active_phase } : {}),
     ...(summary.active_task !== undefined ? { active_task: summary.active_task } : {}),
     ...(summary.mode !== undefined ? { mode: summary.mode } : {}),
+  };
+}
+
+function ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp) {
+  const nextLoop = withClaudeBlockCapMetadata(projectRoot, loop, timestamp);
+
+  if (nextLoop === loop) {
+    return { loop, runtime };
+  }
+
+  const nextRuntime = {
+    ...runtime,
+    implementation_loop: nextLoop,
+    updated_at: timestamp,
+  };
+
+  writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
+  return {
+    loop: nextLoop,
+    runtime: nextRuntime,
+  };
+}
+
+function withClaudeBlockCapMetadata(projectRoot, loop, timestamp) {
+  if (readRuntimePlatform(projectRoot).platform !== "claude-code") {
+    return loop;
+  }
+
+  const existing = normalizeObject(loop.claude_code_stop_hook_block_cap);
+  if (existing.recorded_at) {
+    return loop;
+  }
+
+  return {
+    ...loop,
+    claude_code_stop_hook_block_cap: {
+      ...readClaudeBlockCapEnv(),
+      consecutive_blocks: Number.isFinite(existing.consecutive_blocks) ? existing.consecutive_blocks : 0,
+      last_block_at: existing.last_block_at ?? null,
+      proximity_remaining: CLAUDE_BLOCK_CAP_PROXIMITY_REMAINING,
+      proximity_routed_at: existing.proximity_routed_at ?? null,
+      recorded_at: timestamp,
+    },
+  };
+}
+
+function readClaudeBlockCapEnv() {
+  const rawValue = process.env[CLAUDE_BLOCK_CAP_ENV] ?? null;
+  const numericValue = typeof rawValue === "string" && /^\d+$/u.test(rawValue) ? Number(rawValue) : null;
+
+  return {
+    env_var: CLAUDE_BLOCK_CAP_ENV,
+    finite: numericValue !== null && numericValue > 0,
+    raw_value: rawValue,
+    uncapped: numericValue === 0,
+    valid: numericValue !== null,
+    value: numericValue,
+  };
+}
+
+function getClaudeBlockCapProximityRoute(loop, timestamp) {
+  const cap = normalizeObject(loop.claude_code_stop_hook_block_cap);
+  if (cap.uncapped === true || cap.finite !== true || !Number.isFinite(cap.value)) {
+    return null;
+  }
+
+  const consecutiveBlocks = Number.isFinite(cap.consecutive_blocks) ? cap.consecutive_blocks : 0;
+  const remainingBlocks = cap.value - consecutiveBlocks;
+  if (remainingBlocks > CLAUDE_BLOCK_CAP_PROXIMITY_REMAINING || cap.proximity_routed_at) {
+    return null;
+  }
+
+  return {
+    reason: [
+      `${CLAUDE_BLOCK_CAP_ENV}-proximity`,
+      `The implementation loop is at ${consecutiveBlocks}/${cap.value} consecutive Claude Code Stop-hook block continuations.`,
+      "Route to manager before Claude Code forces the run to stop.",
+      `Tell the user the loop is stopping because it is close to ${CLAUDE_BLOCK_CAP_ENV}.`,
+      "Tell the user to manually ask the agent to continue loop mode when ready.",
+    ].join(" "),
+    routed_at: timestamp,
+  };
+}
+
+function incrementClaudeBlockCount(loop, platform, timestamp, capProximityRoute) {
+  if (platform !== "claude-code") {
+    return loop;
+  }
+
+  const cap = normalizeObject(loop.claude_code_stop_hook_block_cap);
+  const consecutiveBlocks = Number.isFinite(cap.consecutive_blocks) ? cap.consecutive_blocks : 0;
+
+  return {
+    ...loop,
+    claude_code_stop_hook_block_cap: {
+      ...cap,
+      consecutive_blocks: consecutiveBlocks + 1,
+      last_block_at: timestamp,
+      proximity_routed_at: capProximityRoute?.routed_at ?? cap.proximity_routed_at ?? null,
+    },
   };
 }
 

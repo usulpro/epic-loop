@@ -78,7 +78,7 @@ Epic: Claude Code Harness
   - Acceptance: A fresh Claude Code hook capture with `session_id` and `transcript_path` can bind implementation mode; stale or ambiguous captures require explicit `--session-id`; Codex current-session fallback remains unchanged.
   - Docs: `docs/platform-adapter-contract.md`, `docs/claude-api.md`.
 
-- [ ] Kind: implementation | Status: todo | Exercise the manager -> techlead -> engineer loop on Claude Code hook payloads.
+- [x] Kind: implementation | Status: done | Exercise the manager -> techlead -> engineer loop on Claude Code hook payloads.
   - Outcome: The existing implementation loop progresses through Claude Code Stop continuations using the same runtime state transitions as Codex.
   - Surface: `scripts/lib/loop.mjs`, `scripts/hook.mjs`, runtime state fixtures, role report fixtures, tests.
   - Acceptance: A bound Claude Code Stop event returns a block continuation, sets the expected next role, records progress/runtime state, captures reports from transcript JSONL, records the effective `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` at implementation start, routes to manager when a finite cap is close to exhaustion, and respects `stop_hook_active` without infinite reentry.

@@ -30,6 +30,8 @@ Active task: TBD
 - Phase 2 is closed.
 - Phase 3 Task 1 is closed with Claude-aware current-session detection for
   implementation binding.
+- Phase 3 Task 2 is closed with Claude Code implementation loop runtime cap
+  metadata and cap-proximity manager routing.
 
 ## Blockers
 
@@ -37,5 +39,5 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 3 Task 2: exercise the manager -> techlead -> engineer loop on
-  Claude Code hook payloads.
+- Start Phase 3 Task 3: verify end-to-end synthetic Claude Code implementation
+  routing.

@@ -241,6 +241,205 @@ test("Claude Code bound Stop captures latest assistant transcript report", () =>
   }
 });
 
+test("Claude Code bound Stop records uncapped block cap metadata", () => {
+  const root = makeTempRoot("hook-claude-cap-zero-");
+  const slug = "cap-zero";
+  const sessionId = "claude-cap-zero-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "manager ready" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude cap zero project", "--slug", slug, "--no-gitignore"]));
+
+    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+    const runtime = readJsonFile(runtimePath);
+    fs.writeFileSync(
+      runtimePath,
+      `${JSON.stringify(
+        {
+          ...runtime,
+          implementation_loop: {
+            current_role: null,
+            iteration: 0,
+            next_role: "manager",
+            status: "running",
+          },
+          mode: "implementation",
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    const continuation = JSON.parse(result.stdout);
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /manager housekeeping turn 1/u);
+    assert.doesNotMatch(continuation.reason, /CLAUDE_CODE_STOP_HOOK_BLOCK_CAP-proximity/u);
+
+    const nextRuntime = readJsonFile(runtimePath);
+    const cap = nextRuntime.implementation_loop.claude_code_stop_hook_block_cap;
+    assert.equal(cap.value, 0);
+    assert.equal(cap.uncapped, true);
+    assert.equal(cap.finite, false);
+    assert.equal(cap.consecutive_blocks, 1);
+    assert.equal(nextRuntime.implementation_loop.current_role, "manager");
+    assert.equal(nextRuntime.implementation_loop.next_role, "techlead");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code finite block cap proximity routes to manager guidance", () => {
+  const root = makeTempRoot("hook-claude-cap-proximity-");
+  const slug = "cap-proximity";
+  const sessionId = "claude-cap-proximity-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "near cap" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude cap proximity project", "--slug", slug, "--no-gitignore"]));
+
+    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+    const runtime = readJsonFile(runtimePath);
+    fs.writeFileSync(
+      runtimePath,
+      `${JSON.stringify(
+        {
+          ...runtime,
+          implementation_loop: {
+            claude_code_stop_hook_block_cap: {
+              consecutive_blocks: 19,
+              env_var: "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP",
+              finite: true,
+              last_block_at: "2026-07-01T00:00:00+00:00",
+              proximity_remaining: 1,
+              proximity_routed_at: null,
+              raw_value: "20",
+              recorded_at: "2026-07-01T00:00:00+00:00",
+              uncapped: false,
+              valid: true,
+              value: 20,
+            },
+            current_role: null,
+            iteration: 19,
+            next_role: "techlead",
+            status: "running",
+          },
+          mode: "implementation",
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "20",
+      },
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    const continuation = JSON.parse(result.stdout);
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /CLAUDE_CODE_STOP_HOOK_BLOCK_CAP-proximity/u);
+    assert.match(continuation.reason, /manually ask the agent to continue loop mode/u);
+
+    const nextRuntime = readJsonFile(runtimePath);
+    const cap = nextRuntime.implementation_loop.claude_code_stop_hook_block_cap;
+    assert.equal(nextRuntime.implementation_loop.current_role, "manager");
+    assert.equal(nextRuntime.implementation_loop.next_role, "techlead");
+    assert.equal(cap.consecutive_blocks, 20);
+    assert.equal(typeof cap.proximity_routed_at, "string");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code Stop hook reentry does not issue another block", () => {
+  const root = makeTempRoot("hook-claude-reentry-");
+  const slug = "claude-reentry";
+  const sessionId = "claude-reentry-session";
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, `${JSON.stringify({ role: "assistant", content: "reentry" })}\n`, "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Claude reentry project", "--slug", slug, "--no-gitignore"]));
+
+    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+    const runtime = readJsonFile(runtimePath);
+    fs.writeFileSync(
+      runtimePath,
+      `${JSON.stringify(
+        {
+          ...runtime,
+          implementation_loop: {
+            current_role: null,
+            iteration: 0,
+            next_role: "manager",
+            status: "running",
+          },
+          mode: "implementation",
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      env: {
+        CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: "0",
+      },
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        stop_hook_active: true,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(result.stdout, "");
+
+    const nextRuntime = readJsonFile(runtimePath);
+    assert.equal(nextRuntime.implementation_loop.current_role, null);
+    assert.equal(nextRuntime.implementation_loop.next_role, "manager");
+    assert.equal(nextRuntime.implementation_loop.claude_code_stop_hook_block_cap.consecutive_blocks, 0);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("Claude Code malformed or missing transcripts do not break continuation", () => {
   const cases = [
     {
