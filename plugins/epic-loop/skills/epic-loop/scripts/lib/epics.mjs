@@ -11,6 +11,7 @@ import {
   nowIso,
   readCurrentCodexSession,
   readJson,
+  requireRuntimePlatform,
   requireFlag,
   resolveRoot,
   roadmapStatePath,
@@ -193,7 +194,15 @@ export function status(flags = {}, positionals = []) {
 
 export function bindSession(flags = {}) {
   const root = resolveRoot(flags.root);
-  const currentSession = flags.current ? readCurrentCodexSession(root) : null;
+  let currentSession = null;
+
+  if (flags.current) {
+    const platform = requireRuntimePlatform(root);
+    if (platform !== "codex") {
+      throw new Error("Cannot detect current Claude Code session yet. Pass --session-id explicitly.");
+    }
+    currentSession = readCurrentCodexSession(root);
+  }
 
   if (flags.current && !currentSession) {
     throw new Error("Cannot detect current Codex session from .codex/tmp/last-hook-capture.json. Pass --session-id explicitly.");

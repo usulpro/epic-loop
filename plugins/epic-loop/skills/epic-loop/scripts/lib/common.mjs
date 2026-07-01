@@ -4,9 +4,11 @@ import process from "node:process";
 
 export const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
 export const MODES = ["shaping", "implementation", "review", "reset"];
+export const PLATFORMS = ["codex", "claude-code"];
 export const CODEX_HOOKS_RELATIVE_PATH = path.join(".codex", "hooks.json");
 export const CODEX_CONFIG_RELATIVE_PATH = path.join(".codex", "config.toml");
 export const CODEX_HOOK_CAPTURE_RELATIVE_PATH = path.join(".codex", "tmp", "last-hook-capture.json");
+export const PLATFORM_CONFIG_RELATIVE_PATH = path.join(".epic-loop", ".runtime", "platform.json");
 // A hook capture written within this window is treated as the live session.
 const CURRENT_SESSION_CAPTURE_TTL_MS = 15 * 60 * 1000;
 
@@ -233,6 +235,58 @@ export function epicLoopRoot(projectRoot) {
 
 export function sessionRoot(projectRoot) {
   return path.join(epicLoopRoot(projectRoot), ".runtime");
+}
+
+export function platformConfigPath(projectRoot) {
+  return path.join(projectRoot, PLATFORM_CONFIG_RELATIVE_PATH);
+}
+
+export function normalizeRuntimePlatform(value) {
+  return typeof value === "string" && PLATFORMS.includes(value) ? value : null;
+}
+
+export function platformSetupCommand() {
+  return "doctor.mjs --platform codex|claude-code --json";
+}
+
+export function writeRuntimePlatform(projectRoot, platform) {
+  const normalizedPlatform = normalizeRuntimePlatform(platform);
+  if (!normalizedPlatform) {
+    throw new Error(`Invalid --platform "${platform}". Expected one of: ${PLATFORMS.join(", ")}.`);
+  }
+
+  const timestamp = nowIso();
+  writeJson(platformConfigPath(projectRoot), {
+    platform: normalizedPlatform,
+    selected_at: timestamp,
+  });
+
+  return {
+    path: platformConfigPath(projectRoot),
+    platform: normalizedPlatform,
+    selected_at: timestamp,
+  };
+}
+
+export function readRuntimePlatform(projectRoot) {
+  const filePath = platformConfigPath(projectRoot);
+  const config = readJson(filePath, null);
+  const platform = config && typeof config === "object" ? normalizeRuntimePlatform(config.platform) : null;
+
+  return {
+    path: filePath,
+    platform,
+    valid: platform !== null,
+  };
+}
+
+export function requireRuntimePlatform(projectRoot) {
+  const config = readRuntimePlatform(projectRoot);
+  if (config.valid) {
+    return config.platform;
+  }
+
+  throw new Error(`Runtime platform is not configured. Run: ${platformSetupCommand()}`);
 }
 
 export function epicsRoot(projectRoot) {

@@ -15,6 +15,8 @@ test("hook CLI captures unbound sessions without writing epic-loop runtime recor
   };
 
   try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+
     const result = runNodeScript("hook.mjs", ["--root", root], {
       input: JSON.stringify(payload),
     });
@@ -22,7 +24,8 @@ test("hook CLI captures unbound sessions without writing epic-loop runtime recor
     assertSuccess(result);
     assert.equal(result.stdout, "");
     assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), true);
-    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime")), false);
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -34,6 +37,7 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
   const sessionId = "session-bound";
 
   try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bound routing project", "--no-gitignore"]));
 
     const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
@@ -100,6 +104,34 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
     assert.equal(nextRuntime.implementation_loop.iteration, 1);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "last-hook-event.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "sessions", sessionId, "last-hook-event.json")), true);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("Claude Code unbound hook payload exits without epic-loop runtime records", () => {
+  const root = makeTempRoot("hook-claude-unbound-");
+  const transcriptPath = path.join(root, "transcript.jsonl");
+
+  try {
+    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"done\"}}\n", "utf8");
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: "claude-session-unbound",
+        stop_hook_active: false,
+        transcript_path: transcriptPath,
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(result.stdout, "");
+    assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), false);
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
+    assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

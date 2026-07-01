@@ -46,3 +46,8 @@
 - Manager owns the user-facing communication: explain that the loop is stopping
   near `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` and tell the user to manually ask the
   agent to continue loop mode.
+
+## 2026-07-01T14:59:57+00:00 - Closed. Added explicit runtime platform config at .epic-loop/.runtime/platform.json, doctor-driven platform bootstrap for codex and claude-code, platform guards for install-hooks/hook/bind-session --current, Codex-preserving doctor behavior after codex selection, structured Claude setup-required doctor boundary, and unit coverage for missing platform errors, Codex contracts, Claude doctor boundary, and Claude-shaped unbound Stop payloads. Verification: pnpm run test:unit passed 16/16; pnpm run validate passed. Residual gaps intentionally deferred: full Claude hook installer/readiness policy and transcript report capture.
+
+- Task: Phase 1 Task 1 - Platform adapter foundation
+- Verdict: Closed. Added explicit runtime platform config at .epic-loop/.runtime/platform.json, doctor-driven platform bootstrap for codex and claude-code, platform guards for install-hooks/hook/bind-session --current, Codex-preserving doctor behavior after codex selection, structured Claude setup-required doctor boundary, and unit coverage for missing platform errors, Codex contracts, Claude doctor boundary, and Claude-shaped unbound Stop payloads. Verification: pnpm run test:unit passed 16/16; pnpm run validate passed. Residual gaps intentionally deferred: full Claude hook installer/readiness policy and transcript report capture.

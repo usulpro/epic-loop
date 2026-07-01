@@ -26,9 +26,9 @@ Epic: Claude Code Harness
 
 ### Phase 1: Platform Adapter Foundation
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Introduce doctor-driven runtime platform selection and a platform adapter boundary without changing Codex defaults.
+- [x] Kind: implementation | Status: done | Introduce doctor-driven runtime platform selection and a platform adapter boundary without changing Codex defaults.
   - Outcome: The first `doctor.mjs --platform codex|claude-code --json` call stores the selected platform in uncommitted runtime config, and platform-aware scripts use that value for Codex or Claude Code behavior.
   - Surface: `scripts/doctor.mjs`, `scripts/lib/common.mjs`, `scripts/lib/hooks.mjs`, `scripts/lib/loop.mjs`, hook payload helpers, tests.
   - Acceptance: Doctor writes runtime platform config when `--platform` is provided; platform-aware scripts fail clearly when platform config is missing or invalid; no script infers platform from payload shape, cwd, env, or config-file presence; Codex payloads still route exactly as before once `codex` is selected; Claude Code payload fixtures work once `claude-code` is selected; unbound sessions remain silent no-ops.

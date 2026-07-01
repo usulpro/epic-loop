@@ -12,6 +12,9 @@ import {
   eventTimestamp,
   formatList,
   nowIso,
+  platformConfigPath,
+  readRuntimePlatform,
+  requireRuntimePlatform,
   readJson,
   readJsonStrict,
   resolveRoot,
@@ -20,6 +23,7 @@ import {
   slugify,
   writeHookCapture,
   writeJson,
+  writeRuntimePlatform,
 } from "./common.mjs";
 import { markInterruptedTurnIfNeeded, maybeBuildImplementationContinuation } from "./loop.mjs";
 
@@ -263,6 +267,23 @@ function inspectHookConfig(root) {
 
 export function doctor(flags = {}) {
   const root = resolveRoot(flags.root);
+  const platformConfig =
+    typeof flags.platform === "string" ? writeRuntimePlatform(root, flags.platform) : { ...readRuntimePlatform(root), selected_at: null };
+  const platform = platformConfig.platform;
+
+  if (!platform) {
+    throw new Error("Runtime platform is not configured. Run: doctor.mjs --platform codex|claude-code --json");
+  }
+
+  if (platform === "claude-code") {
+    doctorClaudeCode(root, platformConfig, flags);
+    return;
+  }
+
+  doctorCodex(root, platformConfig, flags);
+}
+
+function doctorCodex(root, platformConfig, flags = {}) {
   const hookConfig = inspectHookConfig(root);
   const feature = inspectCodexHooksFeature(root);
   const runtimeWritable = canWritePath(sessionRoot(root));
@@ -284,6 +305,12 @@ export function doctor(flags = {}) {
       exists: fs.existsSync(HOOK_SCRIPT_PATH),
       path: HOOK_SCRIPT_PATH,
       readable: scriptReadable,
+    },
+    platform: "codex",
+    platformConfig: {
+      path: platformConfigPath(root),
+      valid: true,
+      value: platformConfig.platform,
     },
     projectRoot: root,
     ready,
@@ -319,6 +346,7 @@ export function doctor(flags = {}) {
 
   console.log(`Hook target exists: ${fs.existsSync(HOOK_SCRIPT_PATH) ? "yes" : "no"}`);
   console.log(`Hook target readable: ${scriptReadable.ok ? "yes" : `no (${scriptReadable.reason})`}`);
+  console.log(`Runtime platform: codex (${platformConfigPath(root)})`);
 
   if (ready) {
     console.log("Next: continue epic-loop lifecycle setup.");
@@ -337,8 +365,60 @@ export function doctor(flags = {}) {
   console.log(`  ${buildInstallHooksCommand()}`);
 }
 
+function doctorClaudeCode(root, platformConfig, flags = {}) {
+  const runtimeWritable = canWritePath(sessionRoot(root));
+  const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
+  const settingsPath = path.join(root, ".claude", "settings.json");
+  const settingsWritable = canWritePath(settingsPath);
+  const status = {
+    claudeCodeHookConfig: {
+      path: settingsPath,
+      ready: false,
+      writable: settingsWritable,
+    },
+    command: buildHookCommand(),
+    hookTarget: {
+      exists: fs.existsSync(HOOK_SCRIPT_PATH),
+      path: HOOK_SCRIPT_PATH,
+      readable: scriptReadable,
+    },
+    platform: "claude-code",
+    platformConfig: {
+      path: platformConfigPath(root),
+      valid: true,
+      value: platformConfig.platform,
+    },
+    projectRoot: root,
+    ready: false,
+    runtimeState: {
+      path: sessionRoot(root),
+      writable: runtimeWritable,
+    },
+    setupPossible: settingsWritable.ok,
+    status: "setup-required",
+  };
+
+  if (flags.json) {
+    console.log(JSON.stringify(status, null, 2));
+    return;
+  }
+
+  console.log("Epic-loop hook readiness: setup-required");
+  console.log(`Project root: ${root}`);
+  console.log(`Runtime platform: claude-code (${platformConfigPath(root)})`);
+  console.log(`Hook command: ${buildHookCommand()}`);
+  console.log(`Claude Code settings: ${settingsPath}`);
+  console.log("Claude Code hook installation and readiness checks will be added by the Claude hook setup task.");
+}
+
 export function installHooks(flags = {}) {
   const root = resolveRoot(flags.root);
+  const platform = requireRuntimePlatform(root);
+
+  if (platform === "claude-code") {
+    throw new Error("Claude Code hook installation is not implemented yet. Run the Claude hook setup task before installing Claude hooks.");
+  }
+
   const hooksPath = path.join(root, CODEX_HOOKS_RELATIVE_PATH);
   const strict = readJsonStrict(hooksPath);
 
@@ -387,11 +467,14 @@ export function handleHook(rawInput, flags = {}) {
 
   const projectRoot = resolveRoot(payload.cwd ?? flags.root);
   const sessionId = String(payload.session_id ?? "no-session");
+  const platform = requireRuntimePlatform(projectRoot);
 
   // Record the live session on every event, before the binding gate. This is the
   // source `bind-session --current` reads to attach the real session id; without it
   // binding falls back to an mtime guess that misfires across parallel sessions.
-  writeHookCapture(projectRoot, payload);
+  if (platform === "codex") {
+    writeHookCapture(projectRoot, payload);
+  }
 
   const binding = getSessionBinding(projectRoot, sessionId);
 

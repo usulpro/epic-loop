@@ -8,11 +8,15 @@ import {
   appendGitignore,
   epicLoopRoot,
   epicSlugify,
+  platformSetupCommand,
   parseArgs,
   readJson,
+  readRuntimePlatform,
   requireFlag,
+  requireRuntimePlatform,
   slugify,
   writeJson,
+  writeRuntimePlatform,
   writeOnce,
 } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 
@@ -48,6 +52,28 @@ test("JSON and write-once helpers handle fallback and idempotency", () => {
     writeOnce(writeOncePath, "first");
     writeOnce(writeOncePath, "second");
     assert.equal(fs.readFileSync(writeOncePath, "utf8"), "first");
+  } finally {
+    fs.rmSync(tempRoot, { force: true, recursive: true });
+  }
+});
+
+test("runtime platform helpers persist and validate explicit platform selection", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "epic-loop-platform-"));
+
+  try {
+    assert.throws(() => requireRuntimePlatform(tempRoot), /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.equal(platformSetupCommand(), "doctor.mjs --platform codex|claude-code --json");
+
+    const codexConfig = writeRuntimePlatform(tempRoot, "codex");
+    assert.equal(codexConfig.platform, "codex");
+    assert.equal(readRuntimePlatform(tempRoot).platform, "codex");
+    assert.equal(requireRuntimePlatform(tempRoot), "codex");
+
+    const claudeConfig = writeRuntimePlatform(tempRoot, "claude-code");
+    assert.equal(claudeConfig.platform, "claude-code");
+    assert.equal(requireRuntimePlatform(tempRoot), "claude-code");
+
+    assert.throws(() => writeRuntimePlatform(tempRoot, "auto"), /Invalid --platform "auto"/u);
   } finally {
     fs.rmSync(tempRoot, { force: true, recursive: true });
   }

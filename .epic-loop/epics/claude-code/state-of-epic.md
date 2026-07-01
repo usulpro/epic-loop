@@ -3,7 +3,7 @@
 Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
-Current mode: shaping
+Current mode: implementation
 Active phase: Phase 1 - Platform Adapter Foundation
 Active task: TBD
 
@@ -13,6 +13,8 @@ Active task: TBD
 - The roadmap is decomposed into implementation phases with verification tasks.
 - The implementation plan preserves Codex behavior as the default path and adds
   Claude Code support through thin platform-specific surfaces.
+- Phase 1 Task 1 is closed with explicit runtime platform selection and the
+  first platform adapter boundary in place.
 
 ## Blockers
 
@@ -22,5 +24,5 @@ Active task: TBD
 
 ## Next Action
 
-- Start implementation only after explicit user confirmation in the current
-  session.
+- Start Phase 1 Task 2: implement Claude Code assistant report capture from
+  transcript JSONL.
