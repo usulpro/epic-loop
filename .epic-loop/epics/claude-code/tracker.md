@@ -92,9 +92,9 @@ Epic: Claude Code Harness
 
 ### Phase 4: Docs Packaging And User-Facing Contracts
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Update skill and reference documentation for dual-platform operation.
+- [x] Kind: implementation | Status: done | Update skill and reference documentation for dual-platform operation.
   - Outcome: Users and future agents can run epic-loop on Codex or Claude Code without relying on hidden implementation knowledge.
   - Surface: `SKILL.md`, `references/hooks-and-session-routing.md`, `references/implementation-cycle.md`, platform setup docs, command examples.
   - Acceptance: Docs explain platform selection, Claude hook trust review, block-cap setup, manager communication on cap-proximity stops, current-session binding behavior, and Codex compatibility; generated artifacts remain in English.

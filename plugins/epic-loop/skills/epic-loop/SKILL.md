@@ -13,7 +13,16 @@ When commands use `<skill-dir>`, replace it with the absolute directory that con
 
 ## First Move
 
-Before asking for the epic title or lifecycle mode, run the technical readiness check:
+Before asking for the epic title or lifecycle mode, make sure the project has an explicit runtime platform selection. On first use in a checkout, select one platform through `doctor`:
+
+```bash
+node <skill-dir>/scripts/doctor.mjs --platform codex --json
+node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
+```
+
+The selected platform is stored in project-local runtime config under `.epic-loop/.runtime/platform.json`. Do not infer the platform from payload shape, cwd, environment variables, `.codex/`, `.claude/`, or transcript paths. Switching platforms in the same checkout requires running `doctor.mjs --platform <platform> --json` again and reinstalling hooks for that platform.
+
+After the platform is selected, run the technical readiness check:
 
 ```bash
 node <skill-dir>/scripts/doctor.mjs --json
@@ -21,25 +30,29 @@ node <skill-dir>/scripts/doctor.mjs --json
 
 If the result is `ready`, continue to local epic discovery.
 
+If the result fails because the platform is missing or invalid, ask which runtime to use, then rerun `doctor` with `--platform codex` or `--platform claude-code`.
+
 If the result is `setup-required`, do not ask the shaping/resume question yet. Use a very short setup exchange and do not mention internal diagnostics unless the user asks.
 
-- **Automatic setup**: if `.codex/hooks.json` is writable and the user explicitly approves setup, run `node <skill-dir>/scripts/install-hooks.mjs`.
-- **Manual setup**: if `.codex/hooks.json` is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
+- **Automatic setup**: if the selected platform's project-local hook config is writable and the user explicitly approves setup, run `node <skill-dir>/scripts/install-hooks.mjs`.
+- **Manual setup**: if the selected platform's project-local hook config is not writable from the current session, give the exact command for the user to run from a writable project checkout or host terminal.
 
-Do not edit global Codex config from this skill. If `doctor` reports that Codex hooks are missing or disabled, explain where the active hooks feature flag appears to be missing and ask the user before changing any project-local config.
+For Codex, setup writes `.codex/hooks.json` and `doctor` also checks the active Codex hooks feature flag. Do not edit global Codex config from this skill. If `doctor` reports that Codex hooks are missing or disabled, explain where the active hooks feature flag appears to be missing and ask the user before changing any project-local config.
+
+For Claude Code, setup writes project-local `.claude/settings.json`. Do not edit global Claude settings from this skill. `doctor` also checks `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`; missing, invalid, or too-low values are setup-required.
 
 Keep the user-facing setup message ultra-short. Do not paste the full doctor output unless the user asks for details. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics in the normal flow.
 
 Use this shape when setup is possible but not yet approved:
 
 ```text
-epic-loop needs to add project-local Codex hooks. Install them now?
+epic-loop needs to add project-local hooks for <platform>. Install them now?
 ```
 
-Use this shape when the current session cannot write `.codex/hooks.json`:
+Use this shape when the current session cannot write the selected platform's project-local hook config:
 
 ```text
-Hooks need setup, but this session cannot write `.codex/hooks.json`.
+Hooks need setup, but this session cannot write the project-local hook config.
 
 cd <project-root>
 node <skill-dir>/scripts/install-hooks.mjs
@@ -48,7 +61,7 @@ node <skill-dir>/scripts/install-hooks.mjs
 Use this shape when the user asked to install and the automatic install failed:
 
 ```text
-I tried to install hooks, but `.codex/hooks.json` is not writable here.
+I tried to install hooks, but the project-local hook config is not writable here.
 
 cd <project-root>
 node <skill-dir>/scripts/install-hooks.mjs
@@ -143,7 +156,7 @@ node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode 
 
 If `--current` cannot detect the session, ask for the session id instead of guessing.
 
-After binding, do not start code implementation manually in the same user turn. Report that the implementation loop is active and stop. A loaded and trusted Codex `Stop` hook continues the same session with the first `manager` housekeeping turn by returning `{ "decision": "block", "reason": "<prompt>" }`.
+After binding, do not start code implementation manually in the same user turn. Report that the implementation loop is active and stop. A loaded and trusted `Stop` hook on the selected platform continues the same session with the first `manager` housekeeping turn by returning `{ "decision": "block", "reason": "<prompt>" }`.
 
 ## Re-Entry Checklist
 
@@ -237,7 +250,7 @@ Inside implementation mode, role transfer rules are strict:
 
 Every implementation continuation must be recorded inside the epic runtime. Prompt text goes to `.runtime/prompt-log.md` and `.runtime/prompt-log.jsonl`. Lifecycle events and timing go to `.runtime/progress-log.jsonl` and readable `.runtime/progress-log.md`, with `.runtime/progress-report.md` regenerated from the structured event log.
 
-Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `.runtime/latest-engineer-report.md` and returns control to `techlead`.
+Engineer turns are skill-agnostic. The engineer receives only a normal task brief, never loop routing instructions. When an engineer turn stops, the `Stop` hook captures the final assistant message into `.runtime/latest-engineer-report.md` and returns control to `techlead`. Codex report capture uses `last_assistant_message`; Claude Code report capture reads the latest assistant text from `transcript_path` JSONL.
 
 Manager turns are also role-specific and non-product. They perform housekeeping only. When a manager turn stops, the `Stop` hook captures the final assistant message into `.runtime/latest-manager-report.md` and returns control to `techlead`.
 
@@ -333,23 +346,29 @@ When parallel work may collide, read current files immediately before editing an
 
 ## Hooks
 
-Use project-local hooks for epic-loop work. Install them from the project root with:
+Use project-local hooks for epic-loop work. Select the runtime platform first, then install hooks from the project root with:
 
 ```bash
+node <skill-dir>/scripts/doctor.mjs --platform codex --json
+# or:
+node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
+
 node <skill-dir>/scripts/install-hooks.mjs
 ```
 
-The local `.codex/hooks.json` should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
+For Codex, the installer writes project-local `.codex/hooks.json`. For Claude Code, it writes project-local `.claude/settings.json`. In both cases the local config should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks/settings, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
 
-The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` as static config; all mutable epic-loop state belongs in `.epic-loop/` because `.codex/` may be read-only in sandboxed sessions.
+The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` and `.claude/settings.json` as static config; all mutable epic-loop state belongs in `.epic-loop/`.
 
-Codex requires non-managed command hooks to be reviewed and trusted before they run. A static `doctor` result can prove that hook config exists and hooks are enabled, but it cannot prove that the current already-running thread has loaded and trusted the hook. If implementation does not continue after binding, inspect `/hooks` in the Codex UI/CLI and start or resume a trusted session.
+Codex requires non-managed command hooks to be reviewed and trusted before they run. Claude Code also requires hook review/trust through `/hooks`. A static `doctor` result can prove that project-local hook config exists and platform prerequisites are satisfied, but it cannot prove that the current already-running thread has loaded and trusted the hook. If implementation does not continue after binding, inspect `/hooks` in the active platform UI/CLI and start or resume a trusted session.
 
-Bind a Codex session to an epic explicitly when running parallel sessions:
+Bind the current session to an epic explicitly when running parallel sessions:
 
 ```bash
 node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
+
+For Codex, `--current` uses the existing Codex hook capture/session fallback. For Claude Code, `--current` requires a fresh hook capture with `session_id` and `transcript_path`; if that cannot be detected safely, pass `--session-id "<session_id>"` explicitly.
 
 There is one active hook-routed session per epic/mode. Binding the current session for the same epic and mode deactivates the previous active session.
 

@@ -40,9 +40,11 @@ node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode 
 
 If another session was previously active for the same epic and mode, this binding replaces it.
 
-Binding starts the loop with `next_role: manager`. The current user turn should stop after binding; a loaded and trusted Codex `Stop` hook continues the same session with the first manager housekeeping prompt by returning `{ "decision": "block", "reason": "<prompt>" }`.
+Binding starts the loop with `next_role: manager`. The current user turn should stop after binding; a loaded and trusted `Stop` hook on the selected platform continues the same session with the first manager housekeeping prompt by returning `{ "decision": "block", "reason": "<prompt>" }`.
 
 Implementation observability is permanent. Runtime/debug traces are stored under `.runtime/` for debugging and analysis only; they are not part of the normal read path for techlead or engineer.
+
+Codex and Claude Code share the same loop core and Stop continuation shape. Platform-specific adapters handle setup, current-session lookup, and report capture: Codex reads `last_assistant_message`, while Claude Code reads the latest assistant text from `transcript_path` JSONL.
 
 ## Turn Order
 
@@ -60,6 +62,10 @@ Implementation observability is permanent. Runtime/debug traces are stored under
 12. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
 
 If the user interrupts a running implementation turn, a later `UserPromptSubmit` in the same bound session marks that open turn as `turn-interrupted`, sets the loop status to `interrupted`, and prevents silent auto-continuation. If implementation is restarted while an older open turn exists, the old turn is closed as interrupted without inventing active duration.
+
+Claude Code Stop hooks include `stop_hook_active`. When it is `true`, epic-loop must not issue another block continuation for the same Stop reentry.
+
+Claude Code also has a finite Stop-hook block cap unless `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0`. When the recorded finite cap is close to exhaustion, the loop routes to a manager communication turn before the platform forces the run to stop. The manager should tell the user the loop is stopping because it is close to the cap and that the user must manually ask the agent to continue loop mode when ready.
 
 On the first techlead turn in a newly started implementation loop, there is no previous engineer turn to close. In that case, techlead should say so explicitly, orient on epic state, use the manager housekeeping report as the baseline handoff, and choose the first honest implementation step.
 
