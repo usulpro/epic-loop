@@ -4,7 +4,7 @@ Epic: Claude Code Harness
 Slug: `claude-code`
 Created: 2026-07-01T11:21:58+00:00
 Current mode: implementation
-Active phase: Phase 4 - Docs Packaging And User-Facing Contracts
+Active phase: TBD
 Active task: TBD
 
 ## Current State
@@ -39,6 +39,9 @@ Active task: TBD
   documentation updated for Codex and Claude Code operation.
 - Phase 4 Task 2 is closed with package metadata and validation updated for
   dual-platform hook support without bundled Claude hook assets.
+- Phase 4 Task 3 is closed with final package, docs, and regression suite
+  verification passing.
+- Phase 4 is closed.
 
 ## Blockers
 
@@ -46,4 +49,4 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 4 Task 3: verify final package, docs, and regression suite.
+- Techlead review after Phase 4 closure housekeeping, then start Phase 5.

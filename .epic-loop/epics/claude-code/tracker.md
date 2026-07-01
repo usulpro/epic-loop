@@ -92,7 +92,7 @@ Epic: Claude Code Harness
 
 ### Phase 4: Docs Packaging And User-Facing Contracts
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Update skill and reference documentation for dual-platform operation.
   - Outcome: Users and future agents can run epic-loop on Codex or Claude Code without relying on hidden implementation knowledge.
@@ -106,7 +106,7 @@ Epic: Claude Code Harness
   - Acceptance: Package validation and docs reflect project-local `.claude/settings.json` as the supported Claude Code install target; Codex plugin metadata remains valid.
   - Docs: `docs/platform-adapter-contract.md`, `docs/verification-plan.md`.
 
-- [ ] Kind: verification | Status: todo | Verify final package, docs, and regression suite.
+- [x] Kind: verification | Status: done | Verify final package, docs, and regression suite.
   - Outcome: The repo is ready for review with both platform contracts documented and validated.
   - Surface: `pnpm run validate`, `pnpm run test:unit`, package validation output, targeted doc inspection.
   - Acceptance: `pnpm run validate` and `pnpm run test:unit` pass; docs contain no stale Codex-only assumptions for shared behavior; Claude-specific caveats are explicit.
