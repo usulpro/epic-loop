@@ -1,8 +1,8 @@
 # epic-loop
 
-> A Codex plugin for running long autonomous engineering epics without losing the plot.
+> A Codex and Claude Code plugin for running long autonomous engineering epics without losing the plot.
 
-`epic-loop` turns a large feature, migration, or investigation into a durable epic workspace with explicit lifecycle modes, disk-backed state, and a hook-driven implementation loop. It packages one reusable Codex skill under `plugins/epic-loop/`.
+`epic-loop` turns a large feature, migration, or investigation into a durable epic workspace with explicit lifecycle modes, disk-backed state, and a hook-driven implementation loop. It packages one reusable skill under `plugins/epic-loop/` that runs on both Codex and Claude Code.
 
 ## The Problem
 
@@ -18,7 +18,7 @@ Long autonomous coding sessions often need repeated human coordination:
 
 ## How Implementation Works
 
-Implementation mode runs as a single Codex session with two visible roles. The Stop hook keeps the loop moving: each techlead turn uses a fixed governance prompt, and each engineer turn receives the task-specific brief the techlead wrote for that exact slice.
+Implementation mode runs as a single agent session (Codex or Claude Code) with two visible roles. The Stop hook keeps the loop moving: each techlead turn uses a fixed governance prompt, and each engineer turn receives the task-specific brief the techlead wrote for that exact slice.
 
 
 **Techlead role.** Owns the implementation loop. It reads compact epic state and live repository evidence, reviews the latest engineer report, decides whether work is honestly closed, chooses the next step, updates human-facing epic artifacts, makes commit decisions, and writes exactly one focused engineer brief when implementation should continue.
@@ -37,9 +37,8 @@ Each epic lives in the target project at `.epic-loop/epics/<slug>/`. Human-facin
 
 ## Requirements
 
-- Codex with hooks support.
-- Codex hooks enabled under `[features]` in the active config or profile.
-- Trusted project-local command hooks for the current session.
+- A supported host: **Codex** (with hooks enabled under `[features]` in the active config or profile) **or Claude Code**.
+- Trusted project-local command hooks for the current session (`.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code).
 - Node.js for the bundled `.mjs` helper scripts.
 - A target repository where the epic workspace should be created.
 
@@ -77,15 +76,17 @@ For local development from this checkout:
 codex plugin marketplace add .
 ```
 
-After installing the plugin, start a new Codex thread and invoke `epic-loop`. The first run checks whether the target project has the project-local hooks it needs.
+On **Claude Code**, install the plugin through its plugin marketplace, or load the skill directly from `.claude/skills/epic-loop/` (this repo keeps that copy in sync via `pnpm run self-update`).
+
+After installing the plugin, start a new Codex or Claude Code session and invoke `epic-loop`. The first run checks whether the target project has the project-local hooks it needs.
 
 Hook setup is intentionally performed from the target project after user approval:
 
 ```bash
-# Check technical readiness.
-node <skill-dir>/scripts/doctor.mjs --json
+# Check technical readiness for the chosen host.
+node <skill-dir>/scripts/doctor.mjs --platform codex|claude-code --json
 
-# Install project-local Codex hooks.
+# Install project-local hooks (.codex/hooks.json for Codex, .claude/settings.json for Claude Code).
 node <skill-dir>/scripts/install-hooks.mjs
 
 # Bind the current session to an epic after the user confirms implementation.

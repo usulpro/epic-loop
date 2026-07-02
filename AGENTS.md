@@ -1,6 +1,6 @@
 # Agent Instructions
 
-This repository publishes and validates the `epic-loop` Codex plugin.
+This repository publishes and validates the `epic-loop` plugin/skill for both Codex and Claude Code.
 
 The durable product surface is:
 
@@ -46,10 +46,11 @@ Runtime/debug files should not be committed to this plugin repository.
 
 ## Hook And Session Rules
 
-The skill installs project-local hooks in the target project:
+The skill installs project-local hooks in the target project — `.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code:
 
 ```text
-.codex/hooks.json
+.codex/hooks.json      # Codex
+.claude/settings.json  # Claude Code
 ```
 
 The hook target is:
@@ -64,10 +65,10 @@ Required hook events:
 - `UserPromptSubmit`
 - `Stop`
 
-Always run readiness checks through:
+The runtime platform is selected explicitly (never inferred from payload shape, cwd, or environment) and stored in `.epic-loop/.runtime/platform.json`. Always run readiness checks through the matching platform:
 
 ```bash
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --json
+node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex|claude-code --json
 ```
 
 Only bound sessions may write epic-loop runtime state. Unbound sessions must produce no epic-loop records.
@@ -116,7 +117,7 @@ pnpm run validate
 For hook readiness in this checkout:
 
 ```bash
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --json
+node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex|claude-code --json
 ```
 
 ## Context Hygiene
