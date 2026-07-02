@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "slug": "eval-fixture",
+  "title": "Eval Fixture Epic For Testing Epic-loop Role Routing",
+  "active_phase_id": "phase-1",
+  "active_task_id": "phase-1-task-1",
+  "statuses": [
+    "todo",
+    "doing",
+    "need-review",
+    "blocked",
+    "partially-satisfied",
+    "deferred",
+    "reset-required",
+    "done"
+  ],
+  "kinds": [
+    "implementation",
+    "verification",
+    "review",
+    "follow-up",
+    "architecture-reset",
+    "documentation-only"
+  ],
+  "phases": [
+    {
+      "id": "phase-1",
+      "title": "Build Isolated Utility Fixture",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "phase-1-task-1",
+          "title": "Initialize nested git fixture project.",
+          "kind": "implementation",
+          "status": "todo",
+          "outcome": "`temp/eval-fixture-project` is a nested git repository with local commit identity configured and an initial task-owned commit.",
+          "surface": "`temp/eval-fixture-project/.git`, `temp/eval-fixture-project/README.md`.",
+          "acceptance": "Run `git -C temp/eval-fixture-project init`, configure local `user.name` and `user.email`, commit `README.md` from inside the fixture repository, and verify `git -C temp/eval-fixture-project status --short` is clean. Fixture task-owned commits must be created only from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; do not stage or commit fixture output from the root repository.",
+          "docs": "`docs/problem-framing.md`, `docs/phase-1-utility-fixture.md`."
+        },
+        {
+          "id": "phase-1-task-2",
+          "title": "Create string normalization utilities with tests.",
+          "kind": "implementation",
+          "status": "todo",
+          "outcome": "`temp/eval-fixture-project` contains tested slug/title helpers that handle normalization and duplicate slug generation.",
+          "surface": "`temp/eval-fixture-project/src/slug-tools.mjs`, `temp/eval-fixture-project/test/slug-tools.test.mjs`.",
+          "acceptance": "`normalizeTitle` and `createStableSlug` are exported, covered by `node:test`, and handle whitespace, punctuation, and duplicate slug suffixes. Commit this task from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; do not stage or commit fixture output from the root repository.",
+          "docs": "`docs/problem-framing.md`, `docs/phase-1-utility-fixture.md`."
+        },
+        {
+          "id": "phase-1-task-3",
+          "title": "Create candidate scoring utilities with tests.",
+          "kind": "implementation",
+          "status": "todo",
+          "outcome": "`temp/eval-fixture-project` contains tested score helpers for ranking candidates and summarizing score distributions.",
+          "surface": "`temp/eval-fixture-project/src/scoreboard.mjs`, `temp/eval-fixture-project/test/scoreboard.test.mjs`.",
+          "acceptance": "`rankCandidates` and `summarizeScores` are exported, covered by `node:test`, and handle sorting, tied ranks, averages, and invalid input behavior. Commit this task from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; do not stage or commit fixture output from the root repository.",
+          "docs": "`docs/problem-framing.md`, `docs/phase-1-utility-fixture.md`."
+        },
+        {
+          "id": "phase-1-task-4",
+          "title": "Verify phase 1 utility fixture through Node test runner.",
+          "kind": "verification",
+          "status": "todo",
+          "outcome": "Phase 1 utility modules are proven through real test execution before integration work starts.",
+          "surface": "`temp/eval-fixture-project/src/**`, `temp/eval-fixture-project/test/**`, `temp/eval-fixture-project/verification/phase-1.md`, Node.js test runner output.",
+          "acceptance": "Run `node --test temp/eval-fixture-project/test/*.test.mjs`; record command evidence in `temp/eval-fixture-project/verification/phase-1.md`; commit the evidence from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; expected evidence is exit code `0`, passing tests, clean `git -C temp/eval-fixture-project status --short`, and no root repository commit for fixture output.",
+          "docs": "`docs/phase-1-utility-fixture.md`."
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "title": "Integrate Report Builder Fixture",
+      "status": "todo",
+      "tasks": [
+        {
+          "id": "phase-2-task-1",
+          "title": "Create report builder integration module with tests.",
+          "kind": "implementation",
+          "status": "todo",
+          "outcome": "`temp/eval-fixture-project` contains an integration module that composes phase 1 helpers into deterministic candidate reports.",
+          "surface": "`temp/eval-fixture-project/src/report-builder.mjs`, `temp/eval-fixture-project/test/report-builder.test.mjs`, existing phase 1 modules.",
+          "acceptance": "`buildCandidateReport` and `formatCandidateReport` are exported, covered by `node:test`, reuse phase 1 helpers, and handle normal and empty or invalid input cases. Commit this task from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; do not stage or commit fixture output from the root repository.",
+          "docs": "`docs/problem-framing.md`, `docs/phase-2-report-builder.md`."
+        },
+        {
+          "id": "phase-2-task-2",
+          "title": "Verify combined mini-project behavior.",
+          "kind": "verification",
+          "status": "todo",
+          "outcome": "The complete `temp/eval-fixture-project` mini-project is proven through tests and a direct runtime import.",
+          "surface": "`temp/eval-fixture-project/src/**`, `temp/eval-fixture-project/test/**`, `temp/eval-fixture-project/verification/phase-2.md`, Node.js test runner output, one-off Node import output.",
+          "acceptance": "Run `node --test temp/eval-fixture-project/test/*.test.mjs` and the documented `node -e` import command; record command evidence in `temp/eval-fixture-project/verification/phase-2.md`; commit the evidence from inside `temp/eval-fixture-project` or with `git -C temp/eval-fixture-project ...`; expected evidence is exit code `0`, passing tests, stdout containing the formatted report slug and ranked candidates, clean nested repo status, and the fixture folder still present after verification.",
+          "docs": "`docs/phase-2-report-builder.md`."
+        }
+      ]
+    }
+  ],
+  "follow_ups": [],
+  "updated_at": "2026-07-02T09:30:00+00:00"
+}

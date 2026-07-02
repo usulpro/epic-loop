@@ -1,0 +1,12 @@
+{
+  "active_phase": "Phase 1 - Build Isolated Utility Fixture",
+  "active_task": "Phase 1 Task 1 - Initialize nested git fixture project",
+  "created_at": "2026-07-02T07:16:07+00:00",
+  "description": "Eval Fixture Epic for testing epic-loop role routing with a two-phase isolated nested git mini project under temp/eval-fixture-project, including simple functions, tests, verification, fixture-local commits, and explicit reset.",
+  "execution_brief": null,
+  "implementation_submode": "techlead",
+  "mode": "shaping",
+  "slug": "eval-fixture",
+  "title": "Eval Fixture Epic For Testing Epic-loop Role Routing",
+  "updated_at": "2026-07-02T09:30:00+00:00"
+}
