@@ -3,16 +3,16 @@
 Epic: Eval Fixture Epic For Testing Epic-loop Role Routing
 Slug: `eval-fixture`
 Created: 2026-07-02T07:16:07+00:00
-Current mode: shaping
-Active phase: Phase 1 - Build Isolated Utility Fixture
-Active task: Phase 1 Task 1 - Initialize nested git fixture project
+Current mode: implementation
+Active phase: none
+Active task: none
 
 ## Current State
 
-- The epic has been shaped as a two-phase eval fixture for testing epic-loop implementation flow.
-- The implementation target is an isolated nested git mini-project under `temp/eval-fixture-project`.
-- The roadmap includes concrete implementation tasks, nested repo commits, and phase-level verification.
-- No implementation has started yet.
+- The epic implementation is complete and both phases are closed.
+- The isolated nested git fixture project remains available under `temp/eval-fixture-project` for inspection.
+- Phase 1 and Phase 2 task-owned commits were made inside the nested fixture repository.
+- The full fixture was verified with Node test runs and a direct import check.
 
 ## Blockers
 
@@ -20,7 +20,7 @@ Active task: Phase 1 Task 1 - Initialize nested git fixture project
 
 ## Next Action
 
-- Ask for explicit implementation confirmation in the current session, then bind the session to `eval-fixture` in implementation mode.
+- Final implementation exit housekeeping, then stop implementation mode.
 
 ## Re-Entry Notes
 
