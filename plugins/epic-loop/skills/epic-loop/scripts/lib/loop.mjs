@@ -19,8 +19,8 @@ const CLAUDE_MANUAL_CONTINUE_NOTE = [
   "",
   "## Claude Code Continuation Note",
   "",
-  "Claude Code may mark the Stop hook reentry after this block as `stop_hook_active: true`; in that case epic-loop records this role's report but does not issue another block continuation in the same turn.",
-  "If the next role does not start automatically after your report, tell the user to send: `continue loop mode`.",
+  "This run is approaching `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, so the implementation loop will pause after this turn instead of chaining into the next role automatically.",
+  "Tell the user that when they are ready to resume they should send: `continue loop mode`.",
 ].join("\n");
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
@@ -168,12 +168,23 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
 
-  if (platform === "claude-code" && payload.stop_hook_active === true) {
+  // A fresh user turn (first Stop, stop_hook_active === false) resets Claude Code's own
+  // consecutive Stop-hook block counter. Mirror that so a finite block cap is measured
+  // per turn instead of accumulating across turns.
+  if (platform === "claude-code" && payload.stop_hook_active !== true) {
+    ({ loop, runtime } = resetClaudeBlockCountForTurn(projectRoot, slug, runtime, loop, timestamp));
+  }
+
+  // Claude Code honours repeated Stop-hook `decision: block` continuations within a single
+  // turn up to CLAUDE_CODE_STOP_HOOK_BLOCK_CAP (default 8, `0` = uncapped). `stop_hook_active`
+  // is informational, not a hard gate, so the loop keeps chaining roles automatically and
+  // only pauses when a finite cap is actually exhausted.
+  if (platform === "claude-code" && isClaudeBlockCapExhausted(loop)) {
     appendLoopLog(projectRoot, {
       action: "skip",
       manual_continue_required: true,
       next_role: loop.next_role ?? null,
-      reason: "claude-stop-hook-reentry",
+      reason: "claude-stop-hook-block-cap",
       session_id: payload.session_id ?? null,
       slug,
       timestamp,
@@ -237,7 +248,10 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       : role === "techlead"
         ? buildTechleadPrompt(slug, iteration)
         : buildEngineerPrompt(projectRoot, slug, loop, iteration);
-  const platformPrompt = platform === "claude-code" ? appendClaudeManualContinueNote(prompt) : prompt;
+  // Only the final housekeeping turn before a finite-cap pause needs the manual-continue
+  // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
+  // so appending it to every prompt would misinform the agent.
+  const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(prompt) : prompt;
   const promptFile =
     role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? loop.prompt_file ?? null : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
@@ -529,6 +543,42 @@ function readClaudeBlockCapEnv() {
     valid: numericValue !== null,
     value: numericValue,
   };
+}
+
+function isClaudeBlockCapExhausted(loop) {
+  const cap = normalizeObject(loop.claude_code_stop_hook_block_cap);
+  if (cap.uncapped === true || cap.finite !== true || !Number.isFinite(cap.value)) {
+    return false;
+  }
+
+  const consecutiveBlocks = Number.isFinite(cap.consecutive_blocks) ? cap.consecutive_blocks : 0;
+  return cap.value - consecutiveBlocks <= 0;
+}
+
+function resetClaudeBlockCountForTurn(projectRoot, slug, runtime, loop, timestamp) {
+  const cap = normalizeObject(loop.claude_code_stop_hook_block_cap);
+  const consecutiveBlocks = Number.isFinite(cap.consecutive_blocks) ? cap.consecutive_blocks : 0;
+
+  if (consecutiveBlocks === 0 && !cap.proximity_routed_at) {
+    return { loop, runtime };
+  }
+
+  const nextLoop = {
+    ...loop,
+    claude_code_stop_hook_block_cap: {
+      ...cap,
+      consecutive_blocks: 0,
+      proximity_routed_at: null,
+    },
+  };
+  const nextRuntime = {
+    ...runtime,
+    implementation_loop: nextLoop,
+    updated_at: timestamp,
+  };
+
+  writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
+  return { loop: nextLoop, runtime: nextRuntime };
 }
 
 function getClaudeBlockCapProximityRoute(loop, timestamp) {

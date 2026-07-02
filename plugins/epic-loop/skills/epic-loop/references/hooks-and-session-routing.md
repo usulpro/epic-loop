@@ -178,15 +178,14 @@ Hooks can:
 - update project-local routing metadata
 - prepare the next submode marker for the manager/techlead/engineer cycle
 - continue the current session from `Stop` by returning `{ "decision": "block", "reason": "<prompt>" }`
-- record a completed Claude Code role report on a `stop_hook_active: true` reentry without issuing another same-turn block
+- keep chaining Claude Code roles across `stop_hook_active: true` Stop reentries within the same turn; `stop_hook_active` is informational, not a hard gate, so each reentry records the role report and issues the next block continuation
 - give an external runner enough data to recover the right session when hook continuation did not run
 
 Hooks cannot be assumed to:
 
 - continue an already-running thread before the selected platform has loaded and trusted the hook
 - replace hook trust review or active-session hook loading
-- force Claude Code to accept multiple Stop-hook block continuations inside the same turn after the platform reports `stop_hook_active: true`
-- bypass Claude Code's finite Stop-hook block cap when `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` is not `0`
+- exceed Claude Code's per-turn Stop-hook block cap; Claude Code overrides the hook after `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` consecutive blocks (default `8`, `0` = uncapped). Near a finite cap the loop pauses gracefully and asks the user to send `continue loop mode`, which starts a fresh turn and resets the counter
 
 ## Parallel Safety
 

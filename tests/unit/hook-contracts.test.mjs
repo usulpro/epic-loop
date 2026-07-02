@@ -226,7 +226,7 @@ test("Claude Code synthetic implementation flow binds current capture and routes
     const managerContinuation = JSON.parse(managerStop.stdout);
     assert.equal(managerContinuation.decision, "block");
     assert.match(managerContinuation.reason, /manager housekeeping turn 1/u);
-    assert.match(managerContinuation.reason, /continue loop mode/u);
+    assert.doesNotMatch(managerContinuation.reason, /continue loop mode/u);
     const managerRuntime = readJsonFile(runtimePath);
     assert.equal(managerRuntime.implementation_loop.current_role, "manager");
     assert.equal(managerRuntime.implementation_loop.next_role, "techlead");
@@ -416,11 +416,13 @@ test("Claude Code bound engineer Stop uses explicit hook root when payload cwd i
     });
 
     assertSuccess(result);
-    assert.equal(result.stdout, "");
+    const continuation = JSON.parse(result.stdout);
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /techlead turn 3/u);
 
     const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
     assert.equal(runtime.implementation_loop.last_engineer_report_path, ".epic-loop/epics/explicit-root/.runtime/latest-engineer-report.md");
-    assert.equal(runtime.implementation_loop.next_role, "techlead");
+    assert.equal(runtime.implementation_loop.next_role, "awaiting-transition");
 
     const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-engineer-report.md"), "utf8");
     assert.match(report, /actual engineer report from payload/u);
@@ -549,7 +551,7 @@ test("Claude Code finite block cap proximity routes to manager guidance", () => 
         cwd: root,
         hook_event_name: "Stop",
         session_id: sessionId,
-        stop_hook_active: false,
+        stop_hook_active: true,
         transcript_path: transcriptPath,
       }),
     });
@@ -571,7 +573,7 @@ test("Claude Code finite block cap proximity routes to manager guidance", () => 
   }
 });
 
-test("Claude Code Stop hook reentry does not issue another block", () => {
+test("Claude Code Stop hook reentry continues the queued implementation turn", () => {
   const root = makeTempRoot("hook-claude-reentry-");
   const slug = "claude-reentry";
   const sessionId = "claude-reentry-session";
@@ -618,18 +620,20 @@ test("Claude Code Stop hook reentry does not issue another block", () => {
     });
 
     assertSuccess(result);
-    assert.equal(result.stdout, "");
+    const continuation = JSON.parse(result.stdout);
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /manager housekeeping turn 1/u);
 
     const nextRuntime = readJsonFile(runtimePath);
-    assert.equal(nextRuntime.implementation_loop.current_role, null);
-    assert.equal(nextRuntime.implementation_loop.next_role, "manager");
-    assert.equal(nextRuntime.implementation_loop.claude_code_stop_hook_block_cap.consecutive_blocks, 0);
+    assert.equal(nextRuntime.implementation_loop.current_role, "manager");
+    assert.equal(nextRuntime.implementation_loop.next_role, "techlead");
+    assert.equal(nextRuntime.implementation_loop.claude_code_stop_hook_block_cap.consecutive_blocks, 1);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
 });
 
-test("Claude Code Stop hook reentry captures the role report and leaves manual continuation queued", () => {
+test("Claude Code Stop hook reentry captures the role report and continues to techlead", () => {
   const root = makeTempRoot("hook-claude-reentry-report-");
   const slug = "reentry-report";
   const sessionId = "claude-reentry-report-session";
@@ -657,22 +661,26 @@ test("Claude Code Stop hook reentry captures the role report and leaves manual c
     });
 
     assertSuccess(result);
-    assert.equal(result.stdout, "");
+    const continuation = JSON.parse(result.stdout);
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /techlead turn 3/u);
 
     const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
-    assert.equal(runtime.implementation_loop.current_role, "manager");
-    assert.equal(runtime.implementation_loop.next_role, "techlead");
+    assert.equal(runtime.implementation_loop.current_role, "techlead");
+    assert.equal(runtime.implementation_loop.next_role, "awaiting-transition");
     assert.equal(runtime.implementation_loop.last_manager_report_path, ".epic-loop/epics/reentry-report/.runtime/latest-manager-report.md");
-    assert.ok(runtime.implementation_loop.active_turn_stopped_at);
+    // The manager turn was closed and a fresh techlead turn opened in the same reentry.
+    assert.equal(runtime.implementation_loop.active_turn_stopped_at, null);
+    assert.ok(runtime.implementation_loop.active_turn_started_at);
 
     const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8");
     assert.match(report, /actual manager reentry report/u);
     assert.doesNotMatch(report, /stale reentry transcript/u);
 
     const progress = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "progress-log.jsonl"), "utf8");
-    assert.match(progress, /"reason":"claude-stop-hook-reentry"/u);
-    assert.match(progress, /"manual_continue_required":true/u);
-    assert.match(progress, /"next_role":"techlead"/u);
+    assert.match(progress, /"action":"turn-stop"/u);
+    assert.match(progress, /"action":"turn-start"/u);
+    assert.match(progress, /"next_role":"awaiting-transition"/u);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
