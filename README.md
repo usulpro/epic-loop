@@ -1,8 +1,10 @@
 # epic-loop
 
-> A Codex and Claude Code plugin for running long autonomous engineering epics without losing the plot.
+> A Codex and Claude Code plugin for shaping an engineering epic, then running long autonomous implementation against it, without losing the plot.
 
-`epic-loop` turns a large feature, migration, or investigation into a durable epic workspace with explicit lifecycle modes, disk-backed state, and a hook-driven implementation loop. It packages one reusable skill under `plugins/epic-loop/` that runs on both Codex and Claude Code.
+An **epic** is the unit of planning: a large slice of work (a feature, migration, or investigation). The name is borrowed from agile decomposition (a large body of work broken into tasks), but here an epic is an area of project ownership with a bounded context: you can rejoin it from any session, and keep it for as long as you need it.
+
+`epic-loop` turns that epic into a durable workspace. You first *shape* it (capture intent, decompose into phases and tasks), then run *implementation* against it through a hook-driven loop. Explicit lifecycle modes and disk-backed state carry the epic across sessions. It packages one reusable skill under `plugins/epic-loop/` that runs on both Codex and Claude Code.
 
 ## The Problem
 
@@ -15,6 +17,10 @@ Long autonomous coding sessions often need repeated human coordination:
 - recovering after context compaction or interruption
 
 `epic-loop` makes that orchestration explicit and durable.
+
+## How Shaping Works
+
+Shaping is a rhythmic dialogue, not a one-shot planning dump. The agent clarifies intent topic by topic, captures it in the epic's documentation pack, and decomposes the work into phases and tasks with concrete acceptance criteria. The tracker and docs it produces are exactly what the implementation loop later consumes — shaping is where the epic's roadmap and source of truth come from.
 
 ## How Implementation Works
 
@@ -29,8 +35,13 @@ Each epic lives in the target project at `.epic-loop/epics/<slug>/`. Human-facin
 
 ## Modes
 
-- **Shaping**: clarify the epic, capture intent, create docs, decompose phases and tasks.
-- **Implementation**: run the hook-driven techlead/engineer loop.
+The spine is two ordered modes — first you shape the epic, then you implement it:
+
+1. **Shaping** → clarify the epic, capture intent, create docs, decompose into phases and tasks.
+2. **Implementation** → run the hook-driven techlead/engineer loop against those tasks.
+
+Three supporting modes surround that axis:
+
 - **Review**: check completed work against original intent, not only the latest docs.
 - **Reset**: replace stale architecture, roadmap, or assumptions with a controlled new baseline.
 - **Resume**: re-enter an existing epic from disk-backed artifacts.
@@ -110,7 +121,7 @@ docs/
 .runtime/
 ```
 
-Human-facing artifacts and machine runtime are separated by design. Roles read the human-facing files. Runtime traces exist for debugging and replay without polluting normal role context.
+These human-facing files **are** the epic — a durable, human-readable planning artifact that lives in the repo, can be committed alongside the code, and outlives any single session. Human-facing artifacts and machine runtime are separated by design: roles read the human-facing files, while runtime traces exist for debugging and replay without polluting normal role context.
 
 ## Useful Commands
 
