@@ -13,6 +13,7 @@ import {
   formatList,
   nowIso,
   platformConfigPath,
+  platformSetupCommand,
   readRuntimePlatform,
   requireRuntimePlatform,
   readJson,
@@ -481,12 +482,15 @@ function inspectClaudeStopHookBlockCap(env = process.env) {
 
 export function doctor(flags = {}) {
   const root = resolveRoot(flags.root);
-  const platformConfig =
-    typeof flags.platform === "string" ? writeRuntimePlatform(root, flags.platform) : { ...readRuntimePlatform(root), selected_at: null };
+  if (typeof flags.platform !== "string") {
+    throw new Error(`Missing required --platform. Run: ${platformSetupCommand()}`);
+  }
+
+  const platformConfig = writeRuntimePlatform(root, flags.platform);
   const platform = platformConfig.platform;
 
   if (!platform) {
-    throw new Error("Runtime platform is not configured. Run: doctor.mjs --platform codex|claude-code --json");
+    throw new Error(`Runtime platform is not configured. Run: ${platformSetupCommand()}`);
   }
 
   if (platform === "claude-code") {

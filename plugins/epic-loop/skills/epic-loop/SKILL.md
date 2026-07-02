@@ -13,24 +13,20 @@ When commands use `<skill-dir>`, replace it with the absolute directory that con
 
 ## First Move
 
-Before asking for the epic title or lifecycle mode, make sure the project has an explicit runtime platform selection. On first use in a checkout, select one platform through `doctor`:
+Before asking for the epic title or lifecycle mode, run `doctor` with an explicit runtime platform. `--platform` is mandatory on every doctor run:
 
 ```bash
 node <skill-dir>/scripts/doctor.mjs --platform codex --json
 node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
 ```
 
-The selected platform is stored in project-local runtime config under `.epic-loop/.runtime/platform.json`. Do not infer the platform from payload shape, cwd, environment variables, `.codex/`, `.claude/`, or transcript paths. Switching platforms in the same checkout requires running `doctor.mjs --platform <platform> --json` again and reinstalling hooks for that platform.
+The selected platform is stored in project-local runtime config under `.epic-loop/.runtime/platform.json` for other platform-aware scripts. Do not infer the platform from payload shape, cwd, environment variables, `.codex/`, `.claude/`, transcript paths, or an existing `platform.json`. Switching platforms in the same checkout requires running `doctor.mjs --platform <platform> --json` again and reinstalling hooks for that platform.
 
-After the platform is selected, run the technical readiness check:
-
-```bash
-node <skill-dir>/scripts/doctor.mjs --json
-```
+Never run `doctor.mjs --json` without `--platform`; missing `--platform` is a hard error.
 
 If the result is `ready`, continue to local epic discovery.
 
-If the result fails because the platform is missing or invalid, ask which runtime to use, then rerun `doctor` with `--platform codex` or `--platform claude-code`.
+If the current runtime is unclear, ask which runtime to use, then rerun `doctor` with `--platform codex` or `--platform claude-code`.
 
 If the result is `setup-required`, do not ask the shaping/resume question yet. Use a very short setup exchange and do not mention internal diagnostics unless the user asks.
 

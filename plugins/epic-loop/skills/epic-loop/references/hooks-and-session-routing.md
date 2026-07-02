@@ -6,20 +6,16 @@ Epic-loop hooks must be project-local and session-aware. Parallel sessions in th
 
 ## Local Config
 
-Start by selecting the runtime platform explicitly:
+Start by selecting the runtime platform explicitly. `--platform` is mandatory on every `doctor` run:
 
 ```bash
 node <skill-dir>/scripts/doctor.mjs --platform codex --json
 node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
 ```
 
-This writes the selected platform to `.epic-loop/.runtime/platform.json`. Platform-aware scripts read that runtime config; they must not infer the platform from hook payload shape, cwd, environment variables, `.codex/`, `.claude/`, or transcript paths.
+This writes the selected platform to `.epic-loop/.runtime/platform.json`. Platform-aware scripts read that runtime config; they must not infer the platform from hook payload shape, cwd, environment variables, `.codex/`, `.claude/`, transcript paths, or stale runtime config when running `doctor`.
 
-After platform selection, use the normal read-only readiness check:
-
-```bash
-node <skill-dir>/scripts/doctor.mjs --json
-```
+Do not run `doctor.mjs --json` without `--platform`; missing `--platform` must fail instead of falling back to a saved platform.
 
 If setup is needed, preview the changes:
 

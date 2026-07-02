@@ -18,7 +18,8 @@
     "test:unit": "node --test \"tests/unit/**/*.test.mjs\"",
     "validate": "for f in scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done && node scripts/validate-epic-loop-package.mjs",
     "validate:epic-loop": "pnpm run validate",
-    "doctor:epic-loop": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --json",
+    "doctor:epic-loop:codex": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex --json",
+    "doctor:epic-loop:claude-code": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json",
     "eval-fixture-reset": "node scripts/eval-fixture-reset.mjs",
     "self-update": "node scripts/self-update-skill.mjs"
   },
