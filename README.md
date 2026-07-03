@@ -17,6 +17,25 @@ Working with coding agents produces a second body of work alongside the code: th
 
 `epic-loop` gives that work a home and makes the orchestration explicit and durable.
 
+## How to install
+
+**As Codex Plugin:**
+
+in your terminal:
+
+```console
+
+codex plugin marketplace add usulpro/epic-loop
+codex plugin add epic-loop@epic-loop
+
+```
+
+then in codex:
+
+```
+`$epic-loop start a new epic`
+```
+
 ## How Shaping Works
 
 Shaping is a step-by-step dialogue, not a one-shot planning dump. The agent clarifies intent topic by topic, captures it in the epic's documentation pack, and decomposes the work into phases and tasks with concrete acceptance criteria. The tracker and docs it produces are exactly what the implementation loop later consumes: shaping is where the epic's roadmap and source of truth come from.
