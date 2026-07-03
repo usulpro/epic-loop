@@ -56,7 +56,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Acceptance: run from a nested subdirectory of a project containing `.epic-loop/epics/*`, the command finds the root and prints each epic's slug/title, mode, and implementation-loop state where applicable; run outside any `.epic-loop` project, it reports that clearly instead of crashing or printing nothing.
   - Docs: `docs/bootstrap.md`.
 
-- [ ] Kind: verification | Status: todo | Verify the bootstrap and zero-arg command end-to-end, and prepare the package for publish.
+- [x] Kind: verification | Status: done | Verify the bootstrap and zero-arg command end-to-end, and prepare the package for publish.
   - Docs: `docs/bootstrap.md`.
 
 ### Phase 3: Research And Select The CLI/TUI Stack

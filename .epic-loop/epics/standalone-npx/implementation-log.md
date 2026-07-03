@@ -33,3 +33,17 @@
   - confirmed no leftover bin/epic-loop.mjs
 - Commit: ebe3b2b
 - Next move: proceed to phase-2-task-3: implement the zero-argument root command
+
+## 2026-07-03T17:57:19+00:00 - closed
+
+- Phase: phase-2
+- Task: phase-2-task-3: Implement the zero-argument root command
+- Verdict: closed
+- Changed: packages/cli/src/project-root.mjs,packages/cli/src/epics.mjs,packages/cli/src/cli.mjs
+- Verification:
+  - independently re-ran all three fixture scenarios against the rebuilt dist: repo root (4 real epics listed correctly incl. standalone-npx's live loop state), nested subdirectory (test-coverage/docs, root found via upward walk), and a directory with no .epic-loop anywhere above it (clear message, exit 1)
+  - also confirmed --version still works
+  - root pnpm run test:unit (33/33) and pnpm run validate pass unchanged
+  - git status confirms no real epic .runtime state was mutated by this read-only testing
+- Commit: f3fa046
+- Next move: proceed to phase-2-task-4: the phase's verification task (end-to-end verify + npm pack --dry-run), which will close Phase 2

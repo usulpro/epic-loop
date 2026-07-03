@@ -10,7 +10,7 @@
   },
   "type": "module",
   "bin": {
-    "epic-loop": "./dist/epic-loop.mjs"
+    "epic-loop": "dist/epic-loop.mjs"
   },
   "files": [
     "dist",
