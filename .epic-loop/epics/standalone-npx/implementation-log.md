@@ -62,3 +62,12 @@
   - root pnpm run test:unit (33/33) and pnpm run validate pass unchanged
 - Commit: dc05107
 - Next move: Phase 2 tasks are all closed; proceed to phase-closure review and mandatory phase-closure-housekeeping, then idle per this run's Phase-2-only scope
+
+## 2026-07-04 - manual publish and manual test (post phase-2 closure)
+
+- Phase: phase-2
+- Task: manual, user-executed action noted as out of loop scope by phase-2-task-4 (not an automated task step)
+- User published `epic-loop` (packages/cli) to the public npm registry as `v0.1.0` and confirmed manually with a real `npx epic-loop` invocation from this repo root.
+- Observed output: correct listing of all 4 real epics with slug/title/mode, including `standalone-npx` itself showing its own current implementation-loop state (`idle`, current: techlead, next: idle).
+- This confirms end-to-end that the published package resolves and runs correctly via `npx`, beyond the local `npm pack`/`publish --dry-run` evidence gathered during task-4's verification.
+- No further action required for Phase 2; this closes out the loop's manual-publish dependency.

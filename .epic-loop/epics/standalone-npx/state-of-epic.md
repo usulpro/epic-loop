@@ -22,6 +22,7 @@ Active task: none - Phase 2 complete, loop set idle per scope constraint below
   - Zero-argument root command: upward `.epic-loop` discovery + epic listing with mode/implementation-loop state (`f3fa046`).
   - End-to-end verification + publish-readiness check; fixed an invalid `bin` path caught by `npm publish --dry-run` (`dc05107`).
   - Follow-up recorded (not blocking): `docs/bootstrap.md` was referenced by all four tasks but never written — tracked as `follow-up-01` in `tracker.md`.
+- **Published and manually verified (2026-07-04, post-closure)**: user published `epic-loop` to the public npm registry as `v0.1.0` and confirmed with a real `npx epic-loop` run — correctly listed all 4 real epics with slug/title/mode and `standalone-npx`'s own live implementation-loop state. This satisfies Phase 2's manual-publish step, which was explicitly out of the automated loop's scope.
 - Phases 3-5 (CLI/TUI stack research, full command surface, skill migration) remain in the drafted roadmap, untouched this run.
 - `roadmap-state.json` is back in sync with `tracker.md` (this run's techlead turns re-derived it via `start-phase`/`start-task`/`close-task`/`close-phase`).
 

@@ -1,13 +1,28 @@
 {
   "name": "epic-loop",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "CLI for browsing, managing, and repairing epic-loop epics.",
+  "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
   "license": "MIT",
+  "homepage": "https://github.com/usulpro/epic-loop#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/usulpro/epic-loop.git",
     "directory": "packages/cli"
   },
+  "bugs": {
+    "url": "https://github.com/usulpro/epic-loop/issues"
+  },
+  "keywords": [
+    "epic-loop",
+    "cli",
+    "epic",
+    "agent-skills",
+    "automation",
+    "codex plugin",
+    "claude code plugin",
+    "loop engineering"
+  ],
   "type": "module",
   "bin": {
     "epic-loop": "dist/epic-loop.mjs"
