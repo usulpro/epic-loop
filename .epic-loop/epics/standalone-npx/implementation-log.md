@@ -47,3 +47,18 @@
   - git status confirms no real epic .runtime state was mutated by this read-only testing
 - Commit: f3fa046
 - Next move: proceed to phase-2-task-4: the phase's verification task (end-to-end verify + npm pack --dry-run), which will close Phase 2
+
+## 2026-07-03T18:00:46+00:00 - closed
+
+- Phase: phase-2
+- Task: phase-2-task-4: Verify the bootstrap and zero-arg command end-to-end, prepare for publish
+- Verdict: closed
+- Changed: packages/cli/package.json (bin path fix: './dist/epic-loop.mjs' -> 'dist/epic-loop.mjs')
+- Verification:
+  - independently reproduced: npm pack --dry-run before fix showed npm auto-correcting an invalid bin path warning
+  - applied npm pkg fix, re-ran npm pack/publish --dry-run with no warnings, tarball contains exactly dist/README.md/package.json (3 files)
+  - re-ran zero-arg command from repo root, nested subdirectory, and a no-.epic-loop scratch dir with expected output/exit codes
+  - confirmed no leftover .tgz or scratch dirs
+  - root pnpm run test:unit (33/33) and pnpm run validate pass unchanged
+- Commit: dc05107
+- Next move: Phase 2 tasks are all closed; proceed to phase-closure review and mandatory phase-closure-housekeeping, then idle per this run's Phase-2-only scope

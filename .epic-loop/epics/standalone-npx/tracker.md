@@ -36,7 +36,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 
 ### Phase 2: Bootstrap The Package And Ship The Zero-Arg Status Command
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Bootstrap `packages/cli` as a self-contained npm package.
   - Outcome: `packages/cli` exists as an independent, publishable npm package named `epic-loop`, with its own `package.json` and its own dependency install (no pnpm workspace); the existing root package/scripts keep working unchanged since nothing at the root references it.
@@ -136,4 +136,12 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 
 - [ ] Kind: verification | Status: todo | Re-run the same eval scenario on the CLI-based skill, compare against baseline, and record the adopt/drop/iterate decision.
   - Docs: `docs/skill-eval-metrics.md`, `decision-log.md`.
+
+## Follow-Up Tasks
+
+- [ ] Kind: documentation-only | Status: todo | Write docs/bootstrap.md summarizing packages/cli bootstrap, build, and verification decisions
+  - Outcome: docs/bootstrap.md exists and documents the packages/cli bootstrap approach (standalone install, no workspace), the esbuild-based build pipeline (src -> dist, prepack hook), and the zero-arg command's project-root discovery/epic-listing design, so future phases and shaping sessions don't have to reconstruct this from commit history.
+  - Surface: docs/bootstrap.md
+  - Acceptance: the doc exists and accurately reflects the current packages/cli layout (src/, dist/ gitignored+built, package.json bin/files/scripts).
+  - Docs: docs/bootstrap.md
 

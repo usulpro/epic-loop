@@ -13,6 +13,15 @@
 
 - **Implementation run scope (2026-07-04)**: user explicitly started the implementation loop but scoped this session to Phase 2 only ("run implementation loop but only do the first phase, then stop"). techlead must not advance into Phase 3 after Phase 2 closes; set `next_role idle` after Phase 2's phase-closure housekeeping instead.
 
+## Phase 2 Closure Review (2026-07-04)
+
+- Phase goal ("bootstrap the package and ship the zero-arg status command") is honestly met: `packages/cli` installs independently, builds via `pnpm run build` into a gitignored `dist/`, and the zero-arg command finds the project root by walking up from `cwd` and lists real epics with mode/implementation-loop state.
+- All four tracker tasks closed with task-owned commits (`a9eaef0`, `ebe3b2b`, `f3fa046`, `dc05107`); the phase's `verification` task (task 4) produced real evidence (three fixture scenarios, `npm pack`/`publish --dry-run`) and caught a real defect (invalid `bin` path), which was fixed and re-verified.
+- Gap found and not blocking: every Phase 2 task referenced `docs/bootstrap.md`, but it was never written (task detail lived inline in `tracker.md` instead). Recorded as `follow-up-01` in `tracker.md` rather than reopening a closed task or expanding this run's scope.
+- Phase 1 outputs (problem framing, locked decisions) were consumed correctly — no drift found between what was decided in shaping and what got built.
+- Next-phase seam check: Phase 3 (CLI/TUI stack research + prototypes) builds directly on this bootstrap/build foundation. The build pipeline (`src/` -> `dist/` via esbuild) and the plain-JS starting point were both explicitly designed to not constrain Phase 3's stack choice — no rework expected when Phase 3 starts.
+- Verdict: **close the phase, with the one explicit follow-up above** (not blocking, not urgent).
+
 ## Historical Decisions
 
 - None recorded yet.
