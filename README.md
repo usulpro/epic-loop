@@ -27,6 +27,7 @@ in your terminal:
 
 codex plugin marketplace add usulpro/epic-loop
 codex plugin add epic-loop@epic-loop
+codex plugin list | grep "epic-loop"
 
 ```
 
