@@ -3,9 +3,14 @@
 Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 Slug: `standalone-npx`
 Created: 2026-07-03T16:45:12+00:00
-Current mode: shaping
+Current mode: implementation
 Active phase: Phase 2 - Bootstrap The Package And Ship The Zero-Arg Status Command
-Active task: TBD (Phase 2 has not started; still in shaping)
+Active task: TBD
+
+## Scope Constraint (2026-07-04)
+
+- User explicitly confirmed implementation start but scoped this run to **Phase 2 only**.
+- Complete Phase 2 (all four tasks, including its verification task), do required phase-closure housekeeping, then set `next_role idle` and stop. Do not begin Phase 3 without a new explicit user confirmation in a future session/turn.
 
 ## Current State
 

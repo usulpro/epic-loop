@@ -36,9 +36,9 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 
 ### Phase 2: Bootstrap The Package And Ship The Zero-Arg Status Command
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Bootstrap `packages/cli` as a self-contained npm package.
+- [x] Kind: implementation | Status: done | Bootstrap `packages/cli` as a self-contained npm package.
   - Outcome: `packages/cli` exists as an independent, publishable npm package named `epic-loop`, with its own `package.json` and its own dependency install (no pnpm workspace); the existing root package/scripts keep working unchanged since nothing at the root references it.
   - Surface: `packages/cli/package.json` (name, bin, version, license, repository, files), `packages/cli` source entry, `packages/cli/README.md`.
   - Acceptance: `packages/cli/package.json` has valid npm package metadata and a `bin` entry pointing at a runnable entrypoint; running `pnpm install` (or `npm install`) from inside `packages/cli` installs cleanly on its own; `pnpm run test:unit` and `pnpm run validate` at the repo root still pass unchanged.
@@ -57,12 +57,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: `docs/bootstrap.md`.
 
 - [ ] Kind: verification | Status: todo | Verify the bootstrap and zero-arg command end-to-end, and prepare the package for publish.
-  - Method: run the built CLI's zero-arg command from several real project directories — this repo itself (multiple epics, mixed modes), a nested subdirectory, and a directory with no `.epic-loop` at all — and inspect stdout for each case; then run `npm pack --dry-run` (and `npm publish --dry-run` if available) against `packages/cli` to confirm the published tarball contains only the intended files and the `bin` entry resolves correctly.
-  - Tools: this repo's own `.epic-loop/epics/*` as a real fixture, a scratch directory with no `.epic-loop`, `npm pack --dry-run`, `npm publish --dry-run`.
-  - Evidence: captured terminal output for each fixture scenario (found-project case, nested-subdirectory case, no-project case); the dry-run pack file listing; a short manual "ready to publish" checklist.
-  - Cleanup: remove any scratch/fixture directories created only for this verification.
   - Docs: `docs/bootstrap.md`.
-  - Note: the actual `npm publish` is a manual, user-executed action outside this loop, not an automated task step.
 
 ### Phase 3: Research And Select The CLI/TUI Stack
 
@@ -93,10 +88,6 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: `docs/cli-stack-research.md`.
 
 - [ ] Kind: verification | Status: todo | Verify the consolidated CLI on the chosen stack, covering both the zero-arg status command and the new interactive/mode-switch commands.
-  - Method: run the consolidated, built CLI from fixture projects; exercise the interactive epic picker end-to-end and the explicit-slug mode-switch command; capture transcripts since interactive TUI output is not fully scriptable.
-  - Tools: this repo's `.epic-loop/epics/*` as fixtures, a documented manual terminal transcript for the interactive flow.
-  - Evidence: recorded output/transcripts for zero-arg status, interactive picker selection, explicit mode-switch command, and at least one error case (invalid mode, invalid slug).
-  - Cleanup: remove prototype leftovers and any fixture state mutated only for this verification.
   - Docs: `docs/cli-stack-research.md`.
 
 ### Phase 4: Design And Ship The Full User Command Surface
@@ -116,10 +107,6 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: `docs/cli-command-spec.md`.
 
 - [ ] Kind: verification | Status: todo | Verify the full command surface against real epics using fixture projects.
-  - Method: exercise every spec'd command against fixture project(s) with multiple epics in varied modes/states, including edge cases (no `.epic-loop`, an epic mid-implementation, an intentionally inconsistent/broken epic state for repair commands).
-  - Tools: this repo's own `.epic-loop/epics/*`, plus a purpose-built minimal fixture project if the spec needs a case this repo doesn't naturally have.
-  - Evidence: a verification log mapping each spec'd command to its observed output/behavior evidence.
-  - Cleanup: revert any fixture/epic state mutated only for this verification.
   - Docs: `docs/cli-command-spec.md`.
 
 ### Phase 5: Migrate The Skill Onto The CLI, Decide With Evidence
@@ -139,10 +126,6 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: `docs/skill-migration-map.md`.
 
 - [ ] Kind: verification | Status: todo | Capture baseline speed/token metrics of the skill running on today's scripts, via eval-fixture runs coordinated with the `test-coverage` epic.
-  - Method: run a defined representative shaping+implementation flow through the skill's current `scripts/*.mjs` calls using the eval-fixture harness (coordinate scope/ownership with the `test-coverage` epic rather than building a competing harness); capture wall-clock timing and token usage per role turn.
-  - Tools: `.epic-loop/epics/eval-fixture`, the eval/test tooling owned or coordinated with the `test-coverage` epic, recorded transcripts/usage logs.
-  - Evidence: a baseline metrics table (timing, token counts) for the defined representative run.
-  - Cleanup: reset the eval-fixture epic to a clean baseline after the run (`pnpm run eval-fixture-reset`).
   - Docs: `docs/skill-eval-metrics.md`.
 
 - [ ] Kind: implementation | Status: todo | Switch the skill's `SKILL.md`/`references/*.md` and script call sites to the new CLI internal commands.
@@ -152,9 +135,5 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: `docs/skill-migration-map.md`.
 
 - [ ] Kind: verification | Status: todo | Re-run the same eval scenario on the CLI-based skill, compare against baseline, and record the adopt/drop/iterate decision.
-  - Method: repeat the identical representative eval-fixture run from the baseline task on the migrated skill; diff timing/token metrics against baseline; review any behavior regressions.
-  - Tools: same tooling as the baseline task, plus a before/after comparison table.
-  - Evidence: a before/after metrics comparison and an explicit decision recorded in `decision-log.md` with rationale (adopt the CLI fully, drop it and revert, or iterate further).
-  - Cleanup: reset the eval-fixture epic to a clean baseline after the run.
   - Docs: `docs/skill-eval-metrics.md`, `decision-log.md`.
 

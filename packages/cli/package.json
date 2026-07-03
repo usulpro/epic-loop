@@ -1,0 +1,22 @@
+{
+  "name": "epic-loop",
+  "version": "0.0.1",
+  "description": "CLI for browsing, managing, and repairing epic-loop epics.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/usulpro/epic-loop.git",
+    "directory": "packages/cli"
+  },
+  "type": "module",
+  "bin": {
+    "epic-loop": "./bin/epic-loop.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

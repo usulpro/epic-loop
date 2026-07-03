@@ -11,6 +11,8 @@
 - **Phase 5 / eval-metrics coordination**: coordinate with the existing `test-coverage` epic instead of building an independent eval-fixture harness. `test-coverage`'s Phase 2 (not yet started) already targets an eval-fixture pipeline; this epic's Phase 5 reuses/extends that work rather than duplicating it. Exact coordination mechanics (ownership, hand-off point) to be worked out when Phase 5 actually starts.
 - **Roadmap shape**: Phase 1 is the standard "shape the epic" phase; the user's four described phases became Phases 2-5 — (2) bootstrap + zero-arg status command + manual publish, (3) CLI/TUI stack research with competing prototypes and a user-reviewed pick, (4) full user command surface research/spec/implementation/testing, (5) skill migration from scripts to CLI with before/after eval metrics driving an adopt/drop/iterate decision.
 
+- **Implementation run scope (2026-07-04)**: user explicitly started the implementation loop but scoped this session to Phase 2 only ("run implementation loop but only do the first phase, then stop"). techlead must not advance into Phase 3 after Phase 2 closes; set `next_role idle` after Phase 2's phase-closure housekeeping instead.
+
 ## Historical Decisions
 
 - None recorded yet.
