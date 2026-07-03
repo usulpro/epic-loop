@@ -1,0 +1,8 @@
+# Risk Register
+
+| Risk | Impact | Mitigation | Status |
+| --- | --- | --- | --- |
+| Phase 5 eval-metrics work overlaps with the `test-coverage` epic's own planned (not-yet-started) eval-fixture Phase 2 | Duplicated harness effort, or two epics producing conflicting eval infrastructure | User decision: coordinate through `test-coverage` instead of building an independent harness in this epic; re-check `test-coverage` progress before Phase 5 starts | open |
+| CLI/TUI library choice deferred to Phase 3 | If Phase 2's zero-arg command is built with structure that assumes a specific library, switching stacks in Phase 3 could force rework | Keep Phase 2 implementation minimal and framework-agnostic (no CLI-parsing/TUI dependency needed for a zero-arg command) | open |
+| Public npm package name `epic-loop` could be claimed by someone else before Phase 2's manual publish | Loss of the intended package name | Publish an initial placeholder/early version reasonably soon after Phase 2 completes; do not delay indefinitely | open |
+| The skill's own `roadmap-state.json` / tracker-render scripts only round-trip `Outcome`/`Surface`/`Acceptance`/`Docs` task fields; verification tasks in this tracker use `Method`/`Tools`/`Evidence`/`Cleanup` per the shaping-mode convention, which those scripts do not preserve on re-render | A `set-task-status`/`start-task`/etc. mutation during implementation could silently strip verification-task detail from `tracker.md` | Treat `tracker.md` as authoritative (per `SKILL.md`); when closing verification tasks, hand-edit `tracker.md` directly rather than relying on the renderer to keep `Method`/`Tools`/`Evidence`/`Cleanup` text | open |

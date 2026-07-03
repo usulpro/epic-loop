@@ -1,0 +1,16 @@
+# Decision Log
+
+## Active Decisions
+
+- **Package location**: `packages/cli` inside this repo, not a separate repository.
+- **No pnpm workspace**: `packages/cli` is a self-contained npm package with its own `package.json` and its own install, not a formal pnpm workspace member. Reason: the repo root is a private plugin/skill distribution, not a code package, so there is currently no second package to justify workspace tooling (shared deps, `workspace:*` protocol, hoisting). Revisit only if a genuine second package or shared-dependency need appears later.
+- **Package name**: `epic-loop`, published publicly to npm. Confirmed available on the registry (`npm view epic-loop` returned 404) as of 2026-07-04.
+- **Publish model (Phase 2)**: manual `npm publish`, executed by the user themselves. No CI-based release automation in this epic's scope.
+- **Starting language**: plain JavaScript (ESM), matching the rest of the repo. Explicitly not a hard constraint — Phase 3 may adopt TypeScript if the chosen CLI/TUI stack benefits from it; that move is not to be treated as scope creep or a later "reset."
+- **Dependency policy**: `packages/cli` may take on npm runtime dependencies (CLI parsing, output styling, TUI libraries). This differs from the skill's own `scripts/*.mjs` convention (Node built-ins only) — that convention applies to the skill scripts, not to this published package.
+- **Phase 5 / eval-metrics coordination**: coordinate with the existing `test-coverage` epic instead of building an independent eval-fixture harness. `test-coverage`'s Phase 2 (not yet started) already targets an eval-fixture pipeline; this epic's Phase 5 reuses/extends that work rather than duplicating it. Exact coordination mechanics (ownership, hand-off point) to be worked out when Phase 5 actually starts.
+- **Roadmap shape**: Phase 1 is the standard "shape the epic" phase; the user's four described phases became Phases 2-5 — (2) bootstrap + zero-arg status command + manual publish, (3) CLI/TUI stack research with competing prototypes and a user-reviewed pick, (4) full user command surface research/spec/implementation/testing, (5) skill migration from scripts to CLI with before/after eval metrics driving an adopt/drop/iterate decision.
+
+## Historical Decisions
+
+- None recorded yet.
