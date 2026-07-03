@@ -2,7 +2,7 @@
   "name": "epic-loop",
   "version": "0.1.0",
   "private": true,
-  "description": "Codex plugin for orchestrating long-lived epic-level software work across sessions.",
+  "description": "Codex plugin for turning long-running engineering efforts into durable epic workspaces across agent sessions.",
   "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
   "license": "MIT",
   "homepage": "https://github.com/usulpro/epic-loop#readme",

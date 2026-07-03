@@ -2,49 +2,65 @@
 
 > A Codex and Claude Code plugin for shaping an engineering epic, then running long autonomous implementation against it, without losing the plot.
 
-An **epic** is the unit of planning: a large slice of work (a feature, migration, or investigation). The name is borrowed from agile decomposition (a large body of work broken into tasks), but here an epic is an area of project ownership with a bounded context: you can rejoin it from any session, and keep it for as long as you need it.
+An **epic** is the unit of planning: a large slice of work, such as a new area of functionality, a complex migration, or an open-ended investigation. The name comes from agile, where an epic is a large body of work broken into smaller tasks. Here, it's an area of project ownership with its own bounded context, one you can rejoin from any session and keep for as long as you need it.
 
-`epic-loop` turns that epic into a durable workspace. You first *shape* it (capture intent, decompose into phases and tasks), then run *implementation* against it through a hook-driven loop. Explicit lifecycle modes and disk-backed state carry the epic across sessions. It packages one reusable skill under `plugins/epic-loop/` that runs on both Codex and Claude Code.
+`epic-loop` turns that epic into a durable workspace. You first *shape* it, capturing intent and decomposing the work into phases and tasks, then run *implementation* against it through a hook-driven loop. Explicit lifecycle modes and disk-backed state carry the epic across sessions.
 
 ## The Problem
 
-Long autonomous coding sessions often need repeated human coordination:
+Working with coding agents produces a second body of work alongside the code: the intent, specs, decisions, and task breakdowns you feed the agent. Today it has nowhere durable to live.
 
-- deciding whether the previous step is actually complete
-- choosing and scoping the next task
-- writing a precise implementation brief
-- preserving intent, decisions, risks, and progress across sessions
-- recovering after context compaction or interruption
+- context evaporates between sessions, machines, and teammates, or bloats a single `AGENTS.md` / `CLAUDE.md`
+- you return to *areas*, not tasks: cross-cutting, revisited weeks apart, reconstructed by hand each time
+- inside a long autonomous run, coordination falls back on you: is the last step done, what to scope next, what goes in each brief
+- a compaction or interruption loses the thread
 
-`epic-loop` makes that orchestration explicit and durable.
+`epic-loop` gives that work a home and makes the orchestration explicit and durable.
 
 ## How Shaping Works
 
-Shaping is a rhythmic dialogue, not a one-shot planning dump. The agent clarifies intent topic by topic, captures it in the epic's documentation pack, and decomposes the work into phases and tasks with concrete acceptance criteria. The tracker and docs it produces are exactly what the implementation loop later consumes — shaping is where the epic's roadmap and source of truth come from.
+Shaping is a step-by-step dialogue, not a one-shot planning dump. The agent clarifies intent topic by topic, captures it in the epic's documentation pack, and decomposes the work into phases and tasks with concrete acceptance criteria. The tracker and docs it produces are exactly what the implementation loop later consumes: shaping is where the epic's roadmap and source of truth come from.
 
 ## How Implementation Works
 
 Implementation mode runs as a single agent session (Codex or Claude Code) with two visible roles. The Stop hook keeps the loop moving: each techlead turn uses a fixed governance prompt, and each engineer turn receives the task-specific brief the techlead wrote for that exact slice.
 
-
 **Techlead role.** Owns the implementation loop. It reads compact epic state and live repository evidence, reviews the latest engineer report, decides whether work is honestly closed, chooses the next step, updates human-facing epic artifacts, makes commit decisions, and writes exactly one focused engineer brief when implementation should continue.
 
 **Engineer role.** Owns execution of one concrete brief. It follows project patterns, keeps scope narrow, makes local implementation decisions inside the brief, verifies the result with real evidence, reports changed files, blockers, and gaps, then stops. Routing returns to techlead automatically.
 
-Each epic lives in the target project at `.epic-loop/epics/<slug>/`. Human-facing files preserve state, tracker, implementation notes, decisions, risks, and docs. Hidden `.runtime/` files support hook routing and debugging without becoming default role context.
-
 ## Modes
 
-The spine is two ordered modes — first you shape the epic, then you implement it:
+Two ordered modes. First you shape the epic, then you implement it:
 
 1. **Shaping** → clarify the epic, capture intent, create docs, decompose into phases and tasks.
 2. **Implementation** → run the hook-driven techlead/engineer loop against those tasks.
 
-Three supporting modes surround that axis:
+Supporting workflows help keep long-lived epics healthy:
 
-- **Review**: check completed work against original intent, not only the latest docs.
-- **Reset**: replace stale architecture, roadmap, or assumptions with a controlled new baseline.
-- **Resume**: re-enter an existing epic from disk-backed artifacts.
+- **Review** → check completed work against the original intent and captured decisions.
+- **Reset** → replace stale assumptions, architecture, or roadmap with a controlled new baseline.
+- **Resume** → re-enter an existing epic from its disk-backed workspace.
+
+## The Epic Workspace
+
+Epics live inside the target project under `.epic-loop/`, each keyed by a `<slug>` that names its folder and is passed to helper scripts via `--slug`. Multiple epics can coexist, each self-contained.
+
+```text
+.epic-loop/
+  epics/
+    <slug>/                 # one self-contained epic
+      state-of-epic.md      # compact, current source of truth
+      tracker.md            # phases and tasks with their status
+      implementation-log.md # what each turn changed, with verdicts
+      decision-log.md       # decisions by you and the agent, with rationale
+      risk-register.md      # known risks and open concerns
+      docs/                 # intent, specs, references captured during shaping
+      .runtime/             # hidden machine state for hook routing and replay
+    <another-slug>/         # another epic, same layout
+```
+
+These files **are** the epic: a durable, human-readable planning artifact you commit alongside the code and keep across sessions. Roles read the human-facing files; `.runtime/` exists for debugging and replay without polluting role context.
 
 ## Requirements
 
@@ -53,43 +69,45 @@ Three supporting modes surround that axis:
 - Node.js for the bundled `.mjs` helper scripts.
 - A target repository where the epic workspace should be created.
 
-## Repository Layout
-
-```text
-marketplace.json
-plugins/
-  epic-loop/
-    .codex-plugin/plugin.json
-    skills/
-      epic-loop/
-        SKILL.md
-        agents/openai.yaml
-        scripts/
-        references/
-        assets/templates/
-scripts/
-  validate-epic-loop-package.mjs
-```
-
-The distributable plugin surface is `plugins/epic-loop/`. The root `marketplace.json` exposes that plugin for local or Git-backed marketplace installation.
-
 ## Installation
 
-Add this repository as a Codex plugin marketplace:
+Add this repository as a Codex plugin marketplace and install the plugin:
 
 ```bash
-codex plugin marketplace add <owner>/<repo>
+codex plugin marketplace add usulpro/epic-loop --ref main
+codex plugin add epic-loop@epic-loop
+```
+
+To install a pinned version, use the release tag or commit ref:
+
+```bash
+codex plugin marketplace add usulpro/epic-loop --ref "<ref>"
+codex plugin add epic-loop@epic-loop
 ```
 
 For local development from this checkout:
 
 ```bash
 codex plugin marketplace add .
+codex plugin add epic-loop@epic-loop
 ```
 
 On **Claude Code**, install the plugin through its plugin marketplace, or load the skill directly from `.claude/skills/epic-loop/` (this repo keeps that copy in sync via `pnpm run self-update`).
 
-After installing the plugin, start a new Codex or Claude Code session and invoke `epic-loop`. The first run checks whether the target project has the project-local hooks it needs.
+After installing the plugin, start a new Codex or Claude Code session in the target repository and invoke the skill by name:
+
+```text
+$epic-loop start a new epic for the following area of functionality:
+[describe the problem area or functionality you need to solve]
+
+$epic-loop <epic-slug|epic-path>
+
+$epic-loop <epic-slug|epic-path> start implementation loop
+
+$epic-loop <epic-slug|epic-path> start review mode
+```
+
+The first run checks whether the target project has the project-local hooks it needs.
 
 Hook setup is intentionally performed from the target project after user approval:
 
@@ -107,23 +125,37 @@ node <skill-dir>/scripts/bind-session.mjs \
 
 Unbound sessions are silent no-ops. `epic-loop` only activates for sessions explicitly bound to an epic.
 
-## Epic Workspace
+## Status
 
-Each epic at `.epic-loop/epics/<slug>/` contains:
+Experimental. The plugin is intended for sustained autonomous engineering work where preserving intent, state, and review discipline matters more than simply running a checklist.
+
+## Development
+
+For contributors working on the plugin itself.
+
+### Repository Layout
 
 ```text
-state-of-epic.md
-tracker.md
-implementation-log.md
-decision-log.md
-risk-register.md
-docs/
-.runtime/
+.agents/
+  plugins/
+    marketplace.json
+plugins/
+  epic-loop/
+    .codex-plugin/plugin.json
+    skills/
+      epic-loop/
+        SKILL.md
+        agents/openai.yaml
+        scripts/
+        references/
+        assets/templates/
+scripts/
+  validate-epic-loop-package.mjs
 ```
 
-These human-facing files **are** the epic — a durable, human-readable planning artifact that lives in the repo, can be committed alongside the code, and outlives any single session. Human-facing artifacts and machine runtime are separated by design: roles read the human-facing files, while runtime traces exist for debugging and replay without polluting normal role context.
+The distributable plugin surface is `plugins/epic-loop/`. The `.agents/plugins/marketplace.json` file exposes that plugin for local or Git-backed marketplace installation.
 
-## Useful Commands
+### Repository Commands
 
 ```bash
 # Validate this plugin repository.
@@ -131,7 +163,13 @@ pnpm run validate
 
 # Sync the current skill into repo-local Codex and Claude Code skill folders.
 pnpm run self-update
+```
 
+### Helper Scripts
+
+These scripts back the modes above. In normal use the agent invokes them through hooks; they are listed here for reference and manual debugging.
+
+```bash
 # List local epics in a target project.
 node <skill-dir>/scripts/list-epics.mjs
 
@@ -161,10 +199,6 @@ node <skill-dir>/scripts/start-phase.mjs --slug "<epic-slug>" --phase-id "<phase
 node <skill-dir>/scripts/close-phase.mjs --slug "<epic-slug>" --phase-id "<phase-id>"
 node <skill-dir>/scripts/append-implementation-log.mjs --slug "<epic-slug>" --task "<task>" --verdict "<verdict>"
 ```
-
-## Status
-
-Experimental. The plugin is intended for sustained autonomous engineering work where preserving intent, state, and review discipline matters more than simply running a checklist.
 
 ## License
 

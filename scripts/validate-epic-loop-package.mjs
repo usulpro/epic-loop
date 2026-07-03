@@ -7,7 +7,7 @@ const pluginRoot = path.join(root, "plugins", "epic-loop");
 const skillRoot = path.join(pluginRoot, "skills", "epic-loop");
 
 const requiredFiles = [
-  "marketplace.json",
+  ".agents/plugins/marketplace.json",
   "plugins/epic-loop/.codex-plugin/plugin.json",
   "plugins/epic-loop/skills/epic-loop/SKILL.md",
   "plugins/epic-loop/skills/epic-loop/agents/openai.yaml",
@@ -23,10 +23,12 @@ for (const relativePath of requiredFiles) {
   }
 }
 
-const marketplace = readJson("marketplace.json");
+const marketplace = readJson(".agents/plugins/marketplace.json");
 const plugin = readJson("plugins/epic-loop/.codex-plugin/plugin.json");
 
 if (marketplace) {
+  expectEqual(marketplace.name, "epic-loop", "marketplace name");
+
   const marketplaceDescription = marketplace.interface?.description;
   if (typeof marketplaceDescription === "string") {
     expectIncludes(marketplaceDescription, "Codex or Claude Code hooks", "marketplace interface.description");

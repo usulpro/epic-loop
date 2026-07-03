@@ -1,6 +1,6 @@
 ---
 name: epic-loop
-description: Use this skill when the user wants to shape, run, resume, reset, or review a long-lived epic-level software effort across multiple sessions. It is for sustained autonomous engineering work with an epic workspace, tracker, documentation pack, decision log, risk register, lifecycle modes, and a manager/techlead/engineer implementation cycle. Do not use it for one-off feature requests, simple checklist execution, or generating a large document in a single pass.
+description: Use this skill when the user wants to shape, run, resume, reset, or review a long-lived engineering epic across agent sessions. It turns the intent, specs, decisions, risks, and task breakdowns around a large effort into a durable epic workspace, then can run implementation through a manager/techlead/engineer loop. Do not use it for one-off feature requests, simple checklist execution, or generating a large document in a single pass.
 ---
 
 # Epic Loop

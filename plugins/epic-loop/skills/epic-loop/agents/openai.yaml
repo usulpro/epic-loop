@@ -1,4 +1,4 @@
 interface:
   display_name: "Epic Loop"
-  short_description: "Run long-running, multi-phase epics autonomously"
-  default_prompt: "Use $epic-loop to shape and run this epic across sessions."
+  short_description: "Keep long-running engineering epics coherent across agent sessions"
+  default_prompt: "$epic-loop start a new epic for the following area of functionality:\n[describe the problem area or functionality you need to solve]"

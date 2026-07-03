@@ -1,7 +1,7 @@
 {
   "name": "epic-loop",
   "version": "0.1.0",
-  "description": "Run large, multi-phase epics as long-running autonomous jobs, driven by Codex or Claude Code hooks and durable on-disk state.",
+  "description": "Shape large engineering efforts into durable epic workspaces, then run implementation across sessions through Codex or Claude Code hooks without losing intent, decisions, or task context.",
   "author": {
     "name": "Oleg Proskurin",
     "email": "usulpro@gmail.com",
@@ -14,15 +14,16 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Epic Loop",
-    "shortDescription": "Run long-running, multi-phase epics autonomously",
-    "longDescription": "Run large, multi-phase epics as long-running autonomous jobs that hold their intent across context rot and goal drift. The loop rotates between a techlead (writes a per-task brief for the engineer) and an engineer (focused on executing that one brief), driven by project-local Codex or Claude Code hooks and durable on-disk state.",
+    "shortDescription": "Keep long-running engineering epics coherent across agent sessions",
+    "longDescription": "Working with coding agents creates a second body of work alongside the code: intent, specs, decisions, risks, and task breakdowns. Epic Loop gives that work a durable home inside the target repository. Shape an epic into docs, phases, and tasks, then run implementation through Codex or Claude Code hooks in a techlead/engineer loop that keeps state on disk and can resume across sessions.",
     "developerName": "Oleg Proskurin",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "defaultPrompt": [
-      "Use epic-loop to shape and run this epic.",
-      "Resume my epic-loop workspace.",
-      "Review this completed epic-loop slice."
+      "$epic-loop start a new epic for the following area of functionality:\n[describe the problem area or functionality you need to solve]",
+      "$epic-loop <epic-slug|epic-path>",
+      "$epic-loop <epic-slug|epic-path> start implementation loop",
+      "$epic-loop <epic-slug|epic-path> start review mode"
     ]
   }
 }

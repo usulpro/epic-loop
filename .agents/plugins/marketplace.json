@@ -1,0 +1,21 @@
+{
+  "name": "epic-loop",
+  "interface": {
+    "displayName": "Epic Loop",
+    "description": "Turn the intent, specs, decisions, risks, and task breakdowns around a large engineering effort into a durable epic workspace. Shape the work into phases and tasks, then run implementation through Codex or Claude Code hooks in a techlead/engineer loop that can resume across sessions without losing context."
+  },
+  "plugins": [
+    {
+      "name": "epic-loop",
+      "source": {
+        "source": "local",
+        "path": "./plugins/epic-loop"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
