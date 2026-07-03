@@ -10,13 +10,20 @@
   },
   "type": "module",
   "bin": {
-    "epic-loop": "./bin/epic-loop.mjs"
+    "epic-loop": "./dist/epic-loop.mjs"
   },
   "files": [
-    "bin",
+    "dist",
     "README.md"
   ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepack": "pnpm run build"
+  },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
   }
 }

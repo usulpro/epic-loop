@@ -44,7 +44,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Acceptance: `packages/cli/package.json` has valid npm package metadata and a `bin` entry pointing at a runnable entrypoint; running `pnpm install` (or `npm install`) from inside `packages/cli` installs cleanly on its own; `pnpm run test:unit` and `pnpm run validate` at the repo root still pass unchanged.
   - Docs: `docs/bootstrap.md`.
 
-- [ ] Kind: implementation | Status: todo | Set up the build process for the CLI package.
+- [x] Kind: implementation | Status: done | Set up the build process for the CLI package.
   - Outcome: `packages/cli` source builds into a distributable, executable artifact that can be run directly and later resolved through `npx epic-loop`.
   - Surface: `packages/cli` build tooling/config, `packages/cli/package.json` scripts (`build`, `dev` as applicable), `files`/`exports` fields needed for a clean publish.
   - Acceptance: a documented build command produces a working entrypoint; running the built entrypoint directly (e.g. `node packages/cli/dist/...`) executes without runtime errors.
