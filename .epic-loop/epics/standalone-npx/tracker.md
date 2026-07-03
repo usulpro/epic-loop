@@ -50,7 +50,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Acceptance: a documented build command produces a working entrypoint; running the built entrypoint directly (e.g. `node packages/cli/dist/...`) executes without runtime errors.
   - Docs: `docs/bootstrap.md`.
 
-- [ ] Kind: implementation | Status: todo | Implement the zero-argument root command.
+- [x] Kind: implementation | Status: done | Implement the zero-argument root command.
   - Outcome: running the CLI with no arguments walks up from the current working directory to find the project root, checks for `.epic-loop`, and — when found — prints a concise list of existing epics with each epic's current lifecycle mode and, when the epic is in implementation mode, its implementation-loop state.
   - Surface: `packages/cli` entrypoint, a project-root discovery utility (upward directory walk), an epic listing/status reader (may port logic from the skill's `list-epics.mjs` / `role-summary.mjs`).
   - Acceptance: run from a nested subdirectory of a project containing `.epic-loop/epics/*`, the command finds the root and prints each epic's slug/title, mode, and implementation-loop state where applicable; run outside any `.epic-loop` project, it reports that clearly instead of crashing or printing nothing.
