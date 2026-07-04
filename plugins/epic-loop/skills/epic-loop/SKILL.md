@@ -212,7 +212,7 @@ Keep `SKILL.md` as the operating map. Use references only when the mode or probl
 
 ## Shaping Rules
 
-Shaping is a rhythmic dialogue, not one large planning dump. Work topic by topic, capture decisions and open questions, then grow the docs and tracker as clarity appears.
+Shaping is a rhythmic dialogue, not one large planning dump. Work topic by topic, capture decisions and open questions, then grow the docs and tracker as clarity appears. A plain imperative from the user ("do X", "research Y") means capture it as a task in `tracker.md`, not execute it now; say so in one line, e.g. "Adding a follow-up task for X."
 
 The agent owns decomposition. The user can name big phases or areas, but should not have to produce the roadmap. Tasks should stay goal-oriented until implementation mode needs task-local detail.
 
@@ -315,7 +315,7 @@ Review mode checks whether the implementation matches the original intent, not j
 - what was actually implemented
 - what may have drifted, been lost, or been over-literalized
 
-Review findings should become docs corrections, follow-up tasks, a new implementation slice, or a return to shaping.
+Review findings should become docs corrections, follow-up tasks, a new implementation slice, or a return to shaping. Review can also resolve into a small immediate fix; state in one line which path is being taken (e.g. "Adding a follow-up task" vs "Applying this fix directly") so the user can correct a misread immediately.
 
 ## Parallel Work
 
