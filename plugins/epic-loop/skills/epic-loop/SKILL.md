@@ -1,6 +1,6 @@
 ---
 name: epic-loop
-description: Use this skill when the user wants to shape, run, resume, reset, or review a long-lived engineering epic across agent sessions. It turns the intent, specs, decisions, risks, and task breakdowns around a large effort into a durable epic workspace, then can run implementation through a manager/techlead/engineer loop. Do not use it for one-off feature requests, simple checklist execution, or generating a large document in a single pass.
+description: Use this skill for any work inside an epic-loop workspace: reading, creating, or editing files under `.epic-loop/` (`state-of-epic.md`, `tracker.md`, `decision-log.md`, `risk-register.md`, `docs/`); adding, editing, or closing an epic's tasks, research tasks, or phases; switching between the shaping (planning, including architecture reset), implementation (manager/techlead/engineer loop), or review lifecycle modes; or resuming an existing epic by slug. Also trigger on the `epic-loop` CLI/package by name. If the current session is already bound to an epic, keep operating through this skill on every following turn — in shaping/review mode, plain imperative requests usually describe epic tasks to capture in `tracker.md`, not actions to run immediately.
 ---
 
 # Epic Loop
