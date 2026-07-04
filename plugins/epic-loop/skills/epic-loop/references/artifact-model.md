@@ -212,7 +212,7 @@ Use `.epic-loop/.runtime/` for global hook events, session routing, and debug ca
 
 ## File Ownership Guidance
 
-Prefer append-only updates for logs and registers. Rewrite broad planning docs only in shaping or reset mode, and preserve historical context when old decisions might explain existing code.
+Prefer append-only updates for logs and registers. Rewrite broad planning docs only in shaping, including when running the reset ladder, and preserve historical context when old decisions might explain existing code.
 
 ## Compaction Contract
 

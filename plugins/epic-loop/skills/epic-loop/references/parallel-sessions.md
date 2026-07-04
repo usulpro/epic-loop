@@ -9,9 +9,8 @@ For hook-driven routing, only one session may be active for a given epic and mod
 Examples:
 
 - implementation executes the current phase
-- shaping prepares future phases
+- shaping prepares future phases, including architecture reset when needed
 - review inspects a completed slice
-- reset replaces stale architecture
 
 ## Collision Avoidance
 
@@ -19,11 +18,10 @@ Before editing artifacts, read the current file from disk. Prefer append-only en
 
 Mode ownership:
 
-- Shaping: docs, future roadmap, open questions, task decomposition.
+- Shaping: docs, future roadmap, open questions, task decomposition, and reset/baseline transitions when the reset ladder is invoked.
 - Implementation manager housekeeping: compaction of inactive non-doc layers, artifact hygiene, implementation-entry/exit maintenance.
 - Implementation techlead/engineer: active task status, implementation log, verification notes, execution brief.
 - Review: findings, drift analysis, follow-up proposals.
-- Reset: historical baseline, active plan replacement, reset decision.
 
 If two sessions need the same artifact, use dated sections with the mode name.
 

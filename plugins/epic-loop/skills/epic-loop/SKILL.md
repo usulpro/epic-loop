@@ -118,10 +118,9 @@ Do not describe generated slugs as normal, normalized, fixed, renamed, corrected
 
 Only after local epic context is clear, decide the mode before doing epic work:
 
-- **Shaping**: the user is still clarifying the epic, roadmap, phases, contracts, risks, or open questions.
+- **Shaping**: the user is still clarifying the epic, roadmap, phases, contracts, risks, or open questions. When the active architecture, roadmap, or assumptions stop being reliable, run the reset escalation ladder from inside shaping (see Shaping Rules) instead of switching to a separate mode.
 - **Implementation**: the epic has actionable tasks and the user wants autonomous execution.
 - **Review**: a completed slice must be checked against the original conversation intent, not only current docs.
-- **Reset**: the architecture, roadmap, or assumptions are no longer valid and need a controlled rewrite.
 - **Resume**: the user gives an existing epic slug or asks to continue previous epic work.
 
 If no epic workspace exists, initialize one with:
@@ -205,7 +204,7 @@ Load the detailed reference for the active mode:
 - Implementation techlead role: [references/implementation-techlead-role.md](references/implementation-techlead-role.md)
 - Implementation engineer role: [references/implementation-engineer-role.md](references/implementation-engineer-role.md)
 - Review: [references/review-mode.md](references/review-mode.md)
-- Architecture reset: [references/reset-protocol.md](references/reset-protocol.md)
+- Architecture reset (procedure run inside shaping, not a standalone mode): [references/reset-protocol.md](references/reset-protocol.md)
 - Parallel sessions: [references/parallel-sessions.md](references/parallel-sessions.md)
 - Hooks and session routing: [references/hooks-and-session-routing.md](references/hooks-and-session-routing.md)
 
@@ -229,6 +228,8 @@ Design-like titles and `Docs:` links are not enough. If a task sounds like docum
 When a task needs more detail than fits cleanly in `tracker.md`, move that detail into referenced docs instead of bloating the task text. Prefer separate doc files for separate tasks. Use shared docs only when two or three closely related tasks truly share the same narrow scope, governing principles, or a paired relationship such as implementation plus validation. A task may reference multiple docs when that reduces duplication, for example one shared principles doc plus one task-specific spec. The governing rule is to keep each task's read scope as small and relevant as possible.
 
 Verification tasks are stricter than normal implementation tasks. A `verification` task must name the concrete verification method, tools, setup, evidence, and cleanup path, not only the thing being verified. Each phase must contain at least one `verification` task. By default, the final task of the phase should verify the combined result of that phase. Add extra intermediate verification tasks after risky tasks when phase-level verification alone would be too weak.
+
+When the active architecture, roadmap, or task framing is no longer a reliable guide, do not keep patching locally. Follow the reset escalation ladder in [references/reset-protocol.md](references/reset-protocol.md) — local correction, tactical detour, or strategic reset — from inside the shaping session, then resume shaping or implementation with the corrected source of truth. Reset is not a separate mode.
 
 ## Implementation Rules
 
@@ -316,27 +317,13 @@ Review mode checks whether the implementation matches the original intent, not j
 
 Review findings should become docs corrections, follow-up tasks, a new implementation slice, or a return to shaping.
 
-## Reset Rules
-
-Use reset mode when the active architecture, roadmap, or assumptions are no longer reliable. Do not silently keep executing a stale tracker.
-
-A reset should:
-
-1. Stop linear execution.
-2. Record why the reset is needed.
-3. Mark old roadmap/docs as historical baseline where appropriate.
-4. Define the new active plan.
-5. Update tracker, state, decision log, and risk register.
-6. Resume in shaping or implementation with the new source of truth.
-
 ## Parallel Work
 
 One session may be in only one mode at a time, but multiple sessions may work on the same epic in different modes. Avoid conflicting writes by treating artifacts as mode-owned when possible:
 
-- Shaping owns future docs, roadmap changes, and open questions.
+- Shaping owns future docs, roadmap changes, open questions, and reset/baseline transitions when the reset ladder is invoked.
 - Implementation owns active task status, implementation log, verification notes, and task-local briefs.
 - Review owns review findings, drift analysis, and proposed follow-ups.
-- Reset owns baseline transition notes and active plan replacement.
 
 When parallel work may collide, read current files immediately before editing and append dated entries instead of rewriting broad sections.
 

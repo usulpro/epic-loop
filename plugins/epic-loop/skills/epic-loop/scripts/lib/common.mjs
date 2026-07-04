@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 
 export const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
-export const MODES = ["shaping", "implementation", "review", "reset"];
+export const MODES = ["shaping", "implementation", "review"];
 export const PLATFORMS = ["codex", "claude-code"];
 export const CODEX_HOOKS_RELATIVE_PATH = path.join(".codex", "hooks.json");
 export const CODEX_CONFIG_RELATIVE_PATH = path.join(".codex", "config.toml");
