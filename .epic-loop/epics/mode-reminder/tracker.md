@@ -76,23 +76,17 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: The phrase and rule read naturally alongside the existing description triggers; a future session can tell from `SKILL.md` alone when to call `unbind-session.mjs`.
   - Docs: `docs/problem-framing.md`, `decision-log.md`.
 
-- [x] Kind: verification | Status: done | Verify Phase 4's combined result: audit the documented unbind contract for cross-doc consistency and confirm the updated skill package is intact.
-  - Outcome: Zero discrepancies found across `plugins/epic-loop/skills/epic-loop/SKILL.md`, `docs/mode-reminder-design.md` section 2, and `decision-log.md` (flags `--current`/`--session-id`/optional `--reason`, no `--slug`/`--mode`, no-op and rebind semantics, phrase `unbind epic` verbatim in the frontmatter).
-  - Surface: read-only audit plus package checks; no code changes.
-  - Acceptance: Met — side-by-side contract comparison clean; frontmatter YAML valid; runtime copies diff-clean; `pnpm run validate` and 33/33 unit tests green. (Note: this task lives only in `tracker.md`; the structured roadmap state does not know it, and `close-phase.mjs` once re-rendered it away — restored by hand, tracker is the source of truth.)
-  - Docs: `docs/mode-reminder-design.md`, `decision-log.md`.
-
 ### Phase 5: Implement And Write Tests
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Implement the `UserPromptSubmit` mode-reminder injection in `lib/hooks.mjs`/`lib/loop.mjs` and the new `unbind-session.mjs` script, per the Phase 2 proposal.
+- [x] Kind: implementation | Status: done | Implement the `UserPromptSubmit` mode-reminder injection in `lib/hooks.mjs`/`lib/loop.mjs` and the new `unbind-session.mjs` script, per the Phase 2 proposal.
   - Outcome: Working code matching the accepted proposal, including the explicit guarantee that unbound sessions still produce zero output.
   - Surface: `scripts/lib/hooks.mjs`, `scripts/lib/loop.mjs`, `scripts/lib/epics.mjs`, new `scripts/unbind-session.mjs`.
   - Acceptance: Behavior matches the proposal and the Phase 3 POC evidence; existing implementation-mode hook behavior is unchanged.
   - Docs: `docs/problem-framing.md`, `decision-log.md`.
 
-- [ ] Kind: verification | Status: todo | Write unit tests for the new hook behavior and `unbind-session.mjs`, following this repo's `node --test` / `runNodeScript` conventions (matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` style).
+- [ ] Kind: verification | Status: doing | Write unit tests for the new hook behavior and `unbind-session.mjs`, following this repo's `node --test` / `runNodeScript` conventions (matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` style).
   - Outcome: Tests cover: mode reminder injected for bound shaping/review sessions, no reminder/no output for unbound sessions, `unbind-session.mjs` deactivating the current session, and hooks becoming no-ops for that session id afterward.
   - Surface: `tests/unit/`.
   - Acceptance: New tests fail against the pre-implementation state and pass after Phase 5's implementation task.
@@ -107,4 +101,12 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Surface: whole repo test suite.
   - Acceptance: `pnpm run test:unit` and `pnpm run validate` both exit clean.
   - Docs: `implementation-log.md`.
+
+## Follow-Up Tasks
+
+- [x] Kind: verification | Status: done | Phase 4 verification gate: cross-doc audit of the documented unbind contract (executed 2026-07-06)
+  - Outcome: Zero discrepancies across SKILL.md, docs/mode-reminder-design.md section 2, and decision-log.md (flags, no-op, silent-hooks, rebind semantics, verbatim 'unbind epic' phrase); frontmatter YAML valid; runtime copies diff-clean; validate passed; 33/33 unit tests green
+  - Surface: read-only audit plus package checks; no code changes
+  - Acceptance: Met - discrepancy list empty; recorded here as a follow-up entry because hand-added tracker tasks do not survive roadmap re-renders (see implementation-log 2026-07-06)
+  - Docs: docs/mode-reminder-design.md, decision-log.md
 

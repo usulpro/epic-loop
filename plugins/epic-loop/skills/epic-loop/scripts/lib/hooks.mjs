@@ -742,6 +742,31 @@ function installClaudeHooks(root, flags = {}) {
   console.log(`Installed project-local Claude Code epic-loop hooks: ${settingsPath}`);
 }
 
+const MODE_REMINDER_TEXT = {
+  shaping: (slug) =>
+    `[epic-loop] Bound to epic "${slug}" — shaping mode. A plain imperative is a tracker.md task, not an action to run now — state which interpretation you're using (SKILL.md Shaping Rules).`,
+  review: (slug) =>
+    `[epic-loop] Bound to epic "${slug}" — review mode. Compare against original intent, not just current docs, and state which resolution path you're taking (SKILL.md Review Rules).`,
+};
+
+export function buildModeReminder(payload, binding) {
+  if (payload.hook_event_name !== "UserPromptSubmit") {
+    return null;
+  }
+  if (binding.mode !== "shaping" && binding.mode !== "review") {
+    return null;
+  }
+
+  const text = MODE_REMINDER_TEXT[binding.mode](binding.epic_slug);
+
+  return {
+    hookSpecificOutput: {
+      hookEventName: "UserPromptSubmit",
+      additionalContext: text,
+    },
+  };
+}
+
 export function handleHook(rawInput, flags = {}) {
   let payload;
 
@@ -785,7 +810,7 @@ export function handleHook(rawInput, flags = {}) {
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
   markInterruptedTurnIfNeeded(projectRoot, payload, binding);
 
-  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding);
+  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding) ?? buildModeReminder(payload, binding);
   if (continuation) {
     console.log(JSON.stringify(continuation));
   }

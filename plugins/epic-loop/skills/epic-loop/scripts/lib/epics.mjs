@@ -286,6 +286,74 @@ export function bindSession(flags = {}) {
   }
 }
 
+export function unbindSession(flags = {}) {
+  const root = resolveRoot(flags.root);
+  let currentSession = null;
+  let currentPlatform = null;
+
+  if (flags.current) {
+    currentPlatform = requireRuntimePlatform(root);
+    currentSession = currentPlatform === "claude-code" ? readCurrentClaudeSession(root) : readCurrentCodexSession(root);
+  }
+
+  if (flags.current && !currentSession) {
+    if (currentPlatform === "claude-code") {
+      throw new Error("Cannot detect current Claude Code session from a fresh hook capture. Pass --session-id explicitly.");
+    }
+    throw new Error("Cannot detect current Codex session from .codex/tmp/last-hook-capture.json. Pass --session-id explicitly.");
+  }
+
+  const sessionId = currentSession?.session_id ?? requireFlag(flags, "session-id");
+  const reason = typeof flags.reason === "string" && flags.reason.trim() ? flags.reason.trim() : "user-requested-unbind";
+
+  const bindingsPath = path.join(sessionRoot(root), "session-bindings.json");
+  const bindings = readJson(bindingsPath, { sessions: {} });
+  const normalizedBindings = bindings && typeof bindings === "object" && !Array.isArray(bindings) ? bindings : { sessions: {} };
+  const sessions = normalizedBindings.sessions && typeof normalizedBindings.sessions === "object" && !Array.isArray(normalizedBindings.sessions) ? normalizedBindings.sessions : {};
+  const activeSessions =
+    normalizedBindings.active_sessions && typeof normalizedBindings.active_sessions === "object" && !Array.isArray(normalizedBindings.active_sessions)
+      ? normalizedBindings.active_sessions
+      : {};
+  const binding = sessions[sessionId];
+
+  if (!binding || typeof binding !== "object" || binding.active !== true) {
+    console.log(`Session ${sessionId} is not currently bound to any epic.`);
+    return;
+  }
+
+  const epicSlug = String(binding.epic_slug);
+  const mode = String(binding.mode);
+  const unboundAt = nowIso();
+  const activeKey = `${epicSlug}:${mode}`;
+
+  sessions[sessionId] = {
+    ...binding,
+    active: false,
+    deactivated_at: unboundAt,
+    deactivated_reason: reason,
+  };
+
+  if (activeSessions[activeKey] === sessionId) {
+    delete activeSessions[activeKey];
+  }
+
+  normalizedBindings.active_sessions = activeSessions;
+  normalizedBindings.sessions = sessions;
+  writeJson(bindingsPath, normalizedBindings);
+
+  const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionId);
+  ensureDir(sessionDir);
+  writeJson(path.join(sessionDir, "unbind.json"), {
+    epic_slug: epicSlug,
+    mode,
+    reason,
+    session_id: sessionId,
+    unbound_at: unboundAt,
+  });
+
+  console.log(`Session ${sessionId} unbound from ${epicSlug} (${mode}).`);
+}
+
 export function listEpics(flags = {}) {
   const root = resolveRoot(flags.root);
   const epicsDir = epicsRoot(root);
