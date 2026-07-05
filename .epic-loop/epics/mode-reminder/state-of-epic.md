@@ -4,8 +4,8 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Current mode: implementation
-Active phase: Phase 6 - Run The Full Test Suite
-Active task: TBD
+Active phase: none - all six phases are closed
+Active task: none - implementation complete
 
 ## Current State
 
@@ -15,13 +15,13 @@ Active task: TBD
 - Both feature parts are now implemented and test-covered: (1) the per-turn `UserPromptSubmit` mode-reminder injection via `hookSpecificOutput.additionalContext` for shaping/review-bound sessions (`buildModeReminder` in `lib/hooks.mjs`), and (2) `scripts/unbind-session.mjs` detaching the current session from its epic on user intent (`unbindSession` in `lib/epics.mjs`).
 - Phase 3 (Validate With Real Proofs Of Concept On Codex And Claude Code) is closed. Both platforms are natively proven for `UserPromptSubmit` → `hookSpecificOutput.additionalContext`: Codex via an interactive trusted-project CLI run (token `...8273` rendered as visible hook context and echoed by the model), Claude Code via a real headless `claude -p` run (token `POC-CLAUDE-ADDCTX-1783274622` echoed exactly; the transcript JSONL carries the injection as a `hook_additional_context` attachment record). Details and limitations are in `decision-log.md`.
 - Phase 4 (Design The Unbind Trigger Phrase And Update The Skill) is closed. The canonical phrase is `unbind epic` (intent-based proactive unbind with the phrase as reliable fallback); `SKILL.md`'s frontmatter description and a `## Hooks` subsection now document the full `unbind-session.mjs` contract, runtime copies are re-synced, and a cross-doc audit confirmed zero discrepancies against `docs/mode-reminder-design.md` and `decision-log.md`.
+- Phase 5 (Implement And Write Tests) is closed. Implementation matches the accepted design (commits `64b6c81` code, `02d6fae` tests); `tests/unit/unbind-and-reminder.test.mjs` pins both contracts with 10 end-to-end cases; `references/hooks-and-session-routing.md` documents the new behaviors; runtime copies re-synced via `self-update` after the green suite (both diff-clean).
+- Phase 6 (Run The Full Test Suite) is closed. Final verification: `pnpm run test:unit` 43/43/0 with all 10 new tests present, `pnpm run validate` exit 0, both runtime copies diff-clean vs `plugins/`.
 
 ## Blockers
 
 - None recorded.
 
-- Phase 5 (Implement And Write Tests) is closed. Implementation matches the accepted design (commits `64b6c81` code, `02d6fae` tests); `tests/unit/unbind-and-reminder.test.mjs` pins both contracts with 10 end-to-end cases; `references/hooks-and-session-routing.md` documents the new behaviors; runtime copies re-synced via `self-update` after the green suite (both diff-clean).
-
 ## Next Action
 
-- Run Phase 6: full `pnpm run test:unit` (43 tests expected) and `pnpm run validate`, confirm green, then close the epic's implementation with final housekeeping.
+- Implementation of this epic is complete; all six phases are closed. Remaining lifecycle steps: merge/review of `feature/mode-keeper` as the user decides, and a future review-mode pass if drift against original intent is suspected.

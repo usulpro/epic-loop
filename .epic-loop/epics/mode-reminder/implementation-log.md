@@ -59,3 +59,8 @@
 
 - Task: follow-up-02 (reference docs + runtime sync)
 - Verdict: closed: hooks-and-session-routing.md gained the mode-reminder bullet in 'Hooks can' and the unbind paragraph in Binding Sessions, consistent with SKILL.md; pnpm run self-update executed after the 43-test green suite; both runtime copies diff-clean vs plugins/; full suite re-verified 43/43. Note: set-task-status.mjs cannot address follow-up ids (searches phase tasks only) - tracker checkbox maintained by hand
+
+## 2026-07-05T18:31:42+00:00 - closed: final full-suite verification green - pnpm run test:unit 43/43/0 with all 10 unbind-and-reminder tests named in output, pnpm run validate exit 0, both runtime copies diff-clean vs plugins/, no product files dirty
+
+- Task: phase-6-task-1
+- Verdict: closed: final full-suite verification green - pnpm run test:unit 43/43/0 with all 10 unbind-and-reminder tests named in output, pnpm run validate exit 0, both runtime copies diff-clean vs plugins/, no product files dirty

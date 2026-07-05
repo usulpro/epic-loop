@@ -94,9 +94,9 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 6: Run The Full Test Suite
 
-- Phase status: todo
+- Phase status: done
 
-- [ ] Kind: verification | Status: todo | Run `pnpm run test:unit` and `pnpm run validate` and confirm everything is green, including the new tests from Phase 5.
+- [x] Kind: verification | Status: done | Run `pnpm run test:unit` and `pnpm run validate` and confirm everything is green, including the new tests from Phase 5.
   - Outcome: Full green test run with no regressions in existing hook/loop/roadmap tests.
   - Surface: whole repo test suite.
   - Acceptance: `pnpm run test:unit` and `pnpm run validate` both exit clean.
