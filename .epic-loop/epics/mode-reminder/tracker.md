@@ -78,7 +78,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 5: Implement And Write Tests
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Implement the `UserPromptSubmit` mode-reminder injection in `lib/hooks.mjs`/`lib/loop.mjs` and the new `unbind-session.mjs` script, per the Phase 2 proposal.
   - Outcome: Working code matching the accepted proposal, including the explicit guarantee that unbound sessions still produce zero output.
@@ -108,5 +108,11 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Outcome: Zero discrepancies across SKILL.md, docs/mode-reminder-design.md section 2, and decision-log.md (flags, no-op, silent-hooks, rebind semantics, verbatim 'unbind epic' phrase); frontmatter YAML valid; runtime copies diff-clean; validate passed; 33/33 unit tests green
   - Surface: read-only audit plus package checks; no code changes
   - Acceptance: Met - discrepancy list empty; recorded here as a follow-up entry because hand-added tracker tasks do not survive roadmap re-renders (see implementation-log 2026-07-06)
+  - Docs: docs/mode-reminder-design.md, decision-log.md
+
+- [x] Kind: documentation-only | Status: done | Update hooks-and-session-routing.md for the new reminder/unbind hook behavior and sync runtime copies
+  - Outcome: references/hooks-and-session-routing.md reflects the two new hook behaviors (UserPromptSubmit mode reminder for shaping/review bindings; user-requested unbind lifecycle), and .claude/.codex runtime copies are re-synced from plugins/ now that the Phase 5 tests are green
+  - Surface: plugins/epic-loop/skills/epic-loop/references/hooks-and-session-routing.md; pnpm run self-update
+  - Acceptance: Reference doc mentions the reminder output path and unbind deactivation consistently with SKILL.md; diff -rq of both runtime copies vs plugins/ clean except .runtime; full test suite still green
   - Docs: docs/mode-reminder-design.md, decision-log.md
 

@@ -54,3 +54,8 @@
 
 - Task: phase-5-task-2
 - Verdict: closed: tests/unit/unbind-and-reminder.test.mjs adds 10 end-to-end tests via runNodeScript covering shaping/review reminder injection (exact strings), unbound/Stop/implementation-mode silence (empty stdout asserted), unbind no-op/default reason/custom reason/second-unbind/post-unbind hook silence; full suite 43/43 green, validate green; verified fresh by techlead
+
+## 2026-07-05T18:28:39+00:00 - closed: hooks-and-session-routing.md gained the mode-reminder bullet in 'Hooks can' and the unbind paragraph in Binding Sessions, consistent with SKILL.md; pnpm run self-update executed after the 43-test green suite; both runtime copies diff-clean vs plugins/; full suite re-verified 43/43. Note: set-task-status.mjs cannot address follow-up ids (searches phase tasks only) - tracker checkbox maintained by hand
+
+- Task: follow-up-02 (reference docs + runtime sync)
+- Verdict: closed: hooks-and-session-routing.md gained the mode-reminder bullet in 'Hooks can' and the unbind paragraph in Binding Sessions, consistent with SKILL.md; pnpm run self-update executed after the 43-test green suite; both runtime copies diff-clean vs plugins/; full suite re-verified 43/43. Note: set-task-status.mjs cannot address follow-up ids (searches phase tasks only) - tracker checkbox maintained by hand

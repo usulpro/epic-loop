@@ -169,6 +169,8 @@ This deactivates the previous active session for the same epic and mode. Do not 
 
 For Codex, `--current` uses the existing Codex current-session capture and session metadata fallback. For Claude Code, `--current` reads only the Claude Code hook capture for the selected platform; the capture must be fresh, match the current project root, and include string `session_id` and `transcript_path`. If the Claude Code capture is missing, stale, malformed, wrong-root, or ambiguous, pass `--session-id "<session_id>"` explicitly.
 
+Unbind on user request with `node <skill-dir>/scripts/unbind-session.mjs --current` (or `--session-id "<session_id>"`, optional `--reason`). It deactivates the session's entry in `session-bindings.json` (`active: false`, `deactivated_at`, `deactivated_reason`) and clears the `active_sessions` pointer; hooks become silent no-ops for that session id afterwards. Unbinding an unbound session is a harmless no-op. Rebind later through the normal `bind-session.mjs` flow.
+
 ## What Hooks Can And Cannot Do
 
 Hooks can:
@@ -177,6 +179,7 @@ Hooks can:
 - keep per-session state separate
 - update project-local routing metadata
 - prepare the next submode marker for the manager/techlead/engineer cycle
+- inject a one-line mode reminder via `hookSpecificOutput.additionalContext` on `UserPromptSubmit` for sessions bound in `shaping` or `review` mode; implementation-mode and unbound sessions get no reminder
 - continue the current session from `Stop` by returning `{ "decision": "block", "reason": "<prompt>" }`
 - keep chaining Claude Code roles across `stop_hook_active: true` Stop reentries within the same turn; `stop_hook_active` is informational, not a hard gate, so each reentry records the role report and issues the next block continuation
 - give an external runner enough data to recover the right session when hook continuation did not run
