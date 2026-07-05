@@ -34,3 +34,8 @@
 
 - Task: phase-4-task-1
 - Verdict: closed: canonical unbind phrase 'unbind epic' decided and documented in SKILL.md source (frontmatter description + Hooks subsection with intent rule, command shapes, no-op and rebind semantics); validate passed; runtime copies re-synced and diff-clean; live session reloaded the new description
+
+## 2026-07-05T18:15:26+00:00 - closed: audit found zero discrepancies across SKILL.md, docs/mode-reminder-design.md section 2, and decision-log.md (flags, no-op, silent-hooks, rebind semantics, verbatim phrase); frontmatter YAML valid; .claude/.codex runtime copies diff-clean; validate passed; 33/33 unit tests green; read-only pass, no files changed. Follow-up for Phase 5 tests: cover the design doc's default --reason value user-requested-unbind
+
+- Task: Phase 4 Task 2 (verification) - cross-doc unbind contract audit
+- Verdict: closed: audit found zero discrepancies across SKILL.md, docs/mode-reminder-design.md section 2, and decision-log.md (flags, no-op, silent-hooks, rebind semantics, verbatim phrase); frontmatter YAML valid; .claude/.codex runtime copies diff-clean; validate passed; 33/33 unit tests green; read-only pass, no files changed. Follow-up for Phase 5 tests: cover the design doc's default --reason value user-requested-unbind
