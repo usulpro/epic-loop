@@ -11,3 +11,9 @@
 - Recorded the accepted decisions in `decision-log.md`.
 - Closed `phase-2-task-1` and Phase 2 via `close-task.mjs` / `close-phase.mjs`; pointed the active phase at Phase 3 via `set-active-phase.mjs` (no phase-3 work started — its first task requires a real Codex CLI session, which this Claude Code session cannot provide).
 - No code changes in this session; Phase 3 is still todo.
+
+## 2026-07-05T17:48:51+00:00 - closed: real interactive Codex CLI POC proved UserPromptSubmit additionalContext reaches both visible TUI hook context and model context; token POC-CODEX-ADDITIONAL-CONTEXT-TRUSTED-1783273589-8273 was rendered and returned exactly; codex exec/untrusted scratch path did not prove hooks; temporary hooks/scratch sessions were cleaned up
+
+- Task: phase-3-task-1
+- Verdict: closed: real interactive Codex CLI POC proved UserPromptSubmit additionalContext reaches both visible TUI hook context and model context; token POC-CODEX-ADDITIONAL-CONTEXT-TRUSTED-1783273589-8273 was rendered and returned exactly; codex exec/untrusted scratch path did not prove hooks; temporary hooks/scratch sessions were cleaned up
+- Commit: task-owned commit `Record Codex additionalContext POC evidence`; final hash reported by techlead after commit creation.

@@ -46,9 +46,9 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 3: Validate With Real Proofs Of Concept On Codex And Claude Code
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: verification | Status: todo | Prove, with a real running Codex CLI session, that a `UserPromptSubmit` hook returning `hookSpecificOutput.additionalContext` actually works, and capture how Codex's TUI actually renders it.
+- [x] Kind: verification | Status: done | Prove, with a real running Codex CLI session, that a `UserPromptSubmit` hook returning `hookSpecificOutput.additionalContext` actually works, and capture how Codex's TUI actually renders it.
   - Outcome: Documented, reproducible evidence that the mechanism works on Codex, plus a concrete note on the visible-rendering behavior observed (matching or correcting the assumption from `openai/codex` issues #16486/#16933).
   - Surface: a throwaway/POC hook script, run against a real Codex CLI session with the experimental hooks feature flag enabled.
   - Acceptance: The evidence clearly shows the injected text reaching Codex's context/UI on a real turn; any discrepancy from the assumed behavior is recorded in `decision-log.md`.
