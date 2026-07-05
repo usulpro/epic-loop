@@ -5,7 +5,7 @@ Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Current mode: implementation
 Active phase: Phase 4 - Design The Unbind Trigger Phrase And Update The Skill
-Active task: TBD
+Active task: Phase 4 Task 2 (verification) - Audit the documented unbind contract for cross-doc consistency and confirm the updated skill package is intact
 
 ## Current State
 
@@ -22,4 +22,4 @@ Active task: TBD
 
 ## Next Action
 
-- Start Phase 4: decide the canonical ultra-short unbind trigger phrase and the intent-recognition rule, then update `SKILL.md`'s frontmatter `description` and body accordingly.
+- Run Phase 4's verification task (cross-doc unbind-contract audit), then close Phase 4 and move to Phase 5 (implement `buildModeReminder` + `unbind-session.mjs` and their unit tests). The canonical phrase `unbind epic` is decided and documented in `SKILL.md`.

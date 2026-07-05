@@ -1,6 +1,6 @@
 ---
 name: epic-loop
-description: Use this skill for any work inside an epic-loop workspace: reading, creating, or editing files under `.epic-loop/` (`state-of-epic.md`, `tracker.md`, `decision-log.md`, `risk-register.md`, `docs/`); adding, editing, or closing an epic's tasks, research tasks, or phases; switching between the shaping (planning, including architecture reset), implementation (manager/techlead/engineer loop), or review lifecycle modes; or resuming an existing epic by slug. Also trigger on the `epic-loop` CLI/package by name. If the current session is already bound to an epic, keep operating through this skill on every following turn — in shaping/review mode, plain imperative requests usually describe epic tasks to capture in `tracker.md`, not actions to run immediately.
+description: Use this skill for any work inside an epic-loop workspace: reading, creating, or editing files under `.epic-loop/` (`state-of-epic.md`, `tracker.md`, `decision-log.md`, `risk-register.md`, `docs/`); adding, editing, or closing an epic's tasks, research tasks, or phases; switching between the shaping (planning, including architecture reset), implementation (manager/techlead/engineer loop), or review lifecycle modes; resuming an existing epic by slug; or detaching the current session from its epic when the user says `unbind epic` or otherwise asks to work outside the epic. Also trigger on the `epic-loop` CLI/package by name. If the current session is already bound to an epic, keep operating through this skill on every following turn — in shaping/review mode, plain imperative requests usually describe epic tasks to capture in `tracker.md`, not actions to run immediately.
 ---
 
 # Epic Loop
@@ -354,5 +354,15 @@ node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode 
 For Codex, `--current` uses the existing Codex hook capture/session fallback. For Claude Code, `--current` requires a fresh hook capture with `session_id` and `transcript_path`; if that cannot be detected safely, pass `--session-id "<session_id>"` explicitly.
 
 There is one active hook-routed session per epic/mode. Binding the current session for the same epic and mode deactivates the previous active session.
+
+Unbind the current session when the user wants it to stop working through the epic. The canonical trigger phrase is `unbind epic`, but do not require it verbatim: when the user expresses intent to work outside the epic in this session (for example "do this right now, without the epic" or "let's work outside the epic for a bit"), call the unbind script proactively and confirm in one line that the session was unbound:
+
+```bash
+node <skill-dir>/scripts/unbind-session.mjs --current
+# or, when the current session cannot be detected safely:
+node <skill-dir>/scripts/unbind-session.mjs --session-id "<session_id>"
+```
+
+An optional `--reason "<short reason>"` records why the session detached. The script has no `--slug`/`--mode` flags: it deactivates whatever epic/mode the resolved session is actively bound to, and it is a harmless no-op when the session is not bound. Epic-loop hooks become silent no-ops for that session id afterwards. To work on the epic again later, use the normal resume flow and `bind-session.mjs`; there is no separate reattach mechanism.
 
 Do not block epic work solely because hook automation is absent.

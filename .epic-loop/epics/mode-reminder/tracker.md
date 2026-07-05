@@ -68,13 +68,19 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 4: Design The Unbind Trigger Phrase And Update The Skill
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: documentation-only | Status: todo | Decide the canonical ultra-short unbind trigger phrase and the intent-recognition rule around it, then update `SKILL.md`'s frontmatter `description` and body so the skill engages unambiguously and the agent understands the bind/unbind state.
+- [x] Kind: documentation-only | Status: done | Decide the canonical ultra-short unbind trigger phrase and the intent-recognition rule around it, then update `SKILL.md`'s frontmatter `description` and body so the skill engages unambiguously and the agent understands the bind/unbind state.
   - Outcome: A specific short phrase (and the surrounding intent-based rule) is chosen, documented, and consistent with how the skill's `description` already lists concrete triggers.
   - Surface: `SKILL.md` frontmatter `description`, relevant mode-reference sections.
   - Acceptance: The phrase and rule read naturally alongside the existing description triggers; a future session can tell from `SKILL.md` alone when to call `unbind-session.mjs`.
   - Docs: `docs/problem-framing.md`, `decision-log.md`.
+
+- [ ] Kind: verification | Status: todo | Verify Phase 4's combined result: audit the documented unbind contract for cross-doc consistency and confirm the updated skill package is intact.
+  - Outcome: Confirmed (or precisely reported) that the unbind contract reads identically across `plugins/epic-loop/skills/epic-loop/SKILL.md`, `docs/mode-reminder-design.md` section 2, and `decision-log.md` — same flags (`--current`/`--session-id`, optional `--reason`, no `--slug`/`--mode`), same no-op and rebind semantics, phrase `unbind epic` verbatim in the frontmatter description.
+  - Surface: read-only audit of the named docs plus package-level checks; no code changes.
+  - Acceptance: Method — side-by-side contract comparison of the three sources plus `pnpm run validate`, `pnpm run test:unit`, YAML-parse of the SKILL.md frontmatter, and `diff -rq` of runtime copies vs `plugins/`; evidence — a discrepancy list (empty if consistent) with file/line pointers and command outputs; cleanup — none required (read-only).
+  - Docs: `docs/mode-reminder-design.md`, `decision-log.md`.
 
 ### Phase 5: Implement And Write Tests
 

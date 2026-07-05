@@ -29,3 +29,8 @@
 
 - Task: phase-3-task-3
 - Verdict: closed: real headless Claude Code turn (claude -p, v2.1.201) proved UserPromptSubmit additionalContext injection — token POC-CLAUDE-ADDCTX-1783274622 echoed exactly; transcript JSONL shows a hook_additional_context attachment record carrying the injected text into model context; no trust gating on headless path; scratch project cleaned up; interactive TUI rendering not observed (documented limitation)
+
+## 2026-07-05T18:12:08+00:00 - closed: canonical unbind phrase 'unbind epic' decided and documented in SKILL.md source (frontmatter description + Hooks subsection with intent rule, command shapes, no-op and rebind semantics); validate passed; runtime copies re-synced and diff-clean; live session reloaded the new description
+
+- Task: phase-4-task-1
+- Verdict: closed: canonical unbind phrase 'unbind epic' decided and documented in SKILL.md source (frontmatter description + Hooks subsection with intent rule, command shapes, no-op and rebind semantics); validate passed; runtime copies re-synced and diff-clean; live session reloaded the new description
