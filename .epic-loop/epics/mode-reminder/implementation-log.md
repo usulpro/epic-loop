@@ -24,3 +24,8 @@
 - Verdict: closed. The Codex session stopped after the Codex POC (loop set idle with reason `platform-switch-to-claude-code-poc`, user told to resume in Claude Code), and the epic was resumed in a real Claude Code session on 2026-07-06 (doctor `--platform claude-code` ready, session rebound, implementation-start housekeeping passed: clean tree on `feature/mode-keeper`, `pnpm run validate` and `pnpm run test:unit` green, 33/33). No POC evidence was produced from the wrong platform — acceptance satisfied.
 - No code changes; task-owned changes are epic artifacts only (`tracker.md`, `state-of-epic.md`, this log).
 - Commit: task-owned commit `docs: record Codex-to-Claude-Code platform handoff for mode-reminder POC`; hash reported by techlead after creation.
+
+## 2026-07-05T18:06:10+00:00 - closed: real headless Claude Code turn (claude -p, v2.1.201) proved UserPromptSubmit additionalContext injection — token POC-CLAUDE-ADDCTX-1783274622 echoed exactly; transcript JSONL shows a hook_additional_context attachment record carrying the injected text into model context; no trust gating on headless path; scratch project cleaned up; interactive TUI rendering not observed (documented limitation)
+
+- Task: phase-3-task-3
+- Verdict: closed: real headless Claude Code turn (claude -p, v2.1.201) proved UserPromptSubmit additionalContext injection — token POC-CLAUDE-ADDCTX-1783274622 echoed exactly; transcript JSONL shows a hook_additional_context attachment record carrying the injected text into model context; no trust gating on headless path; scratch project cleaned up; interactive TUI rendering not observed (documented limitation)

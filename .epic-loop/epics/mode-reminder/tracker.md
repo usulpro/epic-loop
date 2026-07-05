@@ -46,7 +46,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 3: Validate With Real Proofs Of Concept On Codex And Claude Code
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: verification | Status: done | Prove, with a real running Codex CLI session, that a `UserPromptSubmit` hook returning `hookSpecificOutput.additionalContext` actually works, and capture how Codex's TUI actually renders it.
   - Outcome: Documented, reproducible evidence that the mechanism works on Codex, plus a concrete note on the visible-rendering behavior observed (matching or correcting the assumption from `openai/codex` issues #16486/#16933).
@@ -60,7 +60,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: Do not attempt the Claude Code POC task from within a Codex session, or vice versa. Tell the user which session/platform to open next, then stop and wait for them to resume this epic there.
   - Docs: `docs/problem-framing.md`.
 
-- [ ] Kind: verification | Status: doing | Prove, with a real running Claude Code session, that the same `hookSpecificOutput.additionalContext` mechanism works, and capture how Claude Code actually renders it.
+- [x] Kind: verification | Status: done | Prove, with a real running Claude Code session, that the same `hookSpecificOutput.additionalContext` mechanism works, and capture how Claude Code actually renders it.
   - Outcome: Documented, reproducible evidence (transcript excerpt or equivalent) that the mechanism works as designed on Claude Code.
   - Surface: the same POC hook script, run against a real Claude Code session in this repo or an isolated scratch project.
   - Acceptance: The evidence clearly shows the injected text reaching model context on a real turn, not just a unit-test mock.
