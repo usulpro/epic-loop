@@ -54,13 +54,13 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: The evidence clearly shows the injected text reaching Codex's context/UI on a real turn; any discrepancy from the assumed behavior is recorded in `decision-log.md`.
   - Docs: `docs/problem-framing.md`, `decision-log.md`.
 
-- [ ] Kind: documentation-only | Status: todo | Stop this session here. The Codex POC above must be run from a real Codex CLI session, and the Claude Code POC below must be run from a real Claude Code session — each platform validates its own POC natively, not simulated from the other platform.
+- [x] Kind: documentation-only | Status: done | Stop this session here. The Codex POC above must be run from a real Codex CLI session, and the Claude Code POC below must be run from a real Claude Code session — each platform validates its own POC natively, not simulated from the other platform.
   - Outcome: A clean handoff point between the two POC tasks so no POC evidence is produced from the wrong platform.
   - Surface: this session only; no code changes.
   - Acceptance: Do not attempt the Claude Code POC task from within a Codex session, or vice versa. Tell the user which session/platform to open next, then stop and wait for them to resume this epic there.
   - Docs: `docs/problem-framing.md`.
 
-- [ ] Kind: verification | Status: todo | Prove, with a real running Claude Code session, that the same `hookSpecificOutput.additionalContext` mechanism works, and capture how Claude Code actually renders it.
+- [ ] Kind: verification | Status: doing | Prove, with a real running Claude Code session, that the same `hookSpecificOutput.additionalContext` mechanism works, and capture how Claude Code actually renders it.
   - Outcome: Documented, reproducible evidence (transcript excerpt or equivalent) that the mechanism works as designed on Claude Code.
   - Surface: the same POC hook script, run against a real Claude Code session in this repo or an isolated scratch project.
   - Acceptance: The evidence clearly shows the injected text reaching model context on a real turn, not just a unit-test mock.

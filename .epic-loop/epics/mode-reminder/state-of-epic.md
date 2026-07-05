@@ -5,7 +5,7 @@ Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Current mode: implementation
 Active phase: Phase 3 - Validate With Real Proofs Of Concept On Codex And Claude Code
-Active task: TBD
+Active task: Phase 3 Task 3 - Prove, with a real running Claude Code session, that the same `hookSpecificOutput.additionalContext` mechanism works, and capture how Claude Code actually renders it
 
 ## Current State
 
@@ -22,4 +22,4 @@ Active task: TBD
 
 ## Next Action
 
-- Stop this Codex session for Phase 3's platform-switch handoff. Resume `mode-reminder` in a real Claude Code session and run the Claude Code `additionalContext` POC next; do not treat the Codex proof as a substitute for Claude Code evidence.
+- The platform-switch handoff happened: `mode-reminder` is now resumed in a real Claude Code session (2026-07-06). Run the Claude Code `additionalContext` POC next; do not treat the Codex proof as a substitute for Claude Code evidence.
