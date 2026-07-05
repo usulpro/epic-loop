@@ -36,9 +36,9 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 2: Design The Solution And Write A Proposal
 
-- Phase status: doing
+- Phase status: done
 
-- [ ] Kind: documentation-only | Status: todo | Design the per-turn mode-reminder hook injection and the `unbind-session.mjs` script end-to-end, and write up a concrete proposal covering both.
+- [x] Kind: documentation-only | Status: done | Design the per-turn mode-reminder hook injection and the `unbind-session.mjs` script end-to-end, and write up a concrete proposal covering both.
   - Outcome: A written proposal exists describing the exact `UserPromptSubmit` handler change (where the mode/reminder text is read from, what text is injected, for which modes), the `unbind-session.mjs` script's flags/behavior/data-model changes, and how the two pieces fit together with the existing bind/hook machinery.
   - Surface: `docs/` (new design doc), `decision-log.md`.
   - Acceptance: The proposal is concrete enough that Phase 4/5 implementation tasks can be written without re-deriving the design; it explicitly states what happens for unbound sessions (must remain unaffected) and for each lifecycle mode.
