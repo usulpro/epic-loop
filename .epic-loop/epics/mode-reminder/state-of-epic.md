@@ -5,7 +5,7 @@ Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Current mode: implementation
 Active phase: Phase 5 - Implement And Write Tests
-Active task: Phase 5 Task 2 - Write unit tests for the new hook behavior and `unbind-session.mjs`, following this repo's `node --test` / `runNodeScript` conventions (matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` style)
+Active task: TBD
 
 ## Current State
 

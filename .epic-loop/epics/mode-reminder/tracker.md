@@ -86,7 +86,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: Behavior matches the proposal and the Phase 3 POC evidence; existing implementation-mode hook behavior is unchanged.
   - Docs: `docs/problem-framing.md`, `decision-log.md`.
 
-- [ ] Kind: verification | Status: doing | Write unit tests for the new hook behavior and `unbind-session.mjs`, following this repo's `node --test` / `runNodeScript` conventions (matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` style).
+- [x] Kind: verification | Status: done | Write unit tests for the new hook behavior and `unbind-session.mjs`, following this repo's `node --test` / `runNodeScript` conventions (matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` style).
   - Outcome: Tests cover: mode reminder injected for bound shaping/review sessions, no reminder/no output for unbound sessions, `unbind-session.mjs` deactivating the current session, and hooks becoming no-ops for that session id afterward.
   - Surface: `tests/unit/`.
   - Acceptance: New tests fail against the pre-implementation state and pass after Phase 5's implementation task.

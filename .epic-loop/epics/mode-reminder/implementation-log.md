@@ -49,3 +49,8 @@
 
 - Task: phase-5-task-1
 - Verdict: closed: buildModeReminder added to lib/hooks.mjs with single ?? fallback in handleHook (one-line control-flow change, verified by diff); unbindSession added to lib/epics.mjs reusing bindSession's detection helpers; new thin scripts/unbind-session.mjs. Smoke against temp --root proved: shaping/review reminders injected on UserPromptSubmit, zero output for unbound sessions and Stop events, no-op exit 0 unbind for never-bound/already-unbound, deactivated_reason default and custom values, active_sessions cleanup, unbind.json mirror. validate green, 33/33 existing tests green, self-update deliberately deferred until new tests pass
+
+## 2026-07-05T18:26:10+00:00 - closed: tests/unit/unbind-and-reminder.test.mjs adds 10 end-to-end tests via runNodeScript covering shaping/review reminder injection (exact strings), unbound/Stop/implementation-mode silence (empty stdout asserted), unbind no-op/default reason/custom reason/second-unbind/post-unbind hook silence; full suite 43/43 green, validate green; verified fresh by techlead
+
+- Task: phase-5-task-2
+- Verdict: closed: tests/unit/unbind-and-reminder.test.mjs adds 10 end-to-end tests via runNodeScript covering shaping/review reminder injection (exact strings), unbound/Stop/implementation-mode silence (empty stdout asserted), unbind no-op/default reason/custom reason/second-unbind/post-unbind hook silence; full suite 43/43 green, validate green; verified fresh by techlead
