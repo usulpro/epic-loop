@@ -34,15 +34,15 @@ Epic: Linting And English Checks
   - Acceptance: A lint script exists, runs without false positives on the intended source set, and is included in aggregate validation.
   - Docs: `docs/linting-and-language-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Add Prettier configuration and non-mutating format validation.
+- [ ] Kind: implementation | Status: todo | Add Oxfmt configuration and non-mutating format validation.
   - Outcome: Repository formatting is standardized and can be checked without modifying files during validation.
-  - Surface: `package.json`, Prettier config/ignore files, supported source and documentation files.
+  - Surface: `package.json`, Oxfmt config/ignore files, supported source and documentation files.
   - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit.
   - Docs: `docs/linting-and-language-policy.md`.
 
 - [ ] Kind: verification | Status: todo | Verify lint and format tooling through the repository validation path.
   - Outcome: The first phase tooling is proven through the same command future contributors will run.
-  - Surface: Local pnpm scripts, oxlint, Prettier, existing syntax/package validation.
+  - Surface: Local pnpm scripts, oxlint, Oxfmt, existing syntax/package validation.
   - Acceptance: Run `pnpm run validate` and any focused lint/format scripts; evidence includes exit codes and any required follow-up fixes, with no generated runtime artifacts committed.
   - Docs: `docs/linting-and-language-policy.md`.
 

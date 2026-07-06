@@ -3,9 +3,9 @@
 Epic: Epic-Loop Mode Reminder And Session Unbind
 Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
-Current mode: implementation
-Active phase: none - all six phases are closed
-Active task: none - implementation complete
+Current mode: shaping
+Active phase: Phase 6 - Run The Full Test Suite
+Active task: TBD
 
 ## Current State
 
@@ -17,6 +17,7 @@ Active task: none - implementation complete
 - Phase 4 (Design The Unbind Trigger Phrase And Update The Skill) is closed. The canonical phrase is `unbind epic` (intent-based proactive unbind with the phrase as reliable fallback); `SKILL.md`'s frontmatter description and a `## Hooks` subsection now document the full `unbind-session.mjs` contract, runtime copies are re-synced, and a cross-doc audit confirmed zero discrepancies against `docs/mode-reminder-design.md` and `decision-log.md`.
 - Phase 5 (Implement And Write Tests) is closed. Implementation matches the accepted design (commits `64b6c81` code, `02d6fae` tests); `tests/unit/unbind-and-reminder.test.mjs` pins both contracts with 10 end-to-end cases; `references/hooks-and-session-routing.md` documents the new behaviors; runtime copies re-synced via `self-update` after the green suite (both diff-clean).
 - Phase 6 (Run The Full Test Suite) is closed. Final verification: `pnpm run test:unit` 43/43/0 with all 10 new tests present, `pnpm run validate` exit 0, both runtime copies diff-clean vs `plugins/`.
+- Follow-up shaping reopened on 2026-07-06 to investigate a binding lifecycle gap: shaping/review reminders work after explicit binding, but normal shaping did not bind the session, and switching the same session between shaping epics left a stale `active_sessions["set-up:shaping"]` pointer.
 
 ## Blockers
 
@@ -24,4 +25,4 @@ Active task: none - implementation complete
 
 ## Next Action
 
-- Implementation of this epic is complete; all six phases are closed. Remaining lifecycle steps: merge/review of `feature/mode-keeper` as the user decides, and a future review-mode pass if drift against original intent is suspected.
+- Decide the desired binding behavior for shaping/review sessions and turn `docs/shaping-binding-gap.md` into a focused follow-up implementation plan.

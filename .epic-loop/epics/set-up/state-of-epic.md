@@ -9,9 +9,9 @@ Active task: TBD
 
 ## Current State
 
-- Initial shaping captured the repository baseline: Node.js ESM, pnpm, existing syntax/package validation, and no current oxlint/Prettier configuration.
+- Initial shaping captured the repository baseline: Node.js ESM, pnpm, existing syntax/package validation, and no current oxlint/Oxfmt configuration.
 - The roadmap is ready for implementation once the user confirms the implementation loop.
-- The central product requirement is adding linting, Prettier, and deterministic English-only lexical checks for committed project content.
+- The central product requirement is adding linting, Oxfmt formatting, and deterministic English-only lexical checks for committed project content.
 
 ## Blockers
 

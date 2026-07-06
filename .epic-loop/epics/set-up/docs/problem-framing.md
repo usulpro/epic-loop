@@ -2,20 +2,20 @@
 
 ## Problem
 
-Set up repository linting: add a linter and Prettier, plus additional repository checks such as enforcing English-only lexical usage in committed project content.
+Set up repository linting: add a linter and Oxfmt, plus additional repository checks such as enforcing English-only lexical usage in committed project content.
 
 ## Desired Outcome
 
 - The repository has a single deterministic validation entry point that covers syntax checks, unit tests, linting, formatting, package validation, and repository-specific content checks.
 - JavaScript/ESM source, tests, scripts, plugin skill files, and package metadata are checked by oxlint where supported.
-- Formatting is handled by Prettier and can be checked in CI/local validation without changing files unexpectedly.
+- Formatting is handled by Oxfmt and can be checked in CI/local validation without changing files unexpectedly.
 - A dedicated lexical policy check fails when committed project content contains non-English prose or identifiers outside documented allowlists.
 
 ## Scope
 
 - Root package scripts and pnpm workflow.
 - oxlint configuration for the current ESM codebase.
-- Prettier configuration and check/write scripts.
+- Oxfmt configuration and check/write scripts.
 - Repository-specific language policy tooling for English-only lexical usage.
 - Validation integration through `pnpm run validate`.
 - Focused tests for custom validation logic.

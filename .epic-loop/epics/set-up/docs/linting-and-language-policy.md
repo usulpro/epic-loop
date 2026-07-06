@@ -10,14 +10,14 @@
   - `pnpm run validate:epic-loop`
   - platform doctor scripts for Codex and Claude Code.
 - Current `validate` performs `node --check` over selected scripts and runs `scripts/validate-epic-loop-package.mjs`.
-- No oxlint, Prettier, EditorConfig, or spelling/language config is currently present.
+- No oxlint, Oxfmt, EditorConfig, or spelling/language config is currently present.
 
 ## Policy Direction
 
 Use standard tooling for standard concerns and a small repository-owned script for project-specific language policy:
 
 - oxlint for JavaScript/ESM source, tests, scripts, and package code.
-- Prettier for formatting supported text/code/doc files.
+- Oxfmt (`oxfmt`) for formatting supported text/code/doc files.
 - A custom Node.js validation script for English-only lexical usage, because the repository rule is product-specific and should be deterministic.
 
 ## English-Only Check
@@ -55,7 +55,7 @@ The script should report filename, line, column, and offending token or short ex
 - package validation still runs
 - unit tests either run directly or remain available through a documented validation script
 - oxlint check runs
-- Prettier check runs
+- Oxfmt check runs
 - English-only lexical check runs
 
 Formatting write commands should be separate from check commands so validation remains non-mutating.

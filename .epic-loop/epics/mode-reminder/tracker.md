@@ -116,3 +116,27 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: Reference doc mentions the reminder output path and unbind deactivation consistently with SKILL.md; diff -rq of both runtime copies vs plugins/ clean except .runtime; full test suite still green
   - Docs: docs/mode-reminder-design.md, decision-log.md
 
+- [ ] Kind: follow-up | Status: todo | Design and fix shaping/review session binding lifecycle
+  - Outcome: Shaping and review mode reminders are reliably active when intended, and rebinding a session cannot leave stale active-session pointers for older epic/mode pairs.
+  - Surface: bind-session.mjs, session binding data model, shaping/review resume flow, hook diagnostics, tests.
+  - Acceptance: Define automatic vs explicit binding behavior for shaping/review; ensure binding one session to a new epic/mode clears stale active pointers for the same session id; add regression tests for reminder activation and stale active_sessions cleanup.
+  - Docs: docs/shaping-binding-gap.md
+
+- [ ] Kind: follow-up | Status: todo | Clear stale active session pointers when rebinding the same session
+  - Outcome: Rebinding a session to a new epic/mode leaves exactly one active_sessions pointer for that session id, matching the primary sessions[session_id] binding.
+  - Surface: bindSession in scripts/lib/epics.mjs, session-bindings.json update semantics, unit tests around bind-session.mjs.
+  - Acceptance: When a session already active for old-slug:old-mode is bound to new-slug:new-mode, active_sessions no longer contains old-slug:old-mode for that same session id; existing replacement behavior for another session active on the new key still works; tests cover both cases.
+  - Docs: docs/shaping-binding-gap.md
+
+- [ ] Kind: follow-up | Status: todo | Replace verbose mode reminders with a compact epic-loop mode marker
+  - Outcome: UserPromptSubmit reminders use a short stable marker like '[epic-loop] epic=<slug> mode=<mode>', and SKILL.md/frontmatter treat that marker as a trigger for the existing mode rules without duplicating mode instructions.
+  - Surface: MODE_REMINDER_TEXT in scripts/lib/hooks.mjs, SKILL.md frontmatter description, concise SKILL.md marker note, runtime skill copies, unit tests that assert the compact text.
+  - Acceptance: Shaping and review reminders emit only the compact marker; implementation mode remains excluded; SKILL.md description explicitly mentions the marker pattern so the skill triggers on it; body documentation explains the marker means the session is bound to that epic/mode and should follow existing mode rules; tests updated for the exact compact text.
+  - Docs: docs/mode-reminder-design.md, references/hooks-and-session-routing.md
+
+- [ ] Kind: follow-up | Status: todo | Bind shaping and review sessions when resuming an epic by slug or path
+  - Outcome: When a user resumes an epic by slug or path, the current session is bound to the epic's existing non-implementation mode so mode reminders work immediately without changing the epic mode.
+  - Surface: SKILL.md resume flow, bind-session.mjs usage, session binding semantics, slug/path resume handling, tests for shaping/review/implementation resume cases.
+  - Acceptance: If the resumed epic's current mode is shaping or review, the session is bound with that same mode and the epic mode is not changed; if the resumed epic is implementation or implementation-idle, the existing explicit implementation start/resume flow remains unchanged and no automatic implementation binding occurs; slug and path inputs are covered; stale active-session pointers are not introduced.
+  - Docs: docs/shaping-binding-gap.md
+
