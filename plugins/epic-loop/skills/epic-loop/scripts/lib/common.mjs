@@ -11,7 +11,7 @@ export const CODEX_HOOK_CAPTURE_RELATIVE_PATH = path.join(".codex", "tmp", "last
 export const CLAUDE_HOOK_CAPTURE_RELATIVE_PATH = path.join(".epic-loop", ".runtime", "claude-code-last-hook-capture.json");
 export const PLATFORM_CONFIG_RELATIVE_PATH = path.join(".epic-loop", ".runtime", "platform.json");
 // A hook capture written within this window is treated as the live session.
-const CURRENT_SESSION_CAPTURE_TTL_MS = 15 * 60 * 1000;
+export const CURRENT_SESSION_CAPTURE_TTL_MS = 15 * 60 * 1000;
 
 export function nowIso() {
   return new Date().toISOString().replace(/\.\d{3}Z$/u, "+00:00");

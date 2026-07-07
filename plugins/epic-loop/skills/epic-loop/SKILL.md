@@ -137,7 +137,19 @@ If no epic workspace exists, initialize one with:
 node <skill-dir>/scripts/init-epic.mjs --description "Epic description"
 ```
 
-If the user provides a slug, resume from `.epic-loop/epics/{epic-slug}` in the current project unless they specify another root.
+If the user provides a slug, resume from `.epic-loop/epics/{epic-slug}` in the current project unless they specify another root. During resume/orientation, auto-bind the current session as an epic member when a fresh `UserPromptSubmit` hook capture is available:
+
+```bash
+node <skill-dir>/scripts/auto-bind-session.mjs --current --slug "<epic-slug>"
+```
+
+For a path-based resume, pass the epic folder path instead:
+
+```bash
+node <skill-dir>/scripts/auto-bind-session.mjs --current --path ".epic-loop/epics/<epic-slug>"
+```
+
+If auto-bind prints that it skipped because no fresh `UserPromptSubmit` capture was available, continue orientation and mention in one line that this session was not auto-bound, so the compact marker may not appear on the next turn. Auto-bind only creates mode-less membership; it must not designate an implementation driver or start the implementation loop.
 
 When the user invokes the skill with only an epic slug, treat it as resume/orientation, not permission to execute implementation. Read the re-entry artifacts, report the current state, and stop with a short readiness prompt. If the epic is ready for implementation, use this shape:
 
@@ -361,9 +373,9 @@ Bind the current session to an epic explicitly when running parallel sessions:
 node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
 
-For Codex, `--current` uses the existing Codex hook capture/session fallback. For Claude Code, `--current` requires a fresh hook capture with `session_id` and `transcript_path`; if that cannot be detected safely, pass `--session-id "<session_id>"` explicitly.
+For resume/orientation membership, use `auto-bind-session.mjs --current --slug "<epic-slug>"` or `--path "<epic-path>"`; it accepts only a fresh `UserPromptSubmit` hook capture and skips harmlessly otherwise. For implementation driver binding, `bind-session.mjs --current` uses the existing Codex hook capture/session fallback; Claude Code requires a fresh hook capture with `session_id` and `transcript_path`. If implementation driver binding cannot detect the current session safely, pass `--session-id "<session_id>"` explicitly.
 
-There is one active hook-routed session per epic/mode. Binding the current session for the same epic and mode deactivates the previous active session.
+Many sessions may be active members of the same epic and share the epic runtime mode. Implementation still has one exclusive driver recorded in the epic runtime state.
 
 Unbind the current session when the user wants it to stop working through the epic. The canonical trigger phrase is `unbind epic`, but do not require it verbatim: when the user expresses intent to work outside the epic in this session (for example "do this right now, without the epic" or "let's work outside the epic for a bit"), call the unbind script proactively and confirm in one line that the session was unbound:
 
