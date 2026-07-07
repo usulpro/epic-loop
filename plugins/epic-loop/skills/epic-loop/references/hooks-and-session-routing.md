@@ -1,5 +1,16 @@
 # Hooks And Session Routing
 
+## Contents
+
+- [Goal](#goal)
+- [Local Config](#local-config)
+- [Installer Behavior](#installer-behavior)
+- [Hook Payload](#hook-payload)
+- [Project-Local State](#project-local-state)
+- [Binding Sessions](#binding-sessions)
+- [What Hooks Can And Cannot Do](#what-hooks-can-and-cannot-do)
+- [Parallel Safety](#parallel-safety)
+
 ## Goal
 
 Epic-loop hooks must be project-local and session-aware. Parallel sessions in the same project must never route events only by cwd or epic slug.

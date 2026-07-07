@@ -54,15 +54,15 @@ Epic: Linting And Skill Checks
 
 ### Phase 2: Deterministic Skill Package Checks
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Add deterministic skill package validation for mechanical Agent Skills invariants.
+- [x] Kind: implementation | Status: done | Add deterministic skill package validation for mechanical Agent Skills invariants.
   - Outcome: Maintained skill packages fail validation when their file shape, frontmatter, naming, references, or generated-artifact boundaries violate portable skill package rules.
   - Surface: `scripts/validate-skills.mjs` or `scripts/validate-epic-loop-package.mjs`, `package.json` scripts, skill package files under `plugins/epic-loop/skills`.
   - Acceptance: The validator checks `SKILL.md` presence, YAML frontmatter, required `name` and `description`, kebab-case name constraints, directory-name match, description length, `SKILL.md` line budget, direct reference links, long-reference table of contents, forward-slash paths, script syntax, and ignored runtime/debug artifact absence.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Add focused tests or fixtures for deterministic skill package validation.
+- [ ] Kind: implementation | Status: doing | Add focused tests or fixtures for deterministic skill package validation.
   - Outcome: The deterministic skill validator has regression coverage for accepted package shape and representative failure cases.
   - Surface: `tests/unit`, validator fixtures/helpers, package validation scripts.
   - Acceptance: Tests cover valid skill metadata, invalid names, missing descriptions, long entrypoint files, missing table of contents for long references, Windows-style paths, and generated artifact detection.

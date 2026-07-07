@@ -1,5 +1,13 @@
 # Epic Shaping Mode
 
+## Contents
+
+- [Goal](#goal)
+- [Flow](#flow)
+- [Agent Responsibility](#agent-responsibility)
+- [Task Authoring Guardrail](#task-authoring-guardrail)
+- [Re-Entrant Use](#re-entrant-use)
+
 ## Goal
 
 Use shaping mode to turn discussion into a durable epic: framing, docs, decisions, risks, phases, and goal-oriented tasks.
