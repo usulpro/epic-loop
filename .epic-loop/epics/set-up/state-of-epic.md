@@ -11,7 +11,8 @@ Active task: TBD
 
 - Initial shaping captured the repository baseline: Node.js ESM, pnpm, existing syntax/package validation, and no current oxlint/Oxfmt configuration.
 - The roadmap is ready for implementation once the user confirms the implementation loop.
-- The central product requirement is adding linting, Oxfmt formatting, and deterministic English-only lexical checks for committed project content.
+- The central product requirement is adding linting, Oxfmt formatting, deterministic English-only lexical checks, deterministic skill package checks, and AI-assisted semantic skill review.
+- Skill repository checks are split into deterministic script validation for mechanical invariants and a headless `codex exec` review runner that produces schema-validated JSON findings in an ignored output directory.
 
 ## Blockers
 

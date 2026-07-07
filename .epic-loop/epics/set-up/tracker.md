@@ -46,7 +46,51 @@ Epic: Linting And English Checks
   - Acceptance: Run `pnpm run validate` and any focused lint/format scripts; evidence includes exit codes and any required follow-up fixes, with no generated runtime artifacts committed.
   - Docs: `docs/linting-and-language-policy.md`.
 
-### Phase 2: Repository Language Policy
+### Phase 2: Deterministic Skill Package Checks
+
+- Phase status: todo
+
+- [ ] Kind: implementation | Status: todo | Add deterministic skill package validation for mechanical Agent Skills invariants.
+  - Outcome: Maintained skill packages fail validation when their file shape, frontmatter, naming, references, or generated-artifact boundaries violate portable skill package rules.
+  - Surface: `scripts/validate-skills.mjs` or `scripts/validate-epic-loop-package.mjs`, `package.json` scripts, skill package files under `plugins/epic-loop/skills`.
+  - Acceptance: The validator checks `SKILL.md` presence, YAML frontmatter, required `name` and `description`, kebab-case name constraints, directory-name match, description length, `SKILL.md` line budget, direct reference links, long-reference table of contents, forward-slash paths, script syntax, and ignored runtime/debug artifact absence.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+- [ ] Kind: implementation | Status: todo | Add focused tests or fixtures for deterministic skill package validation.
+  - Outcome: The deterministic skill validator has regression coverage for accepted package shape and representative failure cases.
+  - Surface: `tests/unit`, validator fixtures/helpers, package validation scripts.
+  - Acceptance: Tests cover valid skill metadata, invalid names, missing descriptions, long entrypoint files, missing table of contents for long references, Windows-style paths, and generated artifact detection.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+- [ ] Kind: verification | Status: todo | Verify deterministic skill package checks through aggregate validation.
+  - Outcome: Skill package mechanical validation is proven as part of the standard repository validation path.
+  - Surface: `pnpm run validate`, focused validator command, unit tests, current plugin skill package.
+  - Acceptance: Run focused validator tests, run the deterministic skill validator, and run `pnpm run validate` successfully; evidence includes exit codes and any required package cleanup.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+### Phase 3: AI-Assisted Skill Quality Review
+
+- Phase status: todo
+
+- [ ] Kind: implementation | Status: todo | Add a headless Codex skill review runner with structured JSON output.
+  - Outcome: Semantic skill quality review can be launched as a normal script command while internally using `codex exec` in non-interactive mode.
+  - Surface: `package.json` scripts, AI review runner script, repo-local review skill or prompt, ignored `.validation-output/skill-review/` output path, JSON schema validation.
+  - Acceptance: `pnpm run review:skills:ai` invokes `codex exec --ephemeral`, requires a structured JSON report, validates the report schema, prints stable findings, and exits non-zero for blocking findings, malformed JSON, missing output, unknown schema versions, or failed Codex execution.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+- [ ] Kind: implementation | Status: todo | Define the AI skill quality review rubric and finding schema.
+  - Outcome: The model-backed review evaluates skill semantics consistently instead of producing free-form prose.
+  - Surface: Review skill or prompt file, JSON schema fixture, review runner tests, skill policy docs.
+  - Acceptance: The rubric covers invocation quality, trigger boundaries, progressive disclosure, task-local reference organization, degree of freedom, script/dependency safety concerns, and actionable recommendations with path and line evidence where possible.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+- [ ] Kind: verification | Status: todo | Verify the AI-assisted review command behaves like a deterministic script boundary.
+  - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
+  - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
+  - Acceptance: Prove the runner accepts valid reports, rejects malformed or missing reports, prints findings deterministically, keeps generated artifacts ignored, and documents whether the AI-backed command is excluded from or included in `pnpm run validate`.
+  - Docs: `docs/linting-and-language-policy.md`.
+
+### Phase 4: Repository Language Policy
 
 - Phase status: todo
 
