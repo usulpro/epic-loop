@@ -26,7 +26,7 @@ Epic: Linting And Skill Checks
 
 ### Phase 1: Tooling Baseline
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Add oxlint configuration for the current Node.js ESM repository.
   - Outcome: JavaScript source, scripts, tests, and plugin package code are linted consistently with the repository's ESM/Node style.
@@ -46,7 +46,7 @@ Epic: Linting And Skill Checks
   - Acceptance: `pnpm run lint` no longer reports `max-lines` errors for `hooks.mjs` or `loop.mjs`; behavior covered by existing hook/loop tests remains unchanged.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: doing | Verify lint and format tooling through the repository validation path.
+- [x] Kind: verification | Status: done | Verify lint and format tooling through the repository validation path.
   - Outcome: The first phase tooling is proven through the same command future contributors will run.
   - Surface: Local pnpm scripts, oxlint, Oxfmt, existing syntax/package validation.
   - Acceptance: Run `pnpm run validate` and any focused lint/format scripts; evidence includes exit codes and any required follow-up fixes, with no generated runtime artifacts committed.
