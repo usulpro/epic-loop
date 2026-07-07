@@ -31,7 +31,7 @@ Epic: Linting And English Checks
 - [ ] Kind: implementation | Status: todo | Add oxlint configuration for the current Node.js ESM repository.
   - Outcome: JavaScript source, scripts, tests, and plugin package code are linted consistently with the repository's ESM/Node style.
   - Surface: `package.json`, oxlint config, scripts/tests/plugin source under root and `packages/cli`.
-  - Acceptance: A lint script exists, runs without false positives on the intended source set, and is included in aggregate validation.
+  - Acceptance: A lint script exists, runs without false positives on the intended source set, enforces targeted `max-lines` and `max-lines-per-function` limits, and is included in aggregate validation.
   - Docs: `docs/linting-and-language-policy.md`.
 
 - [ ] Kind: implementation | Status: todo | Add Oxfmt configuration and non-mutating format validation.
@@ -67,4 +67,3 @@ Epic: Linting And English Checks
   - Surface: Validator script, test runner, `pnpm run validate`, temporary fixture or controlled failing input.
   - Acceptance: Run focused validator tests, prove a controlled non-English sample fails with the expected diagnostic, remove any temporary sample, and run `pnpm run validate` successfully.
   - Docs: `docs/linting-and-language-policy.md`.
-
