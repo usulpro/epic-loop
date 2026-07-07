@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { epicRuntimeRoot, epicsRoot, readJson, requireFlag, resolveRoot, runtimeStatePath } from "./common.mjs";
+import { epicRoot, epicRuntimeRoot, readJson, requireFlag, resolveRoot, runtimeStatePath } from "./common.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 export function roleSummary(flags = {}) {
@@ -11,7 +11,7 @@ export function roleSummary(flags = {}) {
   const roadmap = readRoadmapSummary(root, slug);
   const latestReportPath = path.join(epicRuntimeRoot(root, slug), "latest-engineer-report.md");
   const latestManagerReportPath = path.join(epicRuntimeRoot(root, slug), "latest-manager-report.md");
-  const statePath = path.join(epicsRoot(root), slug, "state-of-epic.md");
+  const statePath = path.join(epicRoot(root, slug), "state-of-epic.md");
 
   const summary = {
     slug,

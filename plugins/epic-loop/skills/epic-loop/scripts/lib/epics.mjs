@@ -5,6 +5,7 @@ import {
   CURRENT_SESSION_CAPTURE_TTL_MS,
   MODES,
   appendGitignore,
+  epicRoot,
   epicRuntimeRoot,
   epicSlugify,
   epicsRoot,
@@ -37,7 +38,7 @@ export function initEpic(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   ensureDir(path.join(epicDir, "docs"));
   ensureDir(epicRuntimeRoot(root, slug));
 
@@ -176,7 +177,7 @@ export function setEpicMode(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -194,7 +195,7 @@ export function status(flags = {}, positionals = []) {
     throw new Error("Missing epic slug.");
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   const statePath = path.join(epicDir, "state-of-epic.md");
   const runtimePath = runtimeStatePath(root, slug);
 
@@ -237,7 +238,7 @@ export function bindSession(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -287,7 +288,7 @@ export function autoBindSession(flags = {}) {
   const currentPlatform = requireRuntimePlatform(root);
   const currentSession = flags.current ? (currentPlatform === "claude-code" ? readCurrentClaudeSession(root) : readCurrentCodexSession(root)) : null;
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }

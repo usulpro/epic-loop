@@ -5,7 +5,7 @@ Slug: `set-up`
 Created: 2026-07-06T02:54:26+00:00
 Current mode: implementation
 Active phase: Phase 3 - AI-Assisted Skill Quality Review
-Active task: Phase 3 Task 6 - Verify the AI-assisted review command behaves like a deterministic script boundary
+Active task: Phase 3 Task 8 - Verify the AI-assisted review command behaves like a deterministic script boundary
 
 ## Current State
 
@@ -25,7 +25,9 @@ Active task: Phase 3 Task 6 - Verify the AI-assisted review command behaves like
 - Phase 3 Task 4 is closed: absolute `--prompt-file` values are converted to project-relative paths before the normal project and active-epic boundary checks run, with focused CLI coverage for accepted active-epic paths and rejected outside-project/outside-epic/other-epic paths.
 - Phase 3 verification rerun proved the AI review command's deterministic script boundary through focused tests, controlled mock reports, missing-output handling, ignored output, and live `codex exec` execution.
 - Phase 3 Task 5 is closed: the maintained skill frontmatter trigger no longer broadly activates on ordinary `epic-loop` package-name mentions, and same-epic parallel-session guidance now matches the shared-mode model in the parallel-sessions reference.
-- Phase 3 verification is active again and needs a fresh AI-assisted review command rerun after the trigger-boundary and parallel-session instruction correction.
+- Phase 3 verification rerun again proved the AI review command's deterministic script boundary through focused tests, controlled mock reports, missing-output handling, ignored output, and live `codex exec` execution.
+- Phase 3 Task 7 is closed: epic slug path construction now goes through central slug validation and `epicRoot()` resolution, with focused tests covering valid paths and invalid separator/dot/traversal/non-kebab slugs.
+- Phase 3 verification is active again and needs a fresh AI-assisted review command rerun after the slug path boundary correction.
 - The central product requirement is adding linting, Oxfmt formatting, deterministic skill package checks, and AI-assisted semantic skill review.
 - Skill repository checks are split into deterministic script validation for mechanical invariants and a headless `codex exec` review runner that produces schema-validated JSON findings in an ignored output directory.
 - The repository language policy phase was removed during shaping after a real repository audit found no evidence of non-English committed prose; strict ASCII punctuation cleanup is intentionally out of scope for this epic.
@@ -36,4 +38,4 @@ Active task: Phase 3 Task 6 - Verify the AI-assisted review command behaves like
 
 ## Next Action
 
-- Continue with Phase 3 Task 6: rerun AI-assisted review command verification after the trigger-boundary and parallel-session instruction correction.
+- Continue with Phase 3 Task 8: rerun AI-assisted review command verification after the slug path boundary correction.

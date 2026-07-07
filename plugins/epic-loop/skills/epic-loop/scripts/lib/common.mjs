@@ -292,8 +292,40 @@ export function epicsRoot(projectRoot) {
   return path.join(epicLoopRoot(projectRoot), "epics");
 }
 
+export function validateEpicSlug(slug) {
+  if (typeof slug !== "string" || slug.length === 0) {
+    throw new Error("Invalid epic slug: expected a non-empty lowercase kebab-case path segment.");
+  }
+  if (slug !== slug.trim()) {
+    throw new Error(`Invalid epic slug "${slug}": leading or trailing whitespace is not allowed.`);
+  }
+  if (path.isAbsolute(slug) || slug.includes("/") || slug.includes("\\")) {
+    throw new Error(`Invalid epic slug "${slug}": path separators are not allowed.`);
+  }
+  if (slug === "." || slug === ".." || slug.includes("..")) {
+    throw new Error(`Invalid epic slug "${slug}": dot segments are not allowed.`);
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug)) {
+    throw new Error(`Invalid epic slug "${slug}": expected lowercase kebab-case letters and numbers.`);
+  }
+  return slug;
+}
+
+export function epicRoot(projectRoot, slug) {
+  const safeSlug = validateEpicSlug(slug);
+  const root = epicsRoot(projectRoot);
+  const epicPath = path.join(root, safeSlug);
+  const relative = path.relative(path.resolve(root), path.resolve(epicPath));
+
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`Epic path must stay inside .epic-loop/epics/: ${slug}`);
+  }
+
+  return epicPath;
+}
+
 export function epicRuntimeRoot(projectRoot, slug) {
-  return path.join(epicsRoot(projectRoot), slug, ".runtime");
+  return path.join(epicRoot(projectRoot, slug), ".runtime");
 }
 
 export function runtimeStatePath(projectRoot, slug) {

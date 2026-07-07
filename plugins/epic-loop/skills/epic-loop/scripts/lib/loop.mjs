@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { epicsRoot, nowIso, readJson, readRuntimePlatform, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { epicRoot, epicsRoot, nowIso, readJson, readRuntimePlatform, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import {
   appendLoopLog,
   appendPromptLog,
@@ -420,7 +420,7 @@ function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
 }
 
 function readEpicStateSummary(projectRoot, slug) {
-  const statePath = path.join(epicsRoot(projectRoot), slug, "state-of-epic.md");
+  const statePath = path.join(epicRoot(projectRoot, slug), "state-of-epic.md");
   if (!fs.existsSync(statePath)) {
     return {};
   }

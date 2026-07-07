@@ -178,3 +178,42 @@
 - Residual risk: Live AI review was intentionally not rerun in this correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
 - Commit: task-owned commit containing this closure note
 - Next move: Rerun Phase 3 AI review command verification after the instruction correction.
+
+## 2026-07-07T14:57:16+00:00 - not-closed: focused and mocked command-boundary checks passed, but live AI review returned a schema-valid fail report with one error finding, so Phase 3 verification remains blocked.
+
+- Task: Phase 3 Task 8 - Verify the AI-assisted review command behaves like a deterministic script boundary
+- Verdict: not-closed: focused and mocked command-boundary checks passed, but live AI review returned a schema-valid fail report with one error finding, so Phase 3 verification remains blocked.
+- Changed:
+  - No tracked product files changed during verification
+  - tracker/state/risk now record the active correction task for script.slug.path-boundary.
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 7/7
+  - mocked valid report exited 0
+  - malformed report exited 1
+  - missing-output substitute exited 1
+  - mocked error report exited 1 with stable blocking diagnostics
+  - live pnpm run review:skills:ai exited 1 with schemaVersion=1, status=fail, and one error finding.
+- Residual risk: Live AI review remains intentionally blocking on semantic error findings; .validation-output/skill-review/latest.json is ignored and untracked. test:unit and validate were intentionally not run after the live stop condition.
+- Next move: Implement focused correction for script.slug.path-boundary, then rerun Phase 3 verification.
+
+## 2026-07-07T15:01:26+00:00 - closed: epic slug path construction now rejects separators, dot segments, empty/non-kebab slugs, and traversal attempts before returning runtime or artifact paths.
+
+- Task: Phase 3 Task 7 - Add central epic slug path boundary validation surfaced by AI review
+- Verdict: closed: epic slug path construction now rejects separators, dot segments, empty/non-kebab slugs, and traversal attempts before returning runtime or artifact paths.
+- Changed:
+  - plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs adds validateEpicSlug and epicRoot
+  - slug-based runtime and artifact path consumers now route through central validation
+  - tests/unit/common-paths.test.mjs covers valid path preservation and invalid slug rejection
+  - tracker/state/risk artifacts mark the correction closed and verification active again.
+- Verification:
+  - node --test tests/unit/common-paths.test.mjs passed 2/2
+  - pnpm run test:unit passed 78/78
+  - pnpm run lint passed
+  - pnpm run format:check initially failed on the new test file
+  - pnpm run format:write fixed formatting
+  - pnpm run format:check passed
+  - pnpm run validate passed
+  - .validation-output/ remained ignored.
+- Residual risk: Live AI review was intentionally not rerun in this correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
+- Commit: task-owned commit containing this closure note
+- Next move: Rerun Phase 3 AI review command verification after the slug path boundary correction.

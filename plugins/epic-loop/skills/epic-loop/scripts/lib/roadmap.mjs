@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { ensureDir, epicsRoot, nowIso, readJson, requireFlag, resolveRoot, roadmapStatePath, runtimeStatePath, slugify, writeJson } from "./common.mjs";
+import { ensureDir, epicRoot, nowIso, readJson, requireFlag, resolveRoot, roadmapStatePath, runtimeStatePath, slugify, writeJson } from "./common.mjs";
 
 export const TASK_STATUSES = ["todo", "doing", "need-review", "blocked", "partially-satisfied", "deferred", "reset-required", "done"];
 export const TASK_KINDS = ["implementation", "verification", "review", "follow-up", "architecture-reset", "documentation-only"];
@@ -192,7 +192,7 @@ export function addFollowUpTask(flags = {}) {
 }
 
 export function renderTrackerMarkdown(projectRoot, slug, roadmap = ensureRoadmapState(projectRoot, slug)) {
-  const trackerPath = path.join(epicsRoot(projectRoot), slug, "tracker.md");
+  const trackerPath = path.join(epicRoot(projectRoot, slug), "tracker.md");
   ensureDir(path.dirname(trackerPath));
   fs.writeFileSync(trackerPath, trackerMarkdown(roadmap), "utf8");
 }
@@ -211,7 +211,7 @@ function writeRoadmapState(projectRoot, slug, roadmap) {
 function syncActiveState(projectRoot, slug, roadmap) {
   const activePhase = displayPhase(findPhase(roadmap, roadmap.active_phase_id));
   const activeTask = displayTask(roadmap, findTask(roadmap, roadmap.active_task_id));
-  const statePath = path.join(epicsRoot(projectRoot), slug, "state-of-epic.md");
+  const statePath = path.join(epicRoot(projectRoot, slug), "state-of-epic.md");
 
   if (fs.existsSync(statePath)) {
     let text = fs.readFileSync(statePath, "utf8");
@@ -240,7 +240,7 @@ function replaceStateLine(text, label, value) {
 }
 
 function importRoadmapFromTracker(projectRoot, slug, { title } = {}) {
-  const trackerPath = path.join(epicsRoot(projectRoot), slug, "tracker.md");
+  const trackerPath = path.join(epicRoot(projectRoot, slug), "tracker.md");
   if (!fs.existsSync(trackerPath)) {
     return createInitialRoadmapState({ slug, title: title || slug });
   }

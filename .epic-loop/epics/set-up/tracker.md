@@ -108,6 +108,12 @@ Epic: Linting And Skill Checks
   - Acceptance: The frontmatter trigger wording activates the skill for explicit epic-loop runtime/workspace work without broadly triggering on ordinary package/plugin development by name; same-epic parallel-session guidance is consistent between the entrypoint and reference docs.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
+- [x] Kind: implementation | Status: done | Add central epic slug path boundary validation surfaced by AI review.
+  - Outcome: User-provided epic slugs can no longer escape `.epic-loop/epics/` through path separators, dot segments, or resolved-path traversal when runtime and artifact paths are constructed.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs`, path helper call sites as needed, and focused unit/CLI tests.
+  - Acceptance: Slug/path helpers reject path separators, `.`/`..` segments, empty or invalid slugs, and any resolved epic path outside `.epic-loop/epics/`; existing valid slug behavior remains unchanged.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
 - [ ] Kind: verification | Status: doing | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
