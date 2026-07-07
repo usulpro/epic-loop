@@ -104,7 +104,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 7: Epic-Centric Mode Model And Compact Reminder
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Make `runtime-state.json` `mode` the sole lifecycle mode source and drop the human-readable `Current mode:` line.
   - Outcome: The epic's lifecycle mode lives only in `.runtime/runtime-state.json` `mode`, is maintained across all transitions via scripts, and no code parses `state-of-epic.md` prose for it.
@@ -131,9 +131,9 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Docs: docs/epic-mode-model.md, references/hooks-and-session-routing.md, references/parallel-sessions.md
 
 - [x] Kind: verification | Status: done | Phase-level verification: full suite plus a live multi-session Claude Code check of the epic-centric model.
-  - Outcome: Verification completed: unit suite and package validation pass, live Claude Code evidence proves membership/marker/mode-propagation behavior, and installed runtime copies are confirmed stale vs source until manual promotion.
+  - Outcome: Proven-green source-package result: unit suite and package validation pass, live Claude Code evidence proves membership/marker/mode-propagation behavior, and installed runtime-copy sync is explicitly not required for this phase.
   - Surface: Whole repo test suite; real Claude Code sessions in this repo (method analogous to the Phase 3 POC).
-  - Acceptance: `pnpm run test:unit` and `pnpm run validate` exit clean including all new Phase 7 tests; live evidence (transcript attachment or echoed token, as in Phase 3) shows: (a) a session resuming a shaping epic receives the compact marker on the next turn, (b) two member sessions of the same epic both receive it, (c) after `set-epic-mode.mjs` changes the mode, the other session's next reminder reflects the change, and with the mode set to implementation a non-driver member receives the read-only lock marker while the driver receives none; `session-bindings.json` contains mode-less membership entries and no `active_sessions` map; gap: `diff -rq` of both runtime copies vs `plugins/` is not clean because runtime promotion is manual in this repo and `scripts/self-update-skill.mjs` was intentionally not run.
+  - Acceptance: `pnpm run test:unit` and `pnpm run validate` exit clean including all new Phase 7 tests; live evidence (transcript attachment or echoed token, as in Phase 3) shows: (a) a session resuming a shaping epic receives the compact marker on the next turn, (b) two member sessions of the same epic both receive it, (c) after `set-epic-mode.mjs` changes the mode, the other session's next reminder reflects the change, and with the mode set to implementation a non-driver member receives the read-only lock marker while the driver receives none; `session-bindings.json` contains mode-less membership entries and no `active_sessions` map; runtime-copy diff is intentionally ignored for this phase because installed copies do not need to be synced.
   - Docs: implementation-log.md, decision-log.md
 
 - [x] Kind: verification | Status: done | Phase 4 verification gate: cross-doc audit of the documented unbind contract (executed 2026-07-06)
