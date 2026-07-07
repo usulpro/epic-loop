@@ -102,12 +102,46 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Acceptance: `pnpm run test:unit` and `pnpm run validate` both exit clean.
   - Docs: `implementation-log.md`.
 
+### Phase 7: Epic-Centric Mode Model And Compact Reminder
+
+- Phase status: todo
+
+- [ ] Kind: implementation | Status: todo | Make `runtime-state.json` `mode` the sole lifecycle mode source and drop the human-readable `Current mode:` line.
+  - Outcome: The epic's lifecycle mode lives only in `.runtime/runtime-state.json` `mode`, is maintained across all transitions via scripts, and no code parses `state-of-epic.md` prose for it.
+  - Surface: New `scripts/set-epic-mode.mjs` (+ helper in `scripts/lib/epics.mjs`); `init-epic` state template (remove the `Current mode:` line); `readEpicStateSummary` in `scripts/lib/loop.mjs` and any other prose-mode consumers; `SKILL.md` mode-transition instructions; unit tests.
+  - Acceptance: `set-epic-mode.mjs --slug <slug> --mode shaping|implementation|review` validates the mode and writes `mode` + `updated_at`; `init-epic` no longer emits `Current mode:` and nothing regex-parses it (`readEpicStateSummary` reads runtime-state instead); `SKILL.md` instructs calling the script on every lifecycle transition (reopen shaping, enter review); missing/corrupt runtime-state makes hooks silently skip and scripts fail explicitly, never guess; tests cover transitions and the no-prose-parsing contract.
+  - Docs: docs/epic-mode-model.md
+
+- [ ] Kind: implementation | Status: todo | Rework session bindings to mode-less epic membership with an exclusive implementation driver.
+  - Outcome: Bindings answer only "which epic does this session belong to"; many sessions can be active members of one epic; `active_sessions` is deleted from the schema; implementation keeps exactly one driver session recorded in the epic's `runtime-state.json`.
+  - Surface: `bindSession`/`unbindSession` in `scripts/lib/epics.mjs`; `getSessionBinding`, `maybeBuildImplementationContinuation` gate, `markInterruptedTurnIfNeeded` gate in `scripts/lib/hooks.mjs`/`lib/loop.mjs`; `startImplementationLoop` driver designation; `bind-session.mjs`/`unbind-session.mjs` CLI docs; existing binding tests.
+  - Acceptance: Binding entries carry no `mode`; multiple simultaneous active members of one epic are supported while a session still holds at most one active binding; `active_sessions` is gone and readers tolerate the old leftover shape (stale-pointer bug class removed by construction); entering implementation designates `implementation_loop.driver_session_id` (replacing any previous driver) and only the driver's `Stop` events continue the loop; a `UserPromptSubmit` from a non-driver member does not interrupt the loop; unbinding the driver sets the loop to `idle` with a clear reason; parallel work on different epics is unaffected.
+  - Docs: docs/epic-mode-model.md
+
+- [ ] Kind: implementation | Status: todo | Emit the compact mode marker to all member sessions, plus a read-only lock marker for non-driver members during implementation.
+  - Outcome: On `UserPromptSubmit` every active member session of a `shaping`/`review` epic receives exactly `[epic-loop] epic=<slug> mode=<mode> — follow epic-loop skill mode rules`; during `implementation` non-driver members receive the lock marker `[epic-loop] epic=<slug> mode=implementation — loop running in another session; read-only, do not edit epic artifacts` while the driver receives nothing; a mode change by one session propagates to every member's next turn without rebinding.
+  - Surface: `buildModeReminder` + `MODE_REMINDER_TEXT` in `scripts/lib/hooks.mjs` (source mode from epic runtime-state, not the binding); `SKILL.md` frontmatter description plus a concise body note; runtime skill copies; unit tests.
+  - Acceptance: Reminder mode comes from `runtime-state.json`, not the binding; unbound sessions stay silent no-ops; two bound sessions on one epic both receive the shaping/review marker, and after one of them runs `set-epic-mode.mjs` the other's next reminder reflects the new mode — pinned by tests; in implementation mode the driver gets no reminder and a non-driver member gets exactly the lock marker text — pinned by tests; frontmatter description mentions the `[epic-loop] epic=... mode=...` marker pattern and stays within the 1024-char Claude Code limit (currently 895 chars); body note explains both marker variants (mode rules vs read-only lock; the lock is advisory, not a mechanical write barrier); runtime copies re-synced via self-update.
+  - Docs: docs/epic-mode-model.md, docs/mode-reminder-design.md, references/hooks-and-session-routing.md
+
+- [ ] Kind: implementation | Status: todo | Auto-bind the current session as an epic member when resuming by slug or path.
+  - Outcome: Resuming an epic binds the current session as a member (no mode flag); reminders follow the epic's current mode from the next turn; the implementation start/resume confirmation flow is unchanged.
+  - Surface: `SKILL.md` resume flow; `bind-session.mjs` membership usage; capture freshness validation at the bind call site; tests for shaping/review/implementation resume cases.
+  - Acceptance: For a `shaping`/`review` epic the session is auto-bound as a member and the marker appears on the next turn; for an `implementation` epic no driver is designated automatically and the existing explicit confirmation flow is unchanged; the `--current` capture is accepted for auto-bind only when fresh AND `hook_event_name === "UserPromptSubmit"` (last-writer-wins race guard; Codex mtime fallback included); when no acceptable capture exists (e.g. hooks installed but not yet trusted in the running thread) auto-bind is skipped with a one-line notice and orientation continues; `SKILL.md` Parallel Work section and `references/parallel-sessions.md` are updated to the v2 semantics (one epic mode shared by all member sessions; different-modes-per-epic no longer a supported state).
+  - Docs: docs/epic-mode-model.md, references/hooks-and-session-routing.md, references/parallel-sessions.md
+
+- [ ] Kind: verification | Status: todo | Phase-level verification: full suite plus a live multi-session Claude Code check of the epic-centric model.
+  - Outcome: Proven-green phase result: unit suite and package validation pass, runtime copies are clean, and the membership/marker/mode-propagation behavior is observed working in real sessions.
+  - Surface: Whole repo test suite; real Claude Code sessions in this repo (method analogous to the Phase 3 POC).
+  - Acceptance: `pnpm run test:unit` and `pnpm run validate` exit clean including all new Phase 7 tests; `diff -rq` of both runtime copies vs `plugins/` is clean except `.runtime`; live evidence (transcript attachment or echoed token, as in Phase 3) shows: (a) a session resuming a shaping epic receives the compact marker on the next turn, (b) two member sessions of the same epic both receive it, (c) after `set-epic-mode.mjs` changes the mode, the other session's next reminder reflects the change, and with the mode set to implementation a non-driver member receives the read-only lock marker while the driver receives none; `session-bindings.json` contains mode-less membership entries and no `active_sessions` map.
+  - Docs: implementation-log.md, decision-log.md
+
 ## Follow-Up Tasks
 
 - [x] Kind: verification | Status: done | Phase 4 verification gate: cross-doc audit of the documented unbind contract (executed 2026-07-06)
   - Outcome: Zero discrepancies across SKILL.md, docs/mode-reminder-design.md section 2, and decision-log.md (flags, no-op, silent-hooks, rebind semantics, verbatim 'unbind epic' phrase); frontmatter YAML valid; runtime copies diff-clean; validate passed; 33/33 unit tests green
   - Surface: read-only audit plus package checks; no code changes
-  - Acceptance: Met - discrepancy list empty; recorded here as a follow-up entry because hand-added tracker tasks do not survive roadmap re-renders (see implementation-log 2026-07-06)
+  - Acceptance: Met - discrepancy list empty; recorded as a follow-up entry because hand-added tracker tasks do not survive roadmap re-renders (see implementation-log 2026-07-06)
   - Docs: docs/mode-reminder-design.md, decision-log.md
 
 - [x] Kind: documentation-only | Status: done | Update hooks-and-session-routing.md for the new reminder/unbind hook behavior and sync runtime copies
@@ -115,28 +149,4 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Surface: plugins/epic-loop/skills/epic-loop/references/hooks-and-session-routing.md; pnpm run self-update
   - Acceptance: Reference doc mentions the reminder output path and unbind deactivation consistently with SKILL.md; diff -rq of both runtime copies vs plugins/ clean except .runtime; full test suite still green
   - Docs: docs/mode-reminder-design.md, decision-log.md
-
-- [ ] Kind: follow-up | Status: todo | Design and fix shaping/review session binding lifecycle
-  - Outcome: Shaping and review mode reminders are reliably active when intended, and rebinding a session cannot leave stale active-session pointers for older epic/mode pairs.
-  - Surface: bind-session.mjs, session binding data model, shaping/review resume flow, hook diagnostics, tests.
-  - Acceptance: Define automatic vs explicit binding behavior for shaping/review; ensure binding one session to a new epic/mode clears stale active pointers for the same session id; add regression tests for reminder activation and stale active_sessions cleanup.
-  - Docs: docs/shaping-binding-gap.md
-
-- [ ] Kind: follow-up | Status: todo | Clear stale active session pointers when rebinding the same session
-  - Outcome: Rebinding a session to a new epic/mode leaves exactly one active_sessions pointer for that session id, matching the primary sessions[session_id] binding.
-  - Surface: bindSession in scripts/lib/epics.mjs, session-bindings.json update semantics, unit tests around bind-session.mjs.
-  - Acceptance: When a session already active for old-slug:old-mode is bound to new-slug:new-mode, active_sessions no longer contains old-slug:old-mode for that same session id; existing replacement behavior for another session active on the new key still works; tests cover both cases.
-  - Docs: docs/shaping-binding-gap.md
-
-- [ ] Kind: follow-up | Status: todo | Replace verbose mode reminders with a compact epic-loop mode marker
-  - Outcome: UserPromptSubmit reminders use a short stable marker like '[epic-loop] epic=<slug> mode=<mode>', and SKILL.md/frontmatter treat that marker as a trigger for the existing mode rules without duplicating mode instructions.
-  - Surface: MODE_REMINDER_TEXT in scripts/lib/hooks.mjs, SKILL.md frontmatter description, concise SKILL.md marker note, runtime skill copies, unit tests that assert the compact text.
-  - Acceptance: Shaping and review reminders emit only the compact marker; implementation mode remains excluded; SKILL.md description explicitly mentions the marker pattern so the skill triggers on it; body documentation explains the marker means the session is bound to that epic/mode and should follow existing mode rules; tests updated for the exact compact text.
-  - Docs: docs/mode-reminder-design.md, references/hooks-and-session-routing.md
-
-- [ ] Kind: follow-up | Status: todo | Bind shaping and review sessions when resuming an epic by slug or path
-  - Outcome: When a user resumes an epic by slug or path, the current session is bound to the epic's existing non-implementation mode so mode reminders work immediately without changing the epic mode.
-  - Surface: SKILL.md resume flow, bind-session.mjs usage, session binding semantics, slug/path resume handling, tests for shaping/review/implementation resume cases.
-  - Acceptance: If the resumed epic's current mode is shaping or review, the session is bound with that same mode and the epic mode is not changed; if the resumed epic is implementation or implementation-idle, the existing explicit implementation start/resume flow remains unchanged and no automatic implementation binding occurs; slug and path inputs are covered; stale active-session pointers are not introduced.
-  - Docs: docs/shaping-binding-gap.md
 

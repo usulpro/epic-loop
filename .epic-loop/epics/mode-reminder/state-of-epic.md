@@ -4,7 +4,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Current mode: shaping
-Active phase: Phase 6 - Run The Full Test Suite
+Active phase: Phase 7 - Epic-Centric Mode Model And Compact Reminder
 Active task: TBD
 
 ## Current State
@@ -18,6 +18,7 @@ Active task: TBD
 - Phase 5 (Implement And Write Tests) is closed. Implementation matches the accepted design (commits `64b6c81` code, `02d6fae` tests); `tests/unit/unbind-and-reminder.test.mjs` pins both contracts with 10 end-to-end cases; `references/hooks-and-session-routing.md` documents the new behaviors; runtime copies re-synced via `self-update` after the green suite (both diff-clean).
 - Phase 6 (Run The Full Test Suite) is closed. Final verification: `pnpm run test:unit` 43/43/0 with all 10 new tests present, `pnpm run validate` exit 0, both runtime copies diff-clean vs `plugins/`.
 - Follow-up shaping reopened on 2026-07-06 to investigate a binding lifecycle gap: shaping/review reminders work after explicit binding, but normal shaping did not bind the session, and switching the same session between shaping epics left a stale `active_sessions["set-up:shaping"]` pointer.
+- Follow-up shaping completed on 2026-07-07 in two passes. First pass reviewed the binding-lifecycle gap against the actual code and produced a per-binding-mode fix plan (now the superseded-marked Accepted Plan in `docs/shaping-binding-gap.md`). Second pass, on user direction, replaced it with the **epic-centric mode model** (`docs/epic-mode-model.md`): the epic holds exactly one mode in `runtime-state.json` (sole machine source; the `Current mode:` prose line in this file gets dropped by Phase 7), bindings become mode-less epic membership so any number of sessions per epic receive the compact `[epic-loop] epic=<slug> mode=<mode>` marker, a mode change by one session propagates to all members' next turn, `active_sessions` is deleted (stale-pointer bug class removed by construction), and implementation keeps one exclusive driver session recorded in the epic runtime state, with non-driver members receiving an advisory read-only lock marker while the loop runs. Phase 7 — Epic-Centric Mode Model And Compact Reminder — is rebuilt accordingly in `roadmap-state.json` and the re-rendered `tracker.md`: mode source → membership/driver model → marker → auto-bind on resume → live multi-session verification.
 
 ## Blockers
 
@@ -25,4 +26,4 @@ Active task: TBD
 
 ## Next Action
 
-- Decide the desired binding behavior for shaping/review sessions and turn `docs/shaping-binding-gap.md` into a focused follow-up implementation plan.
+- Phase 7 is ready for implementation. Start the implementation loop in a session after explicit user confirmation (`bind-session.mjs --current --slug mode-reminder --mode implementation`).
