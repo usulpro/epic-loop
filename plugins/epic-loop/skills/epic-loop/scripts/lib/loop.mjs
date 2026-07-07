@@ -484,7 +484,6 @@ function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
     ...runtime,
     ...(summary.active_phase !== undefined ? { active_phase: summary.active_phase } : {}),
     ...(summary.active_task !== undefined ? { active_task: summary.active_task } : {}),
-    ...(summary.mode !== undefined ? { mode: summary.mode } : {}),
   };
 }
 
@@ -634,7 +633,6 @@ function readEpicStateSummary(projectRoot, slug) {
   return {
     active_phase: readStateLine(text, "Active phase"),
     active_task: readStateLine(text, "Active task"),
-    mode: readStateLine(text, "Current mode"),
   };
 }
 

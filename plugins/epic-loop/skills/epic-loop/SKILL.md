@@ -123,6 +123,14 @@ Only after local epic context is clear, decide the mode before doing epic work:
 - **Review**: a completed slice must be checked against the original conversation intent, not only current docs.
 - **Resume**: the user gives an existing epic slug or asks to continue previous epic work.
 
+For explicit lifecycle transitions outside the implementation-start binding flow, update the epic runtime mode with:
+
+```bash
+node <skill-dir>/scripts/set-epic-mode.mjs --slug "<epic-slug>" --mode shaping|implementation|review
+```
+
+Use it when reopening shaping or entering review. Do not hand-edit `state-of-epic.md` to change lifecycle mode.
+
 If no epic workspace exists, initialize one with:
 
 ```bash

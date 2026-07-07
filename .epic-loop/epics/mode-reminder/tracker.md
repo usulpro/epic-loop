@@ -104,9 +104,9 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 
 ### Phase 7: Epic-Centric Mode Model And Compact Reminder
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Make `runtime-state.json` `mode` the sole lifecycle mode source and drop the human-readable `Current mode:` line.
+- [x] Kind: implementation | Status: done | Make `runtime-state.json` `mode` the sole lifecycle mode source and drop the human-readable `Current mode:` line.
   - Outcome: The epic's lifecycle mode lives only in `.runtime/runtime-state.json` `mode`, is maintained across all transitions via scripts, and no code parses `state-of-epic.md` prose for it.
   - Surface: New `scripts/set-epic-mode.mjs` (+ helper in `scripts/lib/epics.mjs`); `init-epic` state template (remove the `Current mode:` line); `readEpicStateSummary` in `scripts/lib/loop.mjs` and any other prose-mode consumers; `SKILL.md` mode-transition instructions; unit tests.
   - Acceptance: `set-epic-mode.mjs --slug <slug> --mode shaping|implementation|review` validates the mode and writes `mode` + `updated_at`; `init-epic` no longer emits `Current mode:` and nothing regex-parses it (`readEpicStateSummary` reads runtime-state instead); `SKILL.md` instructs calling the script on every lifecycle transition (reopen shaping, enter review); missing/corrupt runtime-state makes hooks silently skip and scripts fail explicitly, never guess; tests cover transitions and the no-prose-parsing contract.
@@ -149,4 +149,3 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
   - Surface: plugins/epic-loop/skills/epic-loop/references/hooks-and-session-routing.md; pnpm run self-update
   - Acceptance: Reference doc mentions the reminder output path and unbind deactivation consistently with SKILL.md; diff -rq of both runtime copies vs plugins/ clean except .runtime; full test suite still green
   - Docs: docs/mode-reminder-design.md, decision-log.md
-

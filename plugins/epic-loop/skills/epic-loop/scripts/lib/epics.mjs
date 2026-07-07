@@ -49,7 +49,6 @@ export function initEpic(flags = {}) {
 Epic: ${title}
 Slug: \`${slug}\`
 Created: ${createdAt}
-Current mode: ${mode}
 Active phase: Phase 1 - Shape The Epic
 Active task: TBD
 
@@ -165,6 +164,47 @@ TBD
 
   console.log(`Epic initialized: ${slug}`);
   console.log(`Workspace: ${epicDir}`);
+}
+
+export function setEpicMode(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+  const mode = requireFlag(flags, "mode");
+
+  if (!MODES.includes(mode)) {
+    throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
+  }
+
+  const epicDir = path.join(epicsRoot(root), slug);
+  if (!fs.existsSync(epicDir)) {
+    throw new Error(`Epic not found: ${epicDir}`);
+  }
+
+  const runtimePath = runtimeStatePath(root, slug);
+  if (!fs.existsSync(runtimePath)) {
+    throw new Error(`Runtime state not found: ${runtimePath}`);
+  }
+
+  let runtime;
+  try {
+    runtime = JSON.parse(fs.readFileSync(runtimePath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Cannot read runtime state: ${message}`);
+  }
+
+  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+    throw new Error(`Runtime state must be an object: ${runtimePath}`);
+  }
+
+  const timestamp = nowIso();
+  writeJson(runtimePath, {
+    ...runtime,
+    mode,
+    updated_at: timestamp,
+  });
+
+  console.log(`Epic mode set for ${slug}: ${mode}`);
 }
 
 export function status(flags = {}, positionals = []) {
