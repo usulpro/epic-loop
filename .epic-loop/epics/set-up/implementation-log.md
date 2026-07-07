@@ -90,3 +90,22 @@
 - Residual risk: A minimal handshake is still written before binding because current-session binding needs session identity; it deliberately excludes prompt text, transcript paths, and raw hook payloads.
 - Commit: task-owned commit containing this closure note
 - Next move: Continue with Phase 3 Task 3: define the AI skill quality review rubric and finding schema.
+
+## 2026-07-07T14:37:44+00:00 - closed: AI skill review prompt now uses explicit repository-owned rubric and finding schema guidance without changing schema version, exit policy, dependencies, or aggregate validation policy.
+
+- Task: Phase 3 Task 3 - Define the AI skill quality review rubric and finding schema
+- Verdict: closed: AI skill review prompt now uses explicit repository-owned rubric and finding schema guidance without changing schema version, exit policy, dependencies, or aggregate validation policy.
+- Changed:
+  - scripts/review-skills-ai.mjs exports skillReviewRubric and skillReviewFindingSchema and builds the model prompt from them
+  - tests/unit/skill-review-ai.test.mjs verifies required rubric dimensions, stable finding fields, and existing mocked report behavior
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 7/7
+  - pnpm run test:unit passed 75/75
+  - pnpm run lint passed
+  - pnpm run format:check initially failed on tests/unit/skill-review-ai.test.mjs
+  - pnpm run format:write fixed formatting
+  - pnpm run format:check passed
+  - pnpm run validate passed
+- Residual risk: Live review was not rerun because behavior changed only in prompt/rubric text; final Phase 3 verification remains next.
+- Commit: task-owned commit containing this closure note
+- Next move: Continue with Phase 3 Task 4: verify the AI-assisted review command behaves like a deterministic script boundary.

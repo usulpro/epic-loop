@@ -90,13 +90,13 @@ Epic: Linting And Skill Checks
   - Acceptance: Unbound sessions remain silent/no-op for runtime records except any deliberately minimal, non-sensitive binding handshake needed by `bind-session --current`; bound hook routing and implementation-loop continuation behavior remain covered by tests.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: doing | Define the AI skill quality review rubric and finding schema.
+- [x] Kind: implementation | Status: done | Define the AI skill quality review rubric and finding schema.
   - Outcome: The model-backed review evaluates skill semantics consistently instead of producing free-form prose.
   - Surface: Review skill or prompt file, JSON schema fixture, review runner tests, skill policy docs.
   - Acceptance: The rubric covers invocation quality, trigger boundaries, progressive disclosure, task-local reference organization, degree of freedom, script/dependency safety concerns, and actionable recommendations with path and line evidence where possible.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify the AI-assisted review command behaves like a deterministic script boundary.
+- [ ] Kind: verification | Status: doing | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
   - Acceptance: Prove the runner accepts valid reports, rejects malformed or missing reports, prints findings deterministically, keeps generated artifacts ignored, and documents whether the AI-backed command is excluded from or included in `pnpm run validate`.

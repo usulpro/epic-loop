@@ -4,7 +4,15 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
 
-import { blockingReviewReasons, formatSkillReviewReport, reviewOutputPaths, validateSkillReviewReport } from "../../scripts/review-skills-ai.mjs";
+import {
+  blockingReviewReasons,
+  buildSkillReviewPrompt,
+  formatSkillReviewReport,
+  reviewOutputPaths,
+  skillReviewFindingSchema,
+  skillReviewRubric,
+  validateSkillReviewReport,
+} from "../../scripts/review-skills-ai.mjs";
 import { makeTempRoot, repoRoot } from "./test-utils.mjs";
 
 const runnerScript = path.join(repoRoot, "scripts", "review-skills-ai.mjs");
@@ -36,6 +44,41 @@ function withTempRoot(prefix, callback) {
 
 test("AI skill review report schema accepts a valid pass report", () => {
   assert.deepEqual(validateSkillReviewReport(validReport(), repoRoot), []);
+});
+
+test("AI skill review prompt includes the repository-owned rubric and schema guidance", () => {
+  const prompt = buildSkillReviewPrompt(".validation-output/skill-review/latest.json");
+  const requiredRubricCodes = [
+    "invocation-quality",
+    "trigger-boundaries",
+    "progressive-disclosure",
+    "task-local-reference-organization",
+    "instruction-degree-of-freedom",
+    "script-dependency-safety",
+    "actionable-evidence",
+  ];
+  const requiredFindingFields = ["severity", "code", "path", "line", "message", "recommendation"];
+
+  for (const code of requiredRubricCodes) {
+    assert.equal(
+      skillReviewRubric.some((item) => item.code === code),
+      true,
+      `missing rubric code ${code}`,
+    );
+    assert.match(prompt, new RegExp(code, "u"));
+  }
+
+  for (const field of requiredFindingFields) {
+    assert.equal(
+      skillReviewFindingSchema.some((item) => item.field === field),
+      true,
+      `missing finding field ${field}`,
+    );
+    assert.match(prompt, new RegExp(`- ${field}:`, "u"));
+  }
+
+  assert.match(prompt, /repository-relative paths with forward slashes/u);
+  assert.match(prompt, /Use "fail" when any error finding is present/u);
 });
 
 test("AI skill review report schema rejects invalid top-level and finding fields", () => {

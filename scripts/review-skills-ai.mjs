@@ -10,6 +10,71 @@ const allowedSeverities = new Set(["error", "warning", "info"]);
 const outputDirRelative = ".validation-output/skill-review";
 const latestReportRelative = `${outputDirRelative}/latest.json`;
 
+export const skillReviewRubric = [
+  {
+    code: "invocation-quality",
+    title: "Invocation Quality",
+    guidance: "Check whether the skill description and entrypoint give reliable implicit and explicit invocation signals for real epic-loop work.",
+  },
+  {
+    code: "trigger-boundaries",
+    title: "Trigger Boundaries",
+    guidance: "Check whether the skill has clear non-trigger boundaries so it does not activate for unrelated planning, plugin, or repository tasks.",
+  },
+  {
+    code: "progressive-disclosure",
+    title: "Progressive Disclosure",
+    guidance: "Check whether SKILL.md stays concise and sends conditional or mode-specific detail into direct references instead of overloading the entrypoint.",
+  },
+  {
+    code: "task-local-reference-organization",
+    title: "Task-Local Reference Organization",
+    guidance: "Check whether referenced files are organized around task-local context and avoid forcing broad manual reads for narrow operations.",
+  },
+  {
+    code: "instruction-degree-of-freedom",
+    title: "Instruction Degree Of Freedom",
+    guidance: "Check whether fragile operations use exact scripts and constraints while judgment-heavy work leaves appropriate implementation freedom.",
+  },
+  {
+    code: "script-dependency-safety",
+    title: "Bundled Script And Dependency Safety",
+    guidance: "Check bundled scripts, external tools, MCP expectations, file access, and generated-output handling for safety concerns deterministic checks cannot prove.",
+  },
+  {
+    code: "actionable-evidence",
+    title: "Actionable Evidence",
+    guidance: "Check whether every finding can cite a repository-relative path, a line when available, a stable code, and a concrete recommendation.",
+  },
+];
+
+export const skillReviewFindingSchema = [
+  {
+    field: "severity",
+    guidance: 'Required. One of "error", "warning", or "info"; use "error" only for blocking semantic quality or safety issues.',
+  },
+  {
+    field: "code",
+    guidance: "Required. Stable non-empty string suitable for tracking repeated findings across runs.",
+  },
+  {
+    field: "path",
+    guidance: "Required. Repository-relative path using forward slashes; do not use absolute paths.",
+  },
+  {
+    field: "line",
+    guidance: "Optional only when line evidence is genuinely unavailable; otherwise use a positive integer.",
+  },
+  {
+    field: "message",
+    guidance: "Required. Non-empty concise statement of the observed issue.",
+  },
+  {
+    field: "recommendation",
+    guidance: "Required. Non-empty concrete next action for a maintainer.",
+  },
+];
+
 export function reviewOutputPaths(root = process.cwd()) {
   const outputDir = path.resolve(root, outputDirRelative);
   const reportPath = path.resolve(root, latestReportRelative);
@@ -95,12 +160,10 @@ export function buildSkillReviewPrompt(reportPath) {
     "- plugins/epic-loop/skills/epic-loop/scripts/",
     "- .epic-loop/epics/set-up/docs/linting-and-skill-validation-policy.md",
     "",
-    "Review only semantic skill-quality concerns that deterministic scripts cannot prove:",
-    "- invocation quality and trigger boundaries",
-    "- progressive disclosure",
-    "- task-local reference organization",
-    "- degree of freedom in instructions",
-    "- bundled script and external dependency safety concerns",
+    "Review only semantic skill-quality concerns that deterministic scripts cannot prove.",
+    "",
+    "Use this repository-owned rubric:",
+    ...skillReviewRubric.flatMap((item) => [`- ${item.title} (${item.code}): ${item.guidance}`]),
     "",
     "Do not edit tracked source files. Write exactly one JSON report to:",
     normalizedReportPath,
@@ -129,6 +192,11 @@ export function buildSkillReviewPrompt(reportPath) {
     'Allowed status values: "pass", "fail", "needs-review".',
     'Allowed severity values: "error", "warning", "info".',
     'Use "fail" when any error finding is present.',
+    "",
+    "Finding field guidance:",
+    ...skillReviewFindingSchema.flatMap((item) => [`- ${item.field}: ${item.guidance}`]),
+    "",
+    "Prefer path and line evidence for every finding. Use repository-relative paths with forward slashes.",
     "Return a short final message after writing the file.",
   ].join("\n");
 }
