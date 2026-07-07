@@ -19,6 +19,7 @@ import {
   readJson,
   readJsonStrict,
   resolveRoot,
+  runtimeStatePath,
   sessionRoot,
   shellQuote,
   slugify,
@@ -749,15 +750,17 @@ const MODE_REMINDER_TEXT = {
     `[epic-loop] Bound to epic "${slug}" — review mode. Compare against original intent, not just current docs, and state which resolution path you're taking (SKILL.md Review Rules).`,
 };
 
-export function buildModeReminder(payload, binding) {
+export function buildModeReminder(projectRoot, payload, binding) {
   if (payload.hook_event_name !== "UserPromptSubmit") {
     return null;
   }
-  if (binding.mode !== "shaping" && binding.mode !== "review") {
+  const runtime = readJson(runtimeStatePath(projectRoot, binding.epic_slug), {});
+  const mode = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime.mode : null;
+  if (mode !== "shaping" && mode !== "review") {
     return null;
   }
 
-  const text = MODE_REMINDER_TEXT[binding.mode](binding.epic_slug);
+  const text = MODE_REMINDER_TEXT[mode](binding.epic_slug);
 
   return {
     hookSpecificOutput: {
@@ -810,7 +813,7 @@ export function handleHook(rawInput, flags = {}) {
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
   markInterruptedTurnIfNeeded(projectRoot, payload, binding);
 
-  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding) ?? buildModeReminder(payload, binding);
+  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding) ?? buildModeReminder(projectRoot, payload, binding);
   if (continuation) {
     console.log(JSON.stringify(continuation));
   }
@@ -848,18 +851,13 @@ function getSessionBinding(projectRoot, sessionId) {
   const bindingsPath = path.join(sessionRoot(projectRoot), "session-bindings.json");
   const bindings = readJson(bindingsPath, { sessions: {} });
   const sessions = bindings && typeof bindings === "object" && !Array.isArray(bindings) && bindings.sessions && typeof bindings.sessions === "object" ? bindings.sessions : {};
-  const activeSessions =
-    bindings && typeof bindings === "object" && !Array.isArray(bindings) && bindings.active_sessions && typeof bindings.active_sessions === "object"
-      ? bindings.active_sessions
-      : {};
   const binding = sessions[sessionId];
 
   if (!binding || typeof binding !== "object" || binding.active !== true) {
     return null;
   }
 
-  const activeKey = `${binding.epic_slug}:${binding.mode}`;
-  if (activeSessions[activeKey] !== sessionId) {
+  if (!binding.epic_slug) {
     return null;
   }
 

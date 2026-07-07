@@ -180,29 +180,7 @@ export function setEpicMode(flags = {}) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
 
-  const runtimePath = runtimeStatePath(root, slug);
-  if (!fs.existsSync(runtimePath)) {
-    throw new Error(`Runtime state not found: ${runtimePath}`);
-  }
-
-  let runtime;
-  try {
-    runtime = JSON.parse(fs.readFileSync(runtimePath, "utf8"));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Cannot read runtime state: ${message}`);
-  }
-
-  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
-    throw new Error(`Runtime state must be an object: ${runtimePath}`);
-  }
-
-  const timestamp = nowIso();
-  writeJson(runtimePath, {
-    ...runtime,
-    mode,
-    updated_at: timestamp,
-  });
+  writeEpicRuntimeMode(root, slug, mode);
 
   console.log(`Epic mode set for ${slug}: ${mode}`);
 }
@@ -267,39 +245,17 @@ export function bindSession(flags = {}) {
   const bindings = readJson(bindingsPath, { sessions: {} });
   const normalizedBindings = bindings && typeof bindings === "object" && !Array.isArray(bindings) ? bindings : { sessions: {} };
   const sessions = normalizedBindings.sessions && typeof normalizedBindings.sessions === "object" && !Array.isArray(normalizedBindings.sessions) ? normalizedBindings.sessions : {};
-  const activeSessions =
-    normalizedBindings.active_sessions && typeof normalizedBindings.active_sessions === "object" && !Array.isArray(normalizedBindings.active_sessions)
-      ? normalizedBindings.active_sessions
-      : {};
   const boundAt = nowIso();
-  const activeKey = `${slug}:${mode}`;
-  const previousSessionId = activeSessions[activeKey] ?? null;
-
-  for (const [existingSessionId, binding] of Object.entries(sessions)) {
-    if (!binding || typeof binding !== "object") {
-      continue;
-    }
-
-    if (binding.epic_slug === slug && binding.mode === mode && existingSessionId !== sessionId) {
-      sessions[existingSessionId] = {
-        ...binding,
-        active: false,
-        deactivated_at: boundAt,
-      };
-    }
-  }
 
   sessions[sessionId] = {
     active: true,
     activated_at: boundAt,
     bound_at: boundAt,
     epic_slug: slug,
-    mode,
     source: currentSession ? (currentSession.source === "claude-hook-capture" ? "current-claude-code-session" : "current-codex-session") : "explicit-session-id",
     turn_id: currentSession?.turn_id ?? null,
   };
-  activeSessions[activeKey] = sessionId;
-  normalizedBindings.active_sessions = activeSessions;
+  delete normalizedBindings.active_sessions;
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
@@ -308,8 +264,7 @@ export function bindSession(flags = {}) {
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
     epic_slug: slug,
-    mode,
-    previous_session_id: previousSessionId,
+    requested_mode: mode,
     session_id: sessionId,
   });
 
@@ -318,12 +273,11 @@ export function bindSession(flags = {}) {
       sessionId,
       slug,
     });
+  } else {
+    writeEpicRuntimeMode(root, slug, mode);
   }
 
   console.log(`Active ${mode} session for ${slug}: ${sessionId}`);
-  if (previousSessionId && previousSessionId !== sessionId) {
-    console.log(`Previous active session deactivated: ${previousSessionId}`);
-  }
 }
 
 export function unbindSession(flags = {}) {
@@ -350,10 +304,6 @@ export function unbindSession(flags = {}) {
   const bindings = readJson(bindingsPath, { sessions: {} });
   const normalizedBindings = bindings && typeof bindings === "object" && !Array.isArray(bindings) ? bindings : { sessions: {} };
   const sessions = normalizedBindings.sessions && typeof normalizedBindings.sessions === "object" && !Array.isArray(normalizedBindings.sessions) ? normalizedBindings.sessions : {};
-  const activeSessions =
-    normalizedBindings.active_sessions && typeof normalizedBindings.active_sessions === "object" && !Array.isArray(normalizedBindings.active_sessions)
-      ? normalizedBindings.active_sessions
-      : {};
   const binding = sessions[sessionId];
 
   if (!binding || typeof binding !== "object" || binding.active !== true) {
@@ -362,9 +312,12 @@ export function unbindSession(flags = {}) {
   }
 
   const epicSlug = String(binding.epic_slug);
-  const mode = String(binding.mode);
   const unboundAt = nowIso();
-  const activeKey = `${epicSlug}:${mode}`;
+  const runtimePath = runtimeStatePath(root, epicSlug);
+  const runtime = readJson(runtimePath, {});
+  const normalizedRuntime = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime : {};
+  const mode = typeof normalizedRuntime.mode === "string" ? normalizedRuntime.mode : typeof binding.mode === "string" ? binding.mode : "unknown";
+  const loop = normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop) ? normalizedRuntime.implementation_loop : {};
 
   sessions[sessionId] = {
     ...binding,
@@ -373,13 +326,25 @@ export function unbindSession(flags = {}) {
     deactivated_reason: reason,
   };
 
-  if (activeSessions[activeKey] === sessionId) {
-    delete activeSessions[activeKey];
-  }
-
-  normalizedBindings.active_sessions = activeSessions;
+  delete normalizedBindings.active_sessions;
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
+
+  if (loop.driver_session_id === sessionId) {
+    writeJson(runtimePath, {
+      ...normalizedRuntime,
+      implementation_loop: {
+        ...loop,
+        driver_session_id: null,
+        last_reason: "implementation-driver-unbound",
+        last_transition_at: unboundAt,
+        last_transition_by: "unbind-session",
+        next_role: "idle",
+        status: "idle",
+      },
+      updated_at: unboundAt,
+    });
+  }
 
   const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionId);
   ensureDir(sessionDir);
@@ -392,6 +357,31 @@ export function unbindSession(flags = {}) {
   });
 
   console.log(`Session ${sessionId} unbound from ${epicSlug} (${mode}).`);
+}
+
+function writeEpicRuntimeMode(root, slug, mode) {
+  const runtimePath = runtimeStatePath(root, slug);
+  if (!fs.existsSync(runtimePath)) {
+    throw new Error(`Runtime state not found: ${runtimePath}`);
+  }
+
+  let runtime;
+  try {
+    runtime = JSON.parse(fs.readFileSync(runtimePath, "utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Cannot read runtime state: ${message}`);
+  }
+
+  if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+    throw new Error(`Runtime state must be an object: ${runtimePath}`);
+  }
+
+  writeJson(runtimePath, {
+    ...runtime,
+    mode,
+    updated_at: nowIso(),
+  });
 }
 
 export function listEpics(flags = {}) {

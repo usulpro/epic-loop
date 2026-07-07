@@ -117,6 +117,63 @@ test("no reminder is injected for a bound implementation session on UserPromptSu
   }
 });
 
+test("bindings are mode-less memberships and allow multiple active members", () => {
+  const { root, slug } = scaffoldEpicRoot("membership-schema-");
+  const otherSlug = "other-epic";
+
+  try {
+    bindSession(root, slug, "session-a", "shaping");
+    bindSession(root, slug, "session-b", "shaping");
+
+    const bindings = readJsonFile(bindingsPath(root));
+    assert.equal(bindings.active_sessions, undefined);
+    assert.equal(bindings.sessions["session-a"].active, true);
+    assert.equal(bindings.sessions["session-a"].epic_slug, slug);
+    assert.equal(bindings.sessions["session-a"].mode, undefined);
+    assert.equal(bindings.sessions["session-b"].active, true);
+    assert.equal(bindings.sessions["session-b"].epic_slug, slug);
+    assert.equal(bindings.sessions["session-b"].mode, undefined);
+
+    const firstReminder = runHook(root, promptPayload(root, "session-a"));
+    const secondReminder = runHook(root, promptPayload(root, "session-b"));
+    assert.equal(JSON.parse(firstReminder.stdout).hookSpecificOutput.additionalContext.includes(`Bound to epic "${slug}" — shaping mode.`), true);
+    assert.equal(JSON.parse(secondReminder.stdout).hookSpecificOutput.additionalContext.includes(`Bound to epic "${slug}" — shaping mode.`), true);
+
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Other epic", "--slug", otherSlug, "--no-gitignore"]));
+    bindSession(root, otherSlug, "session-a", "review");
+
+    const rebound = readJsonFile(bindingsPath(root));
+    assert.equal(rebound.sessions["session-a"].active, true);
+    assert.equal(rebound.sessions["session-a"].epic_slug, otherSlug);
+    assert.equal(rebound.sessions["session-b"].active, true);
+    assert.equal(rebound.sessions["session-b"].epic_slug, slug);
+    assert.equal(rebound.active_sessions, undefined);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("implementation binding designates and replaces the runtime driver", () => {
+  const { root, slug } = scaffoldEpicRoot("membership-driver-");
+
+  try {
+    bindSession(root, slug, "driver-one", "implementation");
+    let runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.mode, "implementation");
+    assert.equal(runtime.implementation_loop.driver_session_id, "driver-one");
+
+    bindSession(root, slug, "driver-two", "implementation");
+    const bindings = readJsonFile(bindingsPath(root));
+    runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(bindings.sessions["driver-one"].active, true);
+    assert.equal(bindings.sessions["driver-two"].active, true);
+    assert.equal(runtime.implementation_loop.driver_session_id, "driver-two");
+    assert.equal(bindings.active_sessions, undefined);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("unbind-session is a no-op for a never-bound session id", () => {
   const { root, slug } = scaffoldEpicRoot("unbind-noop-");
 
@@ -148,7 +205,8 @@ test("unbind-session deactivates a bound session with the default reason", () =>
     assert.equal(entry.active, false);
     assert.equal(typeof entry.deactivated_at, "string");
     assert.equal(entry.deactivated_reason, "user-requested-unbind");
-    assert.equal(Object.hasOwn(bindings.active_sessions, `${slug}:shaping`), false);
+    assert.equal(entry.mode, undefined);
+    assert.equal(bindings.active_sessions, undefined);
 
     const unbindRecord = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "sessions", "session-bound", "unbind.json"));
     assert.equal(unbindRecord.epic_slug, slug);
@@ -208,6 +266,40 @@ test("hooks are silent for a session id after it is unbound", () => {
 
     const after = runHook(root, promptPayload(root, "session-bound"));
     assert.equal(after.stdout, "");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("unbinding the implementation driver idles the loop but unbinding a non-driver does not", () => {
+  const { root, slug } = scaffoldEpicRoot("unbind-driver-");
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+
+  try {
+    bindSession(root, slug, "driver-session", "implementation");
+
+    const bindings = readJsonFile(bindingsPath(root));
+    bindings.sessions["observer-session"] = {
+      active: true,
+      activated_at: "2026-07-01T00:00:00+00:00",
+      bound_at: "2026-07-01T00:00:00+00:00",
+      epic_slug: slug,
+      source: "explicit-session-id",
+      turn_id: null,
+    };
+    fs.writeFileSync(bindingsPath(root), `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
+
+    assertSuccess(runNodeScript("unbind-session.mjs", ["--root", root, "--session-id", "observer-session"]));
+    let runtime = readJsonFile(runtimePath);
+    assert.equal(runtime.implementation_loop.status, "running");
+    assert.equal(runtime.implementation_loop.driver_session_id, "driver-session");
+
+    assertSuccess(runNodeScript("unbind-session.mjs", ["--root", root, "--session-id", "driver-session"]));
+    runtime = readJsonFile(runtimePath);
+    assert.equal(runtime.implementation_loop.status, "idle");
+    assert.equal(runtime.implementation_loop.next_role, "idle");
+    assert.equal(runtime.implementation_loop.driver_session_id, null);
+    assert.equal(runtime.implementation_loop.last_reason, "implementation-driver-unbound");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

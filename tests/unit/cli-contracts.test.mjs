@@ -378,6 +378,10 @@ test("bind-session current lookup preserves Codex hook capture behavior", () => 
     const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
     assert.equal(bindings.sessions["codex-current-session"].source, "current-codex-session");
     assert.equal(bindings.sessions["codex-current-session"].turn_id, "turn-current");
+    assert.equal(bindings.sessions["codex-current-session"].mode, undefined);
+    assert.equal(bindings.active_sessions, undefined);
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.driver_session_id, "codex-current-session");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -410,7 +414,10 @@ test("bind-session current lookup uses fresh Claude Code hook captures", () => {
 
     const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
     assert.equal(bindings.sessions["claude-current-session"].source, "current-claude-code-session");
-    assert.equal(bindings.active_sessions[`${slug}:implementation`], "claude-current-session");
+    assert.equal(bindings.sessions["claude-current-session"].mode, undefined);
+    assert.equal(bindings.active_sessions, undefined);
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.driver_session_id, "claude-current-session");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -486,6 +493,8 @@ test("bind-session preserves explicit session-id binding on Claude Code", () => 
 
     const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
     assert.equal(bindings.sessions["explicit-claude-session"].source, "explicit-session-id");
+    assert.equal(bindings.sessions["explicit-claude-session"].mode, undefined);
+    assert.equal(bindings.active_sessions, undefined);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
