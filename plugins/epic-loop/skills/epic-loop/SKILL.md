@@ -1,6 +1,6 @@
 ---
 name: epic-loop
-description: Use this skill for work inside an epic-loop workspace: reading or editing `.epic-loop/` artifacts; adding, editing, or closing epic tasks, research tasks, or phases; switching shaping, implementation, or review modes; resuming an epic by slug; detaching the current session when the user says `unbind epic` or asks to work outside the epic; or when hook context includes `[epic-loop] epic=... mode=...`. Also trigger on the `epic-loop` CLI/package by name.
+description: Use this skill when the user explicitly asks to run the epic-loop runtime or work inside an epic-loop workspace: reading or editing `.epic-loop/` artifacts; adding, editing, or closing epic tasks, research tasks, or phases; switching shaping, implementation, or review modes; resuming an epic by slug; detaching the current session when the user says `unbind epic` or asks to work outside the epic; or when hook context includes `[epic-loop] epic=... mode=...`.
 ---
 
 # Epic Loop
@@ -339,7 +339,7 @@ Review findings should become docs corrections, follow-up tasks, a new implement
 
 ## Parallel Work
 
-One session may be in only one mode at a time, but multiple sessions may work on the same epic in different modes. Avoid conflicting writes by treating artifacts as mode-owned when possible:
+One session may be in only one mode at a time. An epic has one shared runtime mode, so same-epic different-mode sessions are not supported; multiple sessions on the same epic share that mode, and in implementation mode only the driver edits implementation artifacts. Avoid conflicting writes by treating artifacts as mode-owned when possible:
 
 - Shaping owns future docs, roadmap changes, open questions, and reset/baseline transitions when the reset ladder is invoked.
 - Implementation owns active task status, implementation log, verification notes, and task-local briefs.

@@ -144,3 +144,37 @@
 - Residual risk: Live AI review was intentionally not rerun in the correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
 - Commit: task-owned commit containing this closure note
 - Next move: Rerun Phase 3 AI review command verification after the prompt-file boundary correction.
+
+## 2026-07-07T14:50:50+00:00 - not-closed: focused and mocked command-boundary checks passed, but live AI review returned a schema-valid fail report with two error findings, so Phase 3 verification remains blocked.
+
+- Task: Phase 3 Task 6 - Verify the AI-assisted review command behaves like a deterministic script boundary
+- Verdict: not-closed: focused and mocked command-boundary checks passed, but live AI review returned a schema-valid fail report with two error findings, so Phase 3 verification remains blocked.
+- Changed:
+  - No tracked product files changed during verification
+  - tracker/state/risk now record the active correction task for trigger-boundary and parallel-session instruction findings.
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 7/7
+  - mocked valid report exited 0
+  - malformed report exited 1
+  - missing-output substitute exited 1
+  - mocked error report exited 1 with stable blocking diagnostics
+  - live pnpm run review:skills:ai exited 1 with schemaVersion=1, status=fail, and two error findings.
+- Residual risk: Live AI review remains intentionally blocking on semantic error findings; .validation-output/skill-review/latest.json is ignored and untracked.
+- Next move: Implement focused instruction correction for trigger-boundaries.package-name-too-broad and parallel-sessions.mode-support-conflict, then rerun Phase 3 verification.
+
+## 2026-07-07T14:52:38+00:00 - closed: maintained skill instructions now address the two live AI review error findings around package-name trigger breadth and same-epic parallel-mode consistency.
+
+- Task: Phase 3 Task 5 - Align skill trigger and parallel-session instructions surfaced by AI review
+- Verdict: closed: maintained skill instructions now address the two live AI review error findings around package-name trigger breadth and same-epic parallel-mode consistency.
+- Changed:
+  - plugins/epic-loop/skills/epic-loop/SKILL.md narrows the frontmatter trigger to explicit epic-loop runtime/workspace work and hook context
+  - SKILL.md Parallel Work now matches the shared-mode model from references/parallel-sessions.md
+  - tracker/state/risk artifacts mark the correction closed and verification active again.
+- Verification:
+  - node scripts/validate-epic-loop-package.mjs passed
+  - pnpm run format:check passed
+  - pnpm run validate passed
+  - git status --short --ignored .validation-output showed .validation-output/ ignored.
+- Residual risk: Live AI review was intentionally not rerun in this correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
+- Commit: task-owned commit containing this closure note
+- Next move: Rerun Phase 3 AI review command verification after the instruction correction.

@@ -102,6 +102,12 @@ Epic: Linting And Skill Checks
   - Acceptance: Absolute prompt paths outside the project or outside `.epic-loop/epics/<slug>/` are rejected; absolute prompt paths inside the active epic runtime prompt location are accepted and stored as normalized project-relative paths.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
+- [x] Kind: implementation | Status: done | Align skill trigger and parallel-session instructions surfaced by AI review.
+  - Outcome: The maintained `epic-loop` skill instructions no longer contain the two live AI review blocking issues around package-name trigger breadth and same-epic parallel-mode consistency.
+  - Surface: `plugins/epic-loop/skills/epic-loop/SKILL.md` and `plugins/epic-loop/skills/epic-loop/references/parallel-sessions.md` if needed.
+  - Acceptance: The frontmatter trigger wording activates the skill for explicit epic-loop runtime/workspace work without broadly triggering on ordinary package/plugin development by name; same-epic parallel-session guidance is consistent between the entrypoint and reference docs.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
 - [ ] Kind: verification | Status: doing | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
