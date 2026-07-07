@@ -133,18 +133,14 @@ Do not store mutable epic-loop state under `.codex/`, `.claude/`, or top-level `
 
 `.runtime/sessions/{session_id}.json` stores the latest known event, transcript path, cwd, model, and turn ids for registered epic-loop sessions only.
 
-`.runtime/session-bindings.json` maps a session to an epic:
+`.runtime/session-bindings.json` maps a session to an epic membership:
 
 ```json
 {
-  "active_sessions": {
-    "runtime-token-migration:implementation": "019..."
-  },
   "sessions": {
     "019...": {
       "active": true,
       "epic_slug": "runtime-token-migration",
-      "mode": "implementation",
       "bound_at": "2026-05-05T00:00:00+00:00"
     }
   }
@@ -159,15 +155,28 @@ When a bound session emits a hook event, the handler also mirrors a lightweight 
 
 ## Binding Sessions
 
+When resuming/orienting an existing epic by slug or path, auto-bind the current session as a mode-less member if the current-session capture is safe:
+
+```bash
+node <skill-dir>/scripts/auto-bind-session.mjs --current --slug "<epic-slug>"
+node <skill-dir>/scripts/auto-bind-session.mjs --current --path ".epic-loop/epics/<epic-slug>"
+```
+
+Auto-bind accepts only a fresh `UserPromptSubmit` hook capture. For Codex, it deliberately rejects the mtime transcript fallback. For Claude Code, the capture must be fresh, match the project root, and include `session_id` plus `transcript_path`. If no acceptable capture exists, the script prints a skip notice and exits successfully so orientation can continue.
+
+Auto-bind creates membership only. It does not change the epic mode, designate an implementation driver, or start the implementation loop.
+
 Bind the current session explicitly after the user confirms that implementation should run in this session:
 
 ```bash
 node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
 
-This deactivates the previous active session for the same epic and mode. Do not infer bindings from cwd alone when multiple epic sessions can run inside the same project. If `--current` cannot detect the current session for the selected platform, pass `--session-id "<session_id>"` explicitly.
+This designates the current session as the exclusive implementation driver for the epic. Do not infer driver bindings from cwd alone when multiple sessions can run inside the same project. If `--current` cannot detect the current session for the selected platform, pass `--session-id "<session_id>"` explicitly.
 
-For Codex, `--current` uses the existing Codex current-session capture and session metadata fallback. For Claude Code, `--current` reads only the Claude Code hook capture for the selected platform; the capture must be fresh, match the current project root, and include string `session_id` and `transcript_path`. If the Claude Code capture is missing, stale, malformed, wrong-root, or ambiguous, pass `--session-id "<session_id>"` explicitly.
+For driver binding, Codex `--current` uses the existing Codex current-session capture and session metadata fallback. Claude Code `--current` reads only the Claude Code hook capture for the selected platform; the capture must be fresh, match the current project root, and include string `session_id` and `transcript_path`. If the Claude Code capture is missing, stale, malformed, wrong-root, or ambiguous, pass `--session-id "<session_id>"` explicitly.
+
+Unbind on user request with `node <skill-dir>/scripts/unbind-session.mjs --current` (or `--session-id "<session_id>"`, optional `--reason`). It deactivates the session's entry in `session-bindings.json` (`active: false`, `deactivated_at`, `deactivated_reason`); hooks become silent no-ops for that session id afterwards. Unbinding an unbound session is a harmless no-op. Rebind later through the normal `bind-session.mjs` flow.
 
 ## What Hooks Can And Cannot Do
 
@@ -177,6 +186,8 @@ Hooks can:
 - keep per-session state separate
 - update project-local routing metadata
 - prepare the next submode marker for the manager/techlead/engineer cycle
+- inject a one-line compact marker via `hookSpecificOutput.additionalContext` on `UserPromptSubmit` for active member sessions in `shaping` or `review` mode: `[epic-loop] epic=<slug> mode=<mode> — follow epic-loop skill mode rules`
+- inject an advisory implementation lock marker for non-driver member sessions while another session drives the implementation loop: `[epic-loop] epic=<slug> mode=implementation — loop running in another session; read-only, do not edit epic artifacts`
 - continue the current session from `Stop` by returning `{ "decision": "block", "reason": "<prompt>" }`
 - keep chaining Claude Code roles across `stop_hook_active: true` Stop reentries within the same turn; `stop_hook_active` is informational, not a hard gate, so each reentry records the role report and issues the next block continuation
 - give an external runner enough data to recover the right session when hook continuation did not run
@@ -192,9 +203,9 @@ Hooks cannot be assumed to:
 For parallel sessions:
 
 - each live platform session has its own `session_id`
-- each session must be bound to one epic and mode
+- each session may be bound to one epic as an active member; the epic's runtime mode is shared by all members
 - hook events are stored under `hook-events/{session_id}` only after the session is bound
 - active epic writes should remain mode-owned where possible
 - broad artifact rewrites require reading the file immediately before editing
 
-If two sessions are bound to the same epic and same mode, prefer append-only logs and task-level ownership markers.
+If multiple sessions are bound to the same epic, prefer append-only logs and task-level ownership markers. During implementation, only the driver session should edit epic artifacts; non-driver members receive the advisory read-only lock marker.

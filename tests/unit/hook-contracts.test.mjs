@@ -11,16 +11,30 @@ function writeSessionBinding(root, slug, sessionId) {
     path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
     `${JSON.stringify(
       {
-        active_sessions: {
-          [`${slug}:implementation`]: sessionId,
-        },
         sessions: {
           [sessionId]: {
             active: true,
             epic_slug: slug,
-            mode: "implementation",
           },
         },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+  const runtime = readJsonFile(runtimePath);
+  fs.writeFileSync(
+    runtimePath,
+    `${JSON.stringify(
+      {
+        ...runtime,
+        implementation_loop: {
+          ...(runtime.implementation_loop ?? {}),
+          driver_session_id: sessionId,
+        },
+        mode: "implementation",
       },
       null,
       2,
@@ -40,6 +54,7 @@ function writeOpenImplementationTurn(root, slug, role = "engineer") {
         implementation_loop: {
           active_turn_started_at: "2026-07-01T00:00:00+00:00",
           current_role: role,
+          driver_session_id: runtime.implementation_loop?.driver_session_id ?? null,
           iteration: 2,
           next_role: "techlead",
           status: "running",
@@ -132,6 +147,131 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
     assert.equal(nextRuntime.implementation_loop.iteration, 1);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "last-hook-event.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "sessions", sessionId, "last-hook-event.json")), true);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bound Stop continuation only runs for the implementation driver", () => {
+  const root = makeTempRoot("hook-driver-stop-");
+  const slug = "driver-routing";
+  const driverSessionId = "session-driver";
+  const observerSessionId = "session-observer";
+
+  try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Driver routing project", "--slug", slug, "--no-gitignore"]));
+
+    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+    const runtime = readJsonFile(runtimePath);
+    fs.writeFileSync(
+      runtimePath,
+      `${JSON.stringify(
+        {
+          ...runtime,
+          implementation_loop: {
+            current_role: null,
+            iteration: 0,
+            next_role: "manager",
+            status: "running",
+          },
+          mode: "implementation",
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    writeSessionBinding(root, slug, driverSessionId);
+    const bindingsPath = path.join(root, ".epic-loop", ".runtime", "session-bindings.json");
+    const bindings = readJsonFile(bindingsPath);
+    bindings.sessions[observerSessionId] = {
+      active: true,
+      epic_slug: slug,
+    };
+    fs.writeFileSync(bindingsPath, `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
+
+    const observerStop = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: observerSessionId,
+        stop_hook_active: true,
+        turn_id: "observer-turn",
+      }),
+    });
+    assertSuccess(observerStop);
+    assert.equal(observerStop.stdout, "");
+    assert.equal(readJsonFile(runtimePath).implementation_loop.current_role, null);
+
+    const driverStop = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: driverSessionId,
+        stop_hook_active: true,
+        turn_id: "driver-turn",
+      }),
+    });
+    assertSuccess(driverStop);
+    assert.match(JSON.parse(driverStop.stdout).reason, /manager housekeeping turn 1/u);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("non-driver UserPromptSubmit does not interrupt an open implementation turn", () => {
+  const root = makeTempRoot("hook-driver-interrupt-");
+  const slug = "driver-interrupt";
+  const driverSessionId = "session-driver";
+  const observerSessionId = "session-observer";
+
+  try {
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Driver interrupt project", "--slug", slug, "--no-gitignore"]));
+    writeOpenImplementationTurn(root, slug, "engineer");
+    writeSessionBinding(root, slug, driverSessionId);
+
+    const bindingsPath = path.join(root, ".epic-loop", ".runtime", "session-bindings.json");
+    const bindings = readJsonFile(bindingsPath);
+    bindings.sessions[observerSessionId] = {
+      active: true,
+      epic_slug: slug,
+    };
+    fs.writeFileSync(bindingsPath, `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
+
+    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+    const observerPrompt = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "UserPromptSubmit",
+        session_id: observerSessionId,
+        turn_id: "observer-prompt",
+      }),
+    });
+    assertSuccess(observerPrompt);
+    assert.equal(
+      JSON.parse(observerPrompt.stdout).hookSpecificOutput.additionalContext,
+      `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
+    );
+    let runtime = readJsonFile(runtimePath);
+    assert.equal(runtime.implementation_loop.status, "running");
+    assert.equal(runtime.implementation_loop.active_turn_stopped_at, undefined);
+
+    const driverPrompt = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "UserPromptSubmit",
+        session_id: driverSessionId,
+        turn_id: "driver-prompt",
+      }),
+    });
+    assertSuccess(driverPrompt);
+    assert.equal(driverPrompt.stdout, "");
+    runtime = readJsonFile(runtimePath);
+    assert.equal(runtime.implementation_loop.status, "interrupted");
+    assert.equal(runtime.implementation_loop.last_interrupt_session_id, driverSessionId);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

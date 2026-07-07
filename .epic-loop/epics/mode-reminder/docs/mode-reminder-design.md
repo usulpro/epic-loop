@@ -1,6 +1,6 @@
 # Mode Reminder + Unbind Design Proposal
 
-Status: proposed (Phase 2). Not yet POC-validated (Phase 3) or implemented (Phase 5).
+Status: historical Phase 2 design. POC validation and the original implementation completed in Phases 3-5, but the reminder source/text portions are superseded by the accepted epic-centric model in `docs/epic-mode-model.md` (2026-07-07): mode now comes from epic runtime state, bindings are mode-less members, shaping/review use the compact marker, and implementation non-driver members receive a read-only lock marker.
 
 ## 1. Per-Turn Mode Reminder (`UserPromptSubmit`)
 
@@ -12,7 +12,9 @@ Status: proposed (Phase 2). Not yet POC-validated (Phase 3) or implemented (Phas
 
 ### Source of the mode value
 
-`binding.mode` from `.epic-loop/.runtime/session-bindings.json`, which is already parsed and loaded in `handleHook` to gate on (`getSessionBinding`). No additional file read (not `state-of-epic.md`, not `runtime-state.json`) is needed to know the mode — this satisfies the constraint that the reminder must be cheap.
+Historical design: `binding.mode` from `.epic-loop/.runtime/session-bindings.json`.
+
+Current design: `runtime-state.json` `mode` from the epic runtime state. This supersedes the "no additional file read" constraint so mode changes propagate to every active member session without rebinding.
 
 ### New function
 
@@ -42,10 +44,9 @@ function buildModeReminder(payload, binding) {
 
 ```js
 const MODE_REMINDER_TEXT = {
-  shaping: (slug) =>
-    `[epic-loop] Bound to epic "${slug}" — shaping mode. A plain imperative is a tracker.md task, not an action to run now — state which interpretation you're using (SKILL.md Shaping Rules).`,
-  review: (slug) =>
-    `[epic-loop] Bound to epic "${slug}" — review mode. Compare against original intent, not just current docs, and state which resolution path you're taking (SKILL.md Review Rules).`,
+  marker: (slug, mode) => `[epic-loop] epic=${slug} mode=${mode} — follow epic-loop skill mode rules`,
+  implementationLock: (slug) =>
+    `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
 };
 ```
 
@@ -95,9 +96,10 @@ Claude Code renders `additionalContext` as invisible model context (a system-rem
 | Binding state | `UserPromptSubmit` behavior |
 | --- | --- |
 | Unbound session | No-op (unchanged; gated by `getSessionBinding` before any new code runs) |
-| Bound, `mode: shaping` | `additionalContext` reminder injected every turn |
-| Bound, `mode: review` | `additionalContext` reminder injected every turn |
-| Bound, `mode: implementation` | No reminder; existing loop machinery (`Stop`-driven continuations) already carries role/mode context every turn |
+| Bound member, epic mode `shaping` | Compact `additionalContext` marker injected every turn |
+| Bound member, epic mode `review` | Compact `additionalContext` marker injected every turn |
+| Bound member, epic mode `implementation`, driver session | No reminder; existing loop machinery (`Stop`-driven continuations) already carries role/mode context every turn |
+| Bound member, epic mode `implementation`, non-driver session | Read-only lock marker injected every turn |
 
 ## 2. `unbind-session.mjs`
 

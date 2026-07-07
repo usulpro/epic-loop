@@ -63,6 +63,7 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
     current_role: null,
     active_turn_started_at: null,
     active_turn_stopped_at: null,
+    driver_session_id: sessionId,
     iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
     last_reason: "implementation-start",
     last_session_id: sessionId,
@@ -153,7 +154,7 @@ export function setNextRole(flags = {}) {
 }
 
 export function maybeBuildImplementationContinuation(projectRoot, payload, binding) {
-  if (payload.hook_event_name !== "Stop" || binding.mode !== "implementation") {
+  if (payload.hook_event_name !== "Stop") {
     return null;
   }
 
@@ -164,6 +165,10 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   let runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   let loop = normalizeObject(runtime.implementation_loop);
   const platform = readRuntimePlatform(projectRoot).platform;
+
+  if (runtime.mode !== "implementation" || loop.driver_session_id !== payload.session_id) {
+    return null;
+  }
 
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
@@ -315,7 +320,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
 }
 
 export function markInterruptedTurnIfNeeded(projectRoot, payload, binding) {
-  if (payload.hook_event_name !== "UserPromptSubmit" || binding.mode !== "implementation") {
+  if (payload.hook_event_name !== "UserPromptSubmit") {
     return false;
   }
 
@@ -324,6 +329,10 @@ export function markInterruptedTurnIfNeeded(projectRoot, payload, binding) {
   const runtimePath = runtimeStatePath(projectRoot, slug);
   const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
+
+  if (runtime.mode !== "implementation" || loop.driver_session_id !== payload.session_id) {
+    return false;
+  }
 
   if (!hasOpenTurn(loop)) {
     return false;
@@ -484,7 +493,6 @@ function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
     ...runtime,
     ...(summary.active_phase !== undefined ? { active_phase: summary.active_phase } : {}),
     ...(summary.active_task !== undefined ? { active_task: summary.active_task } : {}),
-    ...(summary.mode !== undefined ? { mode: summary.mode } : {}),
   };
 }
 
@@ -634,7 +642,6 @@ function readEpicStateSummary(projectRoot, slug) {
   return {
     active_phase: readStateLine(text, "Active phase"),
     active_task: readStateLine(text, "Active task"),
-    mode: readStateLine(text, "Current mode"),
   };
 }
 
