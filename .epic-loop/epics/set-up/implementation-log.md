@@ -70,3 +70,23 @@
   - live pnpm run review:skills:ai generated ignored latest.json and exited 1 on a valid error finding
 - Residual risk: AI-backed review output is model-dependent and the first live run found a real hook contract issue in hooks.mjs; follow-up correction is active before rubric expansion
 - Next move: Implement focused correction for unbound hook capture persistence, then continue the Phase 3 rubric task.
+
+## 2026-07-07T14:34:13+00:00 - closed: replaced raw pre-binding hook capture with a minimal current-session handshake so unbound hooks no longer persist raw payloads, prompt text, or transcript paths. bind-session --current remains covered for Codex and Claude Code; bound hook event persistence still occurs after the binding gate.
+
+- Task: Phase 3 Task 2 - Fix unbound hook capture persistence surfaced by AI skill review
+- Verdict: closed: replaced raw pre-binding hook capture with a minimal current-session handshake so unbound hooks no longer persist raw payloads, prompt text, or transcript paths. bind-session --current remains covered for Codex and Claude Code; bound hook event persistence still occurs after the binding gate.
+- Changed:
+  - plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs writes and reads minimal capture handshakes
+  - plugins/epic-loop/skills/epic-loop/scripts/lib/epics.mjs accepts Claude Code handshake captures for current-session binding
+  - plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs documents the pre-binding handshake boundary
+  - tests/unit/hook-contracts.test.mjs and tests/unit/cli-contracts.test.mjs assert no sensitive raw capture and preserved current binding
+- Verification:
+  - node --test tests/unit/hook-contracts.test.mjs passed 15/15
+  - node --test tests/unit/cli-contracts.test.mjs passed 19/19
+  - pnpm run test:unit passed 74/74
+  - pnpm run lint passed
+  - pnpm run format:check passed
+  - pnpm run validate passed
+- Residual risk: A minimal handshake is still written before binding because current-session binding needs session identity; it deliberately excludes prompt text, transcript paths, and raw hook payloads.
+- Commit: task-owned commit containing this closure note
+- Next move: Continue with Phase 3 Task 3: define the AI skill quality review rubric and finding schema.

@@ -470,8 +470,10 @@ test("bind-session current lookup requires explicit platform selection", () => {
 test("bind-session current lookup preserves Codex hook capture behavior", () => {
   const root = makeTempRoot("bind-codex-current-");
   const slug = "bind-codex";
+  const transcriptPath = path.join(root, "codex-transcript.jsonl");
 
   try {
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Codex current project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
 
@@ -479,11 +481,24 @@ test("bind-session current lookup preserves Codex hook capture behavior", () => 
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive codex prompt",
         session_id: "codex-current-session",
+        transcript_path: transcriptPath,
         turn_id: "turn-current",
       }),
     });
     assertSuccess(capture);
+
+    const handshake = readJsonFile(path.join(root, ".codex", "tmp", "last-hook-capture.json"));
+    assert.deepEqual(handshake.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "codex-current-session",
+      turn_id: "turn-current",
+    });
+    assert.equal(handshake.payload, undefined);
+    assert.equal(JSON.stringify(handshake).includes("sensitive codex prompt"), false);
+    assert.equal(JSON.stringify(handshake).includes(transcriptPath), false);
 
     const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
     assertSuccess(bind);
@@ -515,12 +530,24 @@ test("bind-session current lookup uses fresh Claude Code hook captures", () => {
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive claude prompt",
         session_id: "claude-current-session",
         stop_hook_active: false,
         transcript_path: transcriptPath,
       }),
     });
     assertSuccess(capture);
+
+    const handshake = readJsonFile(path.join(root, ".epic-loop", ".runtime", "claude-code-last-hook-capture.json"));
+    assert.deepEqual(handshake.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "claude-current-session",
+      turn_id: null,
+    });
+    assert.equal(handshake.payload, undefined);
+    assert.equal(JSON.stringify(handshake).includes("sensitive claude prompt"), false);
+    assert.equal(JSON.stringify(handshake).includes(transcriptPath), false);
 
     const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
     assertSuccess(bind);

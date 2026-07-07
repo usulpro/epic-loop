@@ -84,13 +84,13 @@ Epic: Linting And Skill Checks
   - Acceptance: `pnpm run review:skills:ai` invokes `codex exec --ephemeral`, requires a structured JSON report, validates the report schema, prints stable findings, and exits non-zero for blocking findings, malformed JSON, missing output, unknown schema versions, or failed Codex execution.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: doing | Fix unbound hook capture persistence surfaced by AI skill review.
+- [x] Kind: implementation | Status: done | Fix unbound hook capture persistence surfaced by AI skill review.
   - Outcome: Unbound hook invocations do not persist raw hook payloads or prompt/transcript metadata, while current-session binding remains reliable.
   - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, hook capture/session-binding helpers, and focused hook/unit tests.
   - Acceptance: Unbound sessions remain silent/no-op for runtime records except any deliberately minimal, non-sensitive binding handshake needed by `bind-session --current`; bound hook routing and implementation-loop continuation behavior remain covered by tests.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Define the AI skill quality review rubric and finding schema.
+- [ ] Kind: implementation | Status: doing | Define the AI skill quality review rubric and finding schema.
   - Outcome: The model-backed review evaluates skill semantics consistently instead of producing free-form prose.
   - Surface: Review skill or prompt file, JSON schema fixture, review runner tests, skill policy docs.
   - Acceptance: The rubric covers invocation quality, trigger boundaries, progressive disclosure, task-local reference organization, degree of freedom, script/dependency safety concerns, and actionable recommendations with path and line evidence where possible.

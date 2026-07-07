@@ -368,9 +368,8 @@ export function handleHook(rawInput, flags = {}) {
   const sessionId = String(payload.session_id ?? "no-session");
   const platform = requireRuntimePlatform(projectRoot);
 
-  // Record the live session on every event, before the binding gate. This is the
-  // source `bind-session --current` reads to attach the real session id; without it
-  // binding falls back to an mtime guess that misfires across parallel sessions.
+  // Record only a minimal binding handshake before the binding gate. Raw hook
+  // payloads are persisted only for sessions that already opted into epic-loop.
   if (platform === "codex") {
     writeHookCapture(projectRoot, payload);
   } else if (platform === "claude-code") {

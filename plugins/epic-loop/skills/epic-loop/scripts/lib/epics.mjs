@@ -412,7 +412,10 @@ function isAutoBindableCurrentSession(currentSession, platform) {
   }
 
   if (platform === "claude-code") {
-    return currentSession.source === "claude-hook-capture" && typeof currentSession.transcript_path === "string" && currentSession.transcript_path.length > 0;
+    return (
+      currentSession.source === "claude-hook-capture" &&
+      (currentSession.capture_kind === "handshake" || (typeof currentSession.transcript_path === "string" && currentSession.transcript_path.length > 0))
+    );
   }
 
   return currentSession.source === "hook-capture";

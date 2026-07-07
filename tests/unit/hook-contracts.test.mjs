@@ -70,14 +70,18 @@ function writeOpenImplementationTurn(root, slug, role = "engineer") {
 
 test("hook CLI captures unbound sessions without writing epic-loop runtime records", () => {
   const root = makeTempRoot("hook-unbound-");
+  const transcriptPath = path.join(root, "transcript.jsonl");
   const payload = {
     cwd: root,
     hook_event_name: "Stop",
+    prompt: "sensitive prompt text",
     session_id: "session-unbound",
+    transcript_path: transcriptPath,
     turn_id: "turn-1",
   };
 
   try {
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
 
     const result = runNodeScript("hook.mjs", ["--root", root], {
@@ -86,7 +90,16 @@ test("hook CLI captures unbound sessions without writing epic-loop runtime recor
 
     assertSuccess(result);
     assert.equal(result.stdout, "");
-    assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), true);
+    const capture = readJsonFile(path.join(root, ".codex", "tmp", "last-hook-capture.json"));
+    assert.deepEqual(capture.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "session-unbound",
+      turn_id: "turn-1",
+    });
+    assert.equal(capture.payload, undefined);
+    assert.equal(JSON.stringify(capture).includes("sensitive prompt text"), false);
+    assert.equal(JSON.stringify(capture).includes(transcriptPath), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
@@ -277,7 +290,7 @@ test("non-driver UserPromptSubmit does not interrupt an open implementation turn
   }
 });
 
-test("Claude Code unbound hook payload exits without epic-loop runtime records", () => {
+test("Claude Code unbound hook payload records only a minimal current-session handshake", () => {
   const root = makeTempRoot("hook-claude-unbound-");
   const transcriptPath = path.join(root, "transcript.jsonl");
 
@@ -289,6 +302,7 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive claude prompt",
         session_id: "claude-session-unbound",
         stop_hook_active: false,
         transcript_path: transcriptPath,
@@ -298,6 +312,16 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
     assertSuccess(result);
     assert.equal(result.stdout, "");
     assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), false);
+    const capture = readJsonFile(path.join(root, ".epic-loop", ".runtime", "claude-code-last-hook-capture.json"));
+    assert.deepEqual(capture.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "claude-session-unbound",
+      turn_id: null,
+    });
+    assert.equal(capture.payload, undefined);
+    assert.equal(JSON.stringify(capture).includes("sensitive claude prompt"), false);
+    assert.equal(JSON.stringify(capture).includes(transcriptPath), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
