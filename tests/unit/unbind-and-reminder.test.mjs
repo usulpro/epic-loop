@@ -38,40 +38,54 @@ function bindingsPath(root) {
   return path.join(root, ".epic-loop", ".runtime", "session-bindings.json");
 }
 
-test("mode reminder is injected on UserPromptSubmit for a bound shaping session", () => {
+function runtimeStatePath(root, slug) {
+  return path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+}
+
+function readAdditionalContext(result) {
+  const output = JSON.parse(result.stdout.trim());
+  assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
+  return output.hookSpecificOutput.additionalContext;
+}
+
+test("compact mode marker is injected on UserPromptSubmit for two bound shaping members", () => {
   const { root, slug } = scaffoldEpicRoot("reminder-shaping-");
 
   try {
-    bindSession(root, slug, "session-shaping", "shaping");
+    bindSession(root, slug, "session-a", "shaping");
+    bindSession(root, slug, "session-b", "shaping");
 
-    const result = runHook(root, promptPayload(root, "session-shaping"));
-    const lines = result.stdout.trim().split("\n");
-    assert.equal(lines.length, 1);
-
-    const output = JSON.parse(lines[0]);
-    assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
-    const text = output.hookSpecificOutput.additionalContext;
-    assert.equal(text.startsWith("[epic-loop]"), true);
-    assert.equal(text.includes(`Bound to epic "${slug}" — shaping mode.`), true);
-    assert.equal(text.includes("SKILL.md Shaping Rules"), true);
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-a"))), `[epic-loop] epic=${slug} mode=shaping — follow epic-loop skill mode rules`);
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-b"))), `[epic-loop] epic=${slug} mode=shaping — follow epic-loop skill mode rules`);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
 });
 
-test("mode reminder is injected on UserPromptSubmit for a bound review session", () => {
+test("compact mode marker is injected on UserPromptSubmit for a bound review member", () => {
   const { root, slug } = scaffoldEpicRoot("reminder-review-");
 
   try {
     bindSession(root, slug, "session-review", "review");
 
-    const result = runHook(root, promptPayload(root, "session-review"));
-    const output = JSON.parse(result.stdout.trim());
-    assert.equal(output.hookSpecificOutput.hookEventName, "UserPromptSubmit");
-    const text = output.hookSpecificOutput.additionalContext;
-    assert.equal(text.startsWith("[epic-loop]"), true);
-    assert.equal(text.includes(`Bound to epic "${slug}" — review mode.`), true);
-    assert.equal(text.includes("SKILL.md Review Rules"), true);
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-review"))), `[epic-loop] epic=${slug} mode=review — follow epic-loop skill mode rules`);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("mode marker follows runtime mode changes without rebinding members", () => {
+  const { root, slug } = scaffoldEpicRoot("reminder-propagation-");
+
+  try {
+    bindSession(root, slug, "session-a", "shaping");
+    bindSession(root, slug, "session-b", "shaping");
+
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-b"))), `[epic-loop] epic=${slug} mode=shaping — follow epic-loop skill mode rules`);
+
+    assertSuccess(runNodeScript("set-epic-mode.mjs", ["--root", root, "--slug", slug, "--mode", "review"]));
+
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-b"))), `[epic-loop] epic=${slug} mode=review — follow epic-loop skill mode rules`);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -104,14 +118,28 @@ test("no reminder leaks into Stop events for a bound shaping session", () => {
   }
 });
 
-test("no reminder is injected for a bound implementation session on UserPromptSubmit", () => {
+test("implementation driver gets no reminder and non-driver member gets the lock marker", () => {
   const { root, slug } = scaffoldEpicRoot("reminder-implementation-");
 
   try {
-    bindSession(root, slug, "session-impl", "implementation");
+    bindSession(root, slug, "driver-session", "implementation");
 
-    const result = runHook(root, promptPayload(root, "session-impl"));
-    assert.equal(result.stdout, "");
+    const bindings = readJsonFile(bindingsPath(root));
+    bindings.sessions["observer-session"] = {
+      active: true,
+      activated_at: "2026-07-01T00:00:00+00:00",
+      bound_at: "2026-07-01T00:00:00+00:00",
+      epic_slug: slug,
+      source: "explicit-session-id",
+      turn_id: null,
+    };
+    fs.writeFileSync(bindingsPath(root), `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
+
+    assert.equal(runHook(root, promptPayload(root, "driver-session")).stdout, "");
+    assert.equal(
+      readAdditionalContext(runHook(root, promptPayload(root, "observer-session"))),
+      `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
+    );
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -134,10 +162,8 @@ test("bindings are mode-less memberships and allow multiple active members", () 
     assert.equal(bindings.sessions["session-b"].epic_slug, slug);
     assert.equal(bindings.sessions["session-b"].mode, undefined);
 
-    const firstReminder = runHook(root, promptPayload(root, "session-a"));
-    const secondReminder = runHook(root, promptPayload(root, "session-b"));
-    assert.equal(JSON.parse(firstReminder.stdout).hookSpecificOutput.additionalContext.includes(`Bound to epic "${slug}" — shaping mode.`), true);
-    assert.equal(JSON.parse(secondReminder.stdout).hookSpecificOutput.additionalContext.includes(`Bound to epic "${slug}" — shaping mode.`), true);
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-a"))), `[epic-loop] epic=${slug} mode=shaping — follow epic-loop skill mode rules`);
+    assert.equal(readAdditionalContext(runHook(root, promptPayload(root, "session-b"))), `[epic-loop] epic=${slug} mode=shaping — follow epic-loop skill mode rules`);
 
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Other epic", "--slug", otherSlug, "--no-gitignore"]));
     bindSession(root, otherSlug, "session-a", "review");
@@ -266,6 +292,25 @@ test("hooks are silent for a session id after it is unbound", () => {
 
     const after = runHook(root, promptPayload(root, "session-bound"));
     assert.equal(after.stdout, "");
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("mode reminder silently skips malformed or unsupported runtime state", () => {
+  const { root, slug } = scaffoldEpicRoot("reminder-runtime-skip-");
+
+  try {
+    bindSession(root, slug, "session-bound", "shaping");
+
+    fs.rmSync(runtimeStatePath(root, slug), { force: true });
+    assert.equal(runHook(root, promptPayload(root, "session-bound")).stdout, "");
+
+    fs.writeFileSync(runtimeStatePath(root, slug), "{", "utf8");
+    assert.equal(runHook(root, promptPayload(root, "session-bound")).stdout, "");
+
+    fs.writeFileSync(runtimeStatePath(root, slug), `${JSON.stringify({ mode: "paused" }, null, 2)}\n`, "utf8");
+    assert.equal(runHook(root, promptPayload(root, "session-bound")).stdout, "");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

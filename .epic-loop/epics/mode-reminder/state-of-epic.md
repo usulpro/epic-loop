@@ -3,7 +3,6 @@
 Epic: Epic-Loop Mode Reminder And Session Unbind
 Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
-Current mode: shaping
 Active phase: Phase 7 - Epic-Centric Mode Model And Compact Reminder
 Active task: TBD
 
@@ -26,4 +25,4 @@ Active task: TBD
 
 ## Next Action
 
-- Phase 7 is ready for implementation. Start the implementation loop in a session after explicit user confirmation (`bind-session.mjs --current --slug mode-reminder --mode implementation`).
+- Continue Phase 7 Task 3: implement the compact member marker and implementation non-driver lock marker.

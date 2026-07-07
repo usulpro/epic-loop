@@ -744,10 +744,8 @@ function installClaudeHooks(root, flags = {}) {
 }
 
 const MODE_REMINDER_TEXT = {
-  shaping: (slug) =>
-    `[epic-loop] Bound to epic "${slug}" — shaping mode. A plain imperative is a tracker.md task, not an action to run now — state which interpretation you're using (SKILL.md Shaping Rules).`,
-  review: (slug) =>
-    `[epic-loop] Bound to epic "${slug}" — review mode. Compare against original intent, not just current docs, and state which resolution path you're taking (SKILL.md Review Rules).`,
+  implementationLock: (slug) => `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
+  marker: (slug, mode) => `[epic-loop] epic=${slug} mode=${mode} — follow epic-loop skill mode rules`,
 };
 
 export function buildModeReminder(projectRoot, payload, binding) {
@@ -755,12 +753,23 @@ export function buildModeReminder(projectRoot, payload, binding) {
     return null;
   }
   const runtime = readJson(runtimeStatePath(projectRoot, binding.epic_slug), {});
-  const mode = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime.mode : null;
-  if (mode !== "shaping" && mode !== "review") {
-    return null;
+  const normalizedRuntime = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime : {};
+  const mode = normalizedRuntime.mode;
+  const loop =
+    normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop)
+      ? normalizedRuntime.implementation_loop
+      : {};
+
+  let text = null;
+  if (mode === "shaping" || mode === "review") {
+    text = MODE_REMINDER_TEXT.marker(binding.epic_slug, mode);
+  } else if (mode === "implementation" && loop.driver_session_id !== payload.session_id) {
+    text = MODE_REMINDER_TEXT.implementationLock(binding.epic_slug);
   }
 
-  const text = MODE_REMINDER_TEXT[mode](binding.epic_slug);
+  if (!text) {
+    return null;
+  }
 
   return {
     hookSpecificOutput: {

@@ -251,7 +251,10 @@ test("non-driver UserPromptSubmit does not interrupt an open implementation turn
       }),
     });
     assertSuccess(observerPrompt);
-    assert.equal(observerPrompt.stdout, "");
+    assert.equal(
+      JSON.parse(observerPrompt.stdout).hookSpecificOutput.additionalContext,
+      `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
+    );
     let runtime = readJsonFile(runtimePath);
     assert.equal(runtime.implementation_loop.status, "running");
     assert.equal(runtime.implementation_loop.active_turn_stopped_at, undefined);

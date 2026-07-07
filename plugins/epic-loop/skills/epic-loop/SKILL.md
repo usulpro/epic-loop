@@ -1,6 +1,6 @@
 ---
 name: epic-loop
-description: Use this skill for any work inside an epic-loop workspace: reading, creating, or editing files under `.epic-loop/` (`state-of-epic.md`, `tracker.md`, `decision-log.md`, `risk-register.md`, `docs/`); adding, editing, or closing an epic's tasks, research tasks, or phases; switching between the shaping (planning, including architecture reset), implementation (manager/techlead/engineer loop), or review lifecycle modes; resuming an existing epic by slug; or detaching the current session from its epic when the user says `unbind epic` or otherwise asks to work outside the epic. Also trigger on the `epic-loop` CLI/package by name. If the current session is already bound to an epic, keep operating through this skill on every following turn — in shaping/review mode, plain imperative requests usually describe epic tasks to capture in `tracker.md`, not actions to run immediately.
+description: Use this skill for work inside an epic-loop workspace: reading or editing `.epic-loop/` artifacts; adding, editing, or closing epic tasks, research tasks, or phases; switching shaping, implementation, or review modes; resuming an epic by slug; detaching the current session when the user says `unbind epic` or asks to work outside the epic; or when hook context includes `[epic-loop] epic=... mode=...`. Also trigger on the `epic-loop` CLI/package by name.
 ---
 
 # Epic Loop
@@ -350,6 +350,8 @@ node <skill-dir>/scripts/install-hooks.mjs
 For Codex, the installer writes project-local `.codex/hooks.json`. For Claude Code, it writes project-local `.claude/settings.json`. In both cases the local config should route `SessionStart`, `UserPromptSubmit`, and `Stop` events to the epic-loop hook handler. The installer must preserve unrelated hooks/settings, add missing epic-loop event entries, and update stale epic-loop hook commands when the skill path changed.
 
 The hook handler is strict opt-in: it writes state only when `session_id` is already registered in `.epic-loop/.runtime/session-bindings.json`. Unbound sessions must be a silent no-op. Keep `.codex/hooks.json` and `.claude/settings.json` as static config; all mutable epic-loop state belongs in `.epic-loop/`.
+
+On `UserPromptSubmit`, a bound member session may receive a compact marker like `[epic-loop] epic=<slug> mode=<mode> — follow epic-loop skill mode rules`; apply the mode rules from this skill for that epic. If the marker says `mode=implementation — loop running in another session; read-only, do not edit epic artifacts`, treat this session as a non-driver observer: do not edit epic artifacts or implementation state from that session.
 
 Codex requires non-managed command hooks to be reviewed and trusted before they run. Claude Code also requires hook review/trust through `/hooks`. A static `doctor` result can prove that project-local hook config exists and platform prerequisites are satisfied, but it cannot prove that the current already-running thread has loaded and trusted the hook. If implementation does not continue after binding, inspect `/hooks` in the active platform UI/CLI and start or resume a trusted session.
 
