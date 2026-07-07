@@ -54,7 +54,7 @@ Epic: Linting And Skill Checks
 
 ### Phase 2: Deterministic Skill Package Checks
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Add deterministic skill package validation for mechanical Agent Skills invariants.
   - Outcome: Maintained skill packages fail validation when their file shape, frontmatter, naming, references, or generated-artifact boundaries violate portable skill package rules.
@@ -68,7 +68,7 @@ Epic: Linting And Skill Checks
   - Acceptance: Tests cover valid skill metadata, invalid names, missing descriptions, long entrypoint files, missing table of contents for long references, Windows-style paths, and generated artifact detection.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: doing | Verify deterministic skill package checks through aggregate validation.
+- [x] Kind: verification | Status: done | Verify deterministic skill package checks through aggregate validation.
   - Outcome: Skill package mechanical validation is proven as part of the standard repository validation path.
   - Surface: `pnpm run validate`, focused validator command, unit tests, current plugin skill package.
   - Acceptance: Run focused validator tests, run the deterministic skill validator, and run `pnpm run validate` successfully; evidence includes exit codes and any required package cleanup.
