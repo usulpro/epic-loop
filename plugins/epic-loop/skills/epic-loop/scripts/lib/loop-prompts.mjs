@@ -71,11 +71,8 @@ export function normalizePromptFile(root, slug, value) {
     return null;
   }
 
-  const relative = value.trim();
-  if (path.isAbsolute(relative)) {
-    return path.relative(root, relative);
-  }
-
+  const rawPath = value.trim();
+  const relative = path.isAbsolute(rawPath) ? path.relative(root, rawPath) : rawPath;
   const normalized = path.normalize(relative);
   if (normalized.startsWith("..")) {
     throw new Error(`Prompt file must stay inside the project: ${relative}`);

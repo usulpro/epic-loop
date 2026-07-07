@@ -5,7 +5,7 @@ Slug: `set-up`
 Created: 2026-07-06T02:54:26+00:00
 Current mode: implementation
 Active phase: Phase 3 - AI-Assisted Skill Quality Review
-Active task: Phase 3 Task 4 - Verify the AI-assisted review command behaves like a deterministic script boundary
+Active task: Phase 3 Task 5 - Verify the AI-assisted review command behaves like a deterministic script boundary
 
 ## Current State
 
@@ -22,6 +22,8 @@ Active task: Phase 3 Task 4 - Verify the AI-assisted review command behaves like
 - Phase 3 Task 1 is closed: `pnpm run review:skills:ai` now wraps `codex exec --ephemeral`, requires schema-valid JSON in `.validation-output/skill-review/latest.json`, prints stable path-oriented diagnostics, exits non-zero for blocking findings, and remains separate from `pnpm run validate`.
 - Phase 3 Task 2 is closed: unbound hook capture now stores only a minimal current-session handshake before the binding gate and no longer persists raw payloads, prompt text, or transcript paths; `bind-session --current` remains covered for Codex and Claude Code.
 - Phase 3 Task 3 is closed: AI skill review prompt construction now uses explicit repository-owned rubric and finding schema guidance, with focused tests proving required review dimensions and stable finding fields.
+- Phase 3 Task 4 is closed: absolute `--prompt-file` values are converted to project-relative paths before the normal project and active-epic boundary checks run, with focused CLI coverage for accepted active-epic paths and rejected outside-project/outside-epic/other-epic paths.
+- Phase 3 verification is active again after the prompt-file boundary correction and needs a fresh deterministic-boundary pass including live AI review.
 - The central product requirement is adding linting, Oxfmt formatting, deterministic skill package checks, and AI-assisted semantic skill review.
 - Skill repository checks are split into deterministic script validation for mechanical invariants and a headless `codex exec` review runner that produces schema-validated JSON findings in an ignored output directory.
 - The repository language policy phase was removed during shaping after a real repository audit found no evidence of non-English committed prose; strict ASCII punctuation cleanup is intentionally out of scope for this epic.
@@ -32,4 +34,4 @@ Active task: Phase 3 Task 4 - Verify the AI-assisted review command behaves like
 
 ## Next Action
 
-- Continue with Phase 3 Task 4: verify the AI-assisted review command behaves like a deterministic script boundary.
+- Continue with Phase 3 Task 5: rerun AI-assisted review command verification after the prompt-file boundary correction.

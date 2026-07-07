@@ -448,6 +448,50 @@ test("task and role handoff CLIs update public files through process contracts",
   }
 });
 
+test("set-next-role validates absolute prompt-file paths through the normal epic boundary", () => {
+  const root = makeTempRoot("prompt-boundary-");
+  const outsideRoot = makeTempRoot("prompt-boundary-outside-");
+  const slug = "prompt-boundary";
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Prompt boundary project", "--slug", slug, "--no-gitignore"]));
+
+    const brief = runNodeScript("write-engineer-brief.mjs", ["--root", root, "--slug", slug, "--stdin"], {
+      input: "Implement a prompt boundary test.\n",
+    });
+    assertSuccess(brief);
+
+    const promptPath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "current-engineer-prompt.md");
+    const accepted = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", promptPath]);
+    assertSuccess(accepted);
+
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.prompt_file, path.join(".epic-loop", "epics", slug, ".runtime", "current-engineer-prompt.md"));
+
+    const outsidePrompt = path.join(outsideRoot, "prompt.md");
+    fs.writeFileSync(outsidePrompt, "outside\n", "utf8");
+    const outsideProject = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", outsidePrompt]);
+    assert.equal(outsideProject.status, 1);
+    assert.match(outsideProject.stderr, /Prompt file must stay inside the project/u);
+
+    const insideProjectPrompt = path.join(root, "prompt.md");
+    fs.writeFileSync(insideProjectPrompt, "inside project\n", "utf8");
+    const outsideEpic = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", insideProjectPrompt]);
+    assert.equal(outsideEpic.status, 1);
+    assert.match(outsideEpic.stderr, new RegExp(`Prompt file must be inside \\.epic-loop/epics/${slug}/\\.`, "u"));
+
+    const otherEpicPrompt = path.join(root, ".epic-loop", "epics", "other-epic", ".runtime", "current-engineer-prompt.md");
+    fs.mkdirSync(path.dirname(otherEpicPrompt), { recursive: true });
+    fs.writeFileSync(otherEpicPrompt, "other epic\n", "utf8");
+    const wrongEpic = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", otherEpicPrompt]);
+    assert.equal(wrongEpic.status, 1);
+    assert.match(wrongEpic.stderr, new RegExp(`Prompt file must be inside \\.epic-loop/epics/${slug}/\\.`, "u"));
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+    fs.rmSync(outsideRoot, { force: true, recursive: true });
+  }
+});
+
 test("bind-session current lookup requires explicit platform selection", () => {
   const root = makeTempRoot("bind-platform-");
 

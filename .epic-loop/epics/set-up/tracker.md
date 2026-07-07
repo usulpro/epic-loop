@@ -96,6 +96,12 @@ Epic: Linting And Skill Checks
   - Acceptance: The rubric covers invocation quality, trigger boundaries, progressive disclosure, task-local reference organization, degree of freedom, script/dependency safety concerns, and actionable recommendations with path and line evidence where possible.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
+- [x] Kind: implementation | Status: done | Fix prompt-file absolute path boundary surfaced by AI review.
+  - Outcome: Absolute `--prompt-file` values are normalized through the same project and epic path boundary checks as relative prompt files.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/loop-prompts.mjs`, `set-next-role.mjs` behavior, and focused CLI/unit tests.
+  - Acceptance: Absolute prompt paths outside the project or outside `.epic-loop/epics/<slug>/` are rejected; absolute prompt paths inside the active epic runtime prompt location are accepted and stored as normalized project-relative paths.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
 - [ ] Kind: verification | Status: doing | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.

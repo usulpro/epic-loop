@@ -109,3 +109,38 @@
 - Residual risk: Live review was not rerun because behavior changed only in prompt/rubric text; final Phase 3 verification remains next.
 - Commit: task-owned commit containing this closure note
 - Next move: Continue with Phase 3 Task 4: verify the AI-assisted review command behaves like a deterministic script boundary.
+
+## 2026-07-07T14:42:52+00:00 - not-closed: deterministic boundary checks passed for focused tests and controlled mock reports, but live review produced a schema-valid error finding script.prompt-file.absolute-path-bypass in loop-prompts.mjs. Phase 3 verification is blocked until that finding is corrected and verification is rerun.
+
+- Task: Phase 3 Task 5 - Verify the AI-assisted review command behaves like a deterministic script boundary
+- Verdict: not-closed: deterministic boundary checks passed for focused tests and controlled mock reports, but live review produced a schema-valid error finding script.prompt-file.absolute-path-bypass in loop-prompts.mjs. Phase 3 verification is blocked until that finding is corrected and verification is rerun.
+- Changed:
+  - No product files changed during verification
+  - tracker/state/risk now record the active prompt-file boundary correction before verification can close.
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 7/7
+  - mocked valid report exited 0
+  - malformed report exited 1
+  - missing-output substitute exited 1
+  - mocked error report exited 1 with stable blocking diagnostics
+  - live pnpm run review:skills:ai exited 1 with schema_errors=0 status=fail error_findings=1
+- Residual risk: Live AI review remains intentionally blocking on semantic error findings; generated .validation-output/skill-review/latest.json is ignored and untracked.
+- Next move: Implement focused prompt-file absolute path boundary correction, then rerun Phase 3 AI review verification.
+
+## 2026-07-07T14:46:43+00:00 - closed: absolute prompt-file values now normalize to project-relative paths before the standard project and active-epic boundary checks run.
+
+- Task: Phase 3 Task 4 - Fix prompt-file absolute path boundary surfaced by AI review
+- Verdict: closed: absolute prompt-file values now normalize to project-relative paths before the standard project and active-epic boundary checks run.
+- Changed:
+  - plugins/epic-loop/skills/epic-loop/scripts/lib/loop-prompts.mjs normalizes absolute prompt paths through the existing boundary checks
+  - tests/unit/cli-contracts.test.mjs covers accepted active-epic absolute paths and rejected outside-project, outside-epic, and other-epic absolute paths
+  - tracker/state/risk artifacts mark the correction closed and verification active again.
+- Verification:
+  - node --test tests/unit/cli-contracts.test.mjs passed 20/20
+  - pnpm run test:unit passed 76/76
+  - pnpm run lint passed
+  - pnpm run format:check passed after format:write
+  - pnpm run validate passed.
+- Residual risk: Live AI review was intentionally not rerun in the correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
+- Commit: task-owned commit containing this closure note
+- Next move: Rerun Phase 3 AI review command verification after the prompt-file boundary correction.
