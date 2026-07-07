@@ -4,7 +4,7 @@ Epic: Epic-Loop Mode Reminder And Session Unbind
 Slug: `mode-reminder`
 Created: 2026-07-04T19:18:09+00:00
 Active phase: none - Phase 7 closed
-Active task: TBD
+Active task: none
 
 ## Current State
 
@@ -19,6 +19,7 @@ Active task: TBD
 - Follow-up shaping reopened on 2026-07-06 to investigate a binding lifecycle gap: shaping/review reminders work after explicit binding, but normal shaping did not bind the session, and switching the same session between shaping epics left a stale `active_sessions["set-up:shaping"]` pointer.
 - Follow-up shaping completed on 2026-07-07 in two passes. First pass reviewed the binding-lifecycle gap against the actual code and produced a per-binding-mode fix plan (now the superseded-marked Accepted Plan in `docs/shaping-binding-gap.md`). Second pass, on user direction, replaced it with the **epic-centric mode model** (`docs/epic-mode-model.md`): the epic holds exactly one mode in `runtime-state.json` (sole machine source; the `Current mode:` prose line in this file gets dropped by Phase 7), bindings become mode-less epic membership so any number of sessions per epic receive the compact `[epic-loop] epic=<slug> mode=<mode>` marker, a mode change by one session propagates to all members' next turn, `active_sessions` is deleted (stale-pointer bug class removed by construction), and implementation keeps one exclusive driver session recorded in the epic runtime state, with non-driver members receiving an advisory read-only lock marker while the loop runs.
 - Phase 7 is closed. Source-package work and verification are complete: runtime mode source, mode-less membership plus exclusive implementation driver, compact markers, resume auto-bind, full unit/validation checks, and live Claude Code multi-session evidence are recorded in `implementation-log.md`. Installed runtime copies remain intentionally unsynced and are not required for this phase.
+- Implementation mode is complete after final manager housekeeping. The working tree was clean at exit and no artifact compaction was needed.
 
 ## Blockers
 
@@ -26,4 +27,4 @@ Active task: TBD
 
 ## Next Action
 
-- Run phase-closure housekeeping, then finish implementation mode if no housekeeping blocker appears.
+- Implementation is complete. Next human step is normal review/merge of the completed branch.
