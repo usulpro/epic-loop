@@ -19,6 +19,7 @@
     "lint": "oxlint scripts plugins/epic-loop/skills/epic-loop/scripts tests packages/cli/src packages/cli/scripts",
     "format:check": "oxfmt --check package.json .oxlintrc.json .oxfmtrc.json \"scripts/*.mjs\" \"tests/**/*.mjs\" \"packages/cli/src/**/*.mjs\" \"packages/cli/scripts/**/*.mjs\" \"plugins/epic-loop/skills/epic-loop/scripts/**/*.mjs\"",
     "format:write": "oxfmt --write package.json .oxlintrc.json .oxfmtrc.json \"scripts/*.mjs\" \"tests/**/*.mjs\" \"packages/cli/src/**/*.mjs\" \"packages/cli/scripts/**/*.mjs\" \"plugins/epic-loop/skills/epic-loop/scripts/**/*.mjs\"",
+    "review:skills:ai": "node scripts/review-skills-ai.mjs",
     "validate": "for f in scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done && pnpm run lint && pnpm run format:check && node scripts/validate-epic-loop-package.mjs",
     "validate:epic-loop": "pnpm run validate",
     "doctor:epic-loop:codex": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex --json",

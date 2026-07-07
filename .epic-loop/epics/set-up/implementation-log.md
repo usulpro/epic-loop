@@ -49,3 +49,24 @@
 
 - Task: Phase 2 Task 3 - Verify deterministic skill package checks through aggregate validation
 - Verdict: closed: deterministic skill package checks verified through focused and aggregate validation paths. Verification: node --test tests/unit/skill-package-validation.test.mjs passed 8/8; node scripts/validate-epic-loop-package.mjs passed with expected success output; pnpm run test:unit passed 68/68; pnpm run lint passed; pnpm run format:check passed; pnpm run validate passed; git status --short was clean after verification. No generated runtime/debug artifacts appeared. Phase 2 is complete pending mandatory phase-closure housekeeping.
+
+## 2026-07-07T14:27:57+00:00 - closed: added headless Codex skill review runner with schema-validated JSON output, stable diagnostics, ignored .validation-output storage, package script integration, and focused unit coverage. Live review produced a valid blocking finding, proving non-zero behavior; the finding is tracked as the next Phase 3 correction task.
+
+- Task: Phase 3 Task 1 - Add a headless Codex skill review runner with structured JSON output
+- Verdict: closed: added headless Codex skill review runner with schema-validated JSON output, stable diagnostics, ignored .validation-output storage, package script integration, and focused unit coverage. Live review produced a valid blocking finding, proving non-zero behavior; the finding is tracked as the next Phase 3 correction task.
+- Changed:
+  - .gitignore ignores .validation-output
+  - package.json adds review:skills:ai
+  - scripts/review-skills-ai.mjs wraps codex exec and validates reports
+  - tests/unit/skill-review-ai.test.mjs covers schema, formatting, blocking policy, and mocked CLI behavior
+  - tracker/state/risk artifacts record closure and the next correction task
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 6/6
+  - mocked pnpm run review:skills:ai passed
+  - pnpm run lint passed
+  - pnpm run format:check passed
+  - pnpm run test:unit passed 74/74
+  - pnpm run validate passed
+  - live pnpm run review:skills:ai generated ignored latest.json and exited 1 on a valid error finding
+- Residual risk: AI-backed review output is model-dependent and the first live run found a real hook contract issue in hooks.mjs; follow-up correction is active before rubric expansion
+- Next move: Implement focused correction for unbound hook capture persistence, then continue the Phase 3 rubric task.

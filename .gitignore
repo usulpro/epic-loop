@@ -28,6 +28,7 @@ dist/
 build/
 .cache/
 temp/
+.validation-output/
 
 .claude
 .codex

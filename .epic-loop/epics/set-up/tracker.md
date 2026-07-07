@@ -76,12 +76,18 @@ Epic: Linting And Skill Checks
 
 ### Phase 3: AI-Assisted Skill Quality Review
 
-- Phase status: todo
+- Phase status: doing
 
-- [ ] Kind: implementation | Status: todo | Add a headless Codex skill review runner with structured JSON output.
+- [x] Kind: implementation | Status: done | Add a headless Codex skill review runner with structured JSON output.
   - Outcome: Semantic skill quality review can be launched as a normal script command while internally using `codex exec` in non-interactive mode.
   - Surface: `package.json` scripts, AI review runner script, repo-local review skill or prompt, ignored `.validation-output/skill-review/` output path, JSON schema validation.
   - Acceptance: `pnpm run review:skills:ai` invokes `codex exec --ephemeral`, requires a structured JSON report, validates the report schema, prints stable findings, and exits non-zero for blocking findings, malformed JSON, missing output, unknown schema versions, or failed Codex execution.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [ ] Kind: implementation | Status: doing | Fix unbound hook capture persistence surfaced by AI skill review.
+  - Outcome: Unbound hook invocations do not persist raw hook payloads or prompt/transcript metadata, while current-session binding remains reliable.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, hook capture/session-binding helpers, and focused hook/unit tests.
+  - Acceptance: Unbound sessions remain silent/no-op for runtime records except any deliberately minimal, non-sensitive binding handshake needed by `bind-session --current`; bound hook routing and implementation-loop continuation behavior remain covered by tests.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
 - [ ] Kind: implementation | Status: todo | Define the AI skill quality review rubric and finding schema.
