@@ -19,3 +19,8 @@
 
 - Task: Phase 1 Task 2 - Add Oxfmt configuration and non-mutating format validation
 - Verdict: closed: added oxfmt dependency, .oxfmtrc.json, format:check/format:write scripts, and validate integration. format:check passes; unit tests pass. pnpm run validate still fails only on accepted oxlint max-lines debt in hooks.mjs and loop.mjs. Markdown formatting excluded because oxfmt@0.57.0 produced unsafe markdown/template churn.
+
+## 2026-07-07T13:57:42+00:00 - checkpoint: split hooks.mjs into hook-config.mjs and hook-compatibility.mjs helpers without changing public hook exports or runtime behavior. hooks.mjs is now below the oxlint max-lines limit; pnpm run test:unit and pnpm run format:check pass. pnpm run lint still fails only on known loop.mjs max-lines debt, so Task 3 remains open.
+
+- Task: Phase 1 Task 3 - Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines
+- Verdict: checkpoint: split hooks.mjs into hook-config.mjs and hook-compatibility.mjs helpers without changing public hook exports or runtime behavior. hooks.mjs is now below the oxlint max-lines limit; pnpm run test:unit and pnpm run format:check pass. pnpm run lint still fails only on known loop.mjs max-lines debt, so Task 3 remains open.
