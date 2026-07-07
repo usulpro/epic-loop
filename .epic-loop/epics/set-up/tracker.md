@@ -62,13 +62,13 @@ Epic: Linting And Skill Checks
   - Acceptance: The validator checks `SKILL.md` presence, YAML frontmatter, required `name` and `description`, kebab-case name constraints, directory-name match, description length, `SKILL.md` line budget, direct reference links, long-reference table of contents, forward-slash paths, script syntax, and ignored runtime/debug artifact absence.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: doing | Add focused tests or fixtures for deterministic skill package validation.
+- [x] Kind: implementation | Status: done | Add focused tests or fixtures for deterministic skill package validation.
   - Outcome: The deterministic skill validator has regression coverage for accepted package shape and representative failure cases.
   - Surface: `tests/unit`, validator fixtures/helpers, package validation scripts.
   - Acceptance: Tests cover valid skill metadata, invalid names, missing descriptions, long entrypoint files, missing table of contents for long references, Windows-style paths, and generated artifact detection.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify deterministic skill package checks through aggregate validation.
+- [ ] Kind: verification | Status: doing | Verify deterministic skill package checks through aggregate validation.
   - Outcome: Skill package mechanical validation is proven as part of the standard repository validation path.
   - Surface: `pnpm run validate`, focused validator command, unit tests, current plugin skill package.
   - Acceptance: Run focused validator tests, run the deterministic skill validator, and run `pnpm run validate` successfully; evidence includes exit codes and any required package cleanup.

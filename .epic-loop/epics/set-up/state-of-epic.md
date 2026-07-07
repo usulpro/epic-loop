@@ -5,7 +5,7 @@ Slug: `set-up`
 Created: 2026-07-06T02:54:26+00:00
 Current mode: implementation
 Active phase: Phase 2 - Deterministic Skill Package Checks
-Active task: Phase 2 Task 2 - Add focused tests or fixtures for deterministic skill package validation
+Active task: Phase 2 Task 3 - Verify deterministic skill package checks through aggregate validation
 
 ## Current State
 
@@ -16,7 +16,8 @@ Active task: Phase 2 Task 2 - Add focused tests or fixtures for deterministic sk
 - Phase 1 Task 4 is closed: `pnpm run lint`, `pnpm run format:check`, `pnpm run test:unit`, and `pnpm run validate` all pass, and verification left no generated runtime/debug artifacts in the working tree.
 - Phase 1 is complete; mandatory phase-closure housekeeping ran and found no compaction need or blockers.
 - Phase 2 Task 1 is closed: deterministic skill package validation now checks mechanical Agent Skills invariants for the maintained `epic-loop` package through the existing package validator and aggregate validation path.
-- Phase 2 is active: the next implementation slice should add focused tests or fixtures for deterministic skill package validation.
+- Phase 2 Task 2 is closed: deterministic skill package validation now has focused unit coverage for valid package behavior and representative invalid mechanical invariants.
+- Phase 2 is active: the next implementation slice should verify deterministic skill package checks through the aggregate validation path.
 - The central product requirement is adding linting, Oxfmt formatting, deterministic skill package checks, and AI-assisted semantic skill review.
 - Skill repository checks are split into deterministic script validation for mechanical invariants and a headless `codex exec` review runner that produces schema-validated JSON findings in an ignored output directory.
 - The repository language policy phase was removed during shaping after a real repository audit found no evidence of non-English committed prose; strict ASCII punctuation cleanup is intentionally out of scope for this epic.
@@ -27,4 +28,4 @@ Active task: Phase 2 Task 2 - Add focused tests or fixtures for deterministic sk
 
 ## Next Action
 
-- Continue with Phase 2 Task 2: add focused tests or fixtures for deterministic skill package validation.
+- Continue with Phase 2 Task 3: verify deterministic skill package checks through aggregate validation.
