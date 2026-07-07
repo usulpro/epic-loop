@@ -24,3 +24,8 @@
 
 - Task: Phase 1 Task 3 - Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines
 - Verdict: checkpoint: split hooks.mjs into hook-config.mjs and hook-compatibility.mjs helpers without changing public hook exports or runtime behavior. hooks.mjs is now below the oxlint max-lines limit; pnpm run test:unit and pnpm run format:check pass. pnpm run lint still fails only on known loop.mjs max-lines debt, so Task 3 remains open.
+
+## 2026-07-07T14:03:37+00:00 - closed: split loop.mjs into loop-prompts.mjs, loop-claude-cap.mjs, and loop-artifacts.mjs after the earlier hooks.mjs split. hooks.mjs and loop.mjs are both below the oxlint max-lines limit. pnpm run validate passes and pnpm run test:unit passes 60/60. Task 3 is closed; Phase 1 verification remains active next.
+
+- Task: Phase 1 Task 3 - Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines
+- Verdict: closed: split loop.mjs into loop-prompts.mjs, loop-claude-cap.mjs, and loop-artifacts.mjs after the earlier hooks.mjs split. hooks.mjs and loop.mjs are both below the oxlint max-lines limit. pnpm run validate passes and pnpm run test:unit passes 60/60. Task 3 is closed; Phase 1 verification remains active next.

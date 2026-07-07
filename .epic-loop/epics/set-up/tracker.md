@@ -40,13 +40,13 @@ Epic: Linting And Skill Checks
   - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit; markdown is excluded because `oxfmt@0.57.0` produced unsafe markdown/template churn.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: doing | Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines.
+- [x] Kind: implementation | Status: done | Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines.
   - Outcome: Existing source files that exceed the accepted oxlint source-file limit are split into smaller modules without changing hook routing or implementation-loop behavior.
   - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, `plugins/epic-loop/skills/epic-loop/scripts/lib/loop.mjs`, any extracted helper modules under the same `lib/` boundary, and related unit tests.
   - Acceptance: `pnpm run lint` no longer reports `max-lines` errors for `hooks.mjs` or `loop.mjs`; behavior covered by existing hook/loop tests remains unchanged.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify lint and format tooling through the repository validation path.
+- [ ] Kind: verification | Status: doing | Verify lint and format tooling through the repository validation path.
   - Outcome: The first phase tooling is proven through the same command future contributors will run.
   - Surface: Local pnpm scripts, oxlint, Oxfmt, existing syntax/package validation.
   - Acceptance: Run `pnpm run validate` and any focused lint/format scripts; evidence includes exit codes and any required follow-up fixes, with no generated runtime artifacts committed.
