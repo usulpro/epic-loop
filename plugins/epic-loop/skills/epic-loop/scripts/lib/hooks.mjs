@@ -6,8 +6,10 @@ import {
   CODEX_CONFIG_RELATIVE_PATH,
   CODEX_HOOKS_RELATIVE_PATH,
   HOOK_EVENTS,
+  MODES,
   canReadPath,
   canWritePath,
+  epicsRoot,
   epicRuntimeRoot,
   eventTimestamp,
   formatList,
@@ -19,6 +21,7 @@ import {
   readJson,
   readJsonStrict,
   resolveRoot,
+  roadmapStatePath,
   runtimeStatePath,
   sessionRoot,
   shellQuote,
@@ -29,6 +32,7 @@ import {
   writeRuntimePlatform,
 } from "./common.mjs";
 import { markInterruptedTurnIfNeeded, maybeBuildImplementationContinuation } from "./loop.mjs";
+import { createInitialRoadmapState } from "./roadmap.mjs";
 
 const CLAUDE_SETTINGS_RELATIVE_PATH = path.join(".claude", "settings.json");
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -481,6 +485,192 @@ function inspectClaudeStopHookBlockCap(env = process.env) {
   };
 }
 
+function inspectAndRepairEpicCompatibility(root) {
+  const epicsDir = epicsRoot(root);
+  const result = {
+    checked: 0,
+    invalid: [],
+    repaired: [],
+    ready: true,
+  };
+
+  if (!fs.existsSync(epicsDir)) {
+    return result;
+  }
+
+  const bindingModes = readActiveBindingModes(root);
+
+  for (const entry of fs.readdirSync(epicsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const slug = entry.name;
+    result.checked += 1;
+    const roadmap = inspectAndRepairRoadmapState(root, slug, result);
+    inspectAndRepairRuntimeState(root, slug, roadmap, bindingModes.get(slug), result);
+  }
+
+  result.ready = result.invalid.length === 0;
+  return result;
+}
+
+function inspectAndRepairRoadmapState(root, slug, result) {
+  const roadmapPath = roadmapStatePath(root, slug);
+  const strict = readJsonStrict(roadmapPath);
+
+  if (strict.error) {
+    result.invalid.push({
+      path: roadmapPath,
+      reason: strict.error,
+      slug,
+      type: "roadmap-state",
+    });
+    return null;
+  }
+
+  if (strict.exists && isPlainObject(strict.value)) {
+    return strict.value;
+  }
+
+  const roadmap = createInitialRoadmapState({ slug, title: slug });
+  writeJson(roadmapPath, roadmap);
+  result.repaired.push({
+    path: roadmapPath,
+    slug,
+    type: "created-roadmap-state",
+  });
+  return roadmap;
+}
+
+function inspectAndRepairRuntimeState(root, slug, roadmap, bindingMode, result) {
+  const runtimePath = runtimeStatePath(root, slug);
+  const strict = readJsonStrict(runtimePath);
+
+  if (strict.error) {
+    result.invalid.push({
+      path: runtimePath,
+      reason: strict.error,
+      slug,
+      type: "runtime-state",
+    });
+    return;
+  }
+
+  if (!strict.exists) {
+    writeJson(runtimePath, buildRuntimeStateFromStructuredData(slug, roadmap, bindingMode));
+    result.repaired.push({
+      path: runtimePath,
+      slug,
+      type: "created-runtime-state",
+    });
+    return;
+  }
+
+  if (!isPlainObject(strict.value)) {
+    result.invalid.push({
+      path: runtimePath,
+      reason: "runtime state must be an object",
+      slug,
+      type: "runtime-state",
+    });
+    return;
+  }
+
+  const mode = typeof strict.value.mode === "string" && MODES.includes(strict.value.mode) ? strict.value.mode : bindingMode ?? null;
+  if (!mode) {
+    result.invalid.push({
+      path: runtimePath,
+      reason: "missing mode",
+      slug,
+      type: "runtime-state",
+    });
+    return;
+  }
+
+  if (strict.value.mode !== mode) {
+    writeJson(runtimePath, {
+      ...strict.value,
+      mode,
+      updated_at: nowIso(),
+    });
+    result.repaired.push({
+      path: runtimePath,
+      slug,
+      type: "repaired-runtime-mode",
+    });
+  }
+}
+
+function buildRuntimeStateFromStructuredData(slug, roadmap, bindingMode) {
+  const timestamp = nowIso();
+  const normalizedRoadmap = isPlainObject(roadmap) ? roadmap : createInitialRoadmapState({ slug, title: slug });
+
+  return {
+    active_phase: formatRoadmapPhase(normalizedRoadmap, normalizedRoadmap.active_phase_id),
+    active_task: formatRoadmapTask(normalizedRoadmap, normalizedRoadmap.active_task_id),
+    created_at: timestamp,
+    description: null,
+    execution_brief: null,
+    implementation_submode: "techlead",
+    mode: bindingMode ?? "shaping",
+    slug,
+    title: typeof normalizedRoadmap.title === "string" && normalizedRoadmap.title.trim() ? normalizedRoadmap.title.trim() : slug,
+    updated_at: timestamp,
+  };
+}
+
+function readActiveBindingModes(root) {
+  const bindingsPath = path.join(sessionRoot(root), "session-bindings.json");
+  const bindings = readJson(bindingsPath, {});
+  const sessions = isPlainObject(bindings?.sessions) ? bindings.sessions : {};
+  const modes = new Map();
+
+  for (const binding of Object.values(sessions)) {
+    if (!isPlainObject(binding) || binding.active !== true || typeof binding.epic_slug !== "string" || !MODES.includes(binding.mode)) {
+      continue;
+    }
+
+    modes.set(binding.epic_slug, binding.mode);
+  }
+
+  return modes;
+}
+
+function formatRoadmapPhase(roadmap, phaseId) {
+  const phases = Array.isArray(roadmap.phases) ? roadmap.phases : [];
+  const phase = phases.find((candidate) => candidate?.id === phaseId) ?? phases[0];
+  if (!phase) {
+    return null;
+  }
+
+  const index = phases.indexOf(phase);
+  const number = index >= 0 ? index + 1 : 1;
+  const title = typeof phase.title === "string" && phase.title.trim() ? phase.title.trim() : `Phase ${number}`;
+  return `Phase ${number} - ${title}`;
+}
+
+function formatRoadmapTask(roadmap, taskId) {
+  if (typeof taskId !== "string" || !taskId) {
+    return null;
+  }
+
+  const phases = Array.isArray(roadmap.phases) ? roadmap.phases : [];
+  for (const phase of phases) {
+    const tasks = Array.isArray(phase?.tasks) ? phase.tasks : [];
+    const task = tasks.find((candidate) => candidate?.id === taskId);
+    if (task) {
+      return typeof task.title === "string" && task.title.trim() ? task.title.trim() : task.id;
+    }
+  }
+
+  return null;
+}
+
+function isPlainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
 export function doctor(flags = {}) {
   const root = resolveRoot(flags.root);
   if (typeof flags.platform !== "string") {
@@ -507,11 +697,13 @@ function doctorCodex(root, platformConfig, flags = {}) {
   const feature = inspectCodexHooksFeature(root);
   const runtimeWritable = canWritePath(sessionRoot(root));
   const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
-  const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok;
+  const epicCompatibility = inspectAndRepairEpicCompatibility(root);
+  const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok && epicCompatibility.ready;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
   const status = {
     codexHooksFeature: feature,
     command: hookConfig.command,
+    epicCompatibility,
     hookConfig: {
       exists: hookConfig.exists,
       invalid: hookConfig.invalid,
@@ -552,6 +744,9 @@ function doctorCodex(root, platformConfig, flags = {}) {
   console.log(`Hook command: ${hookConfig.command}`);
   console.log(`Required events missing: ${formatList(hookConfig.missingEvents)}`);
   console.log(`Stale epic-loop hook entries: ${formatList(hookConfig.staleEvents)}`);
+  console.log(`Epic compatibility: ${epicCompatibility.ready ? "ready" : "repair-required"}`);
+  console.log(`Epic compatibility repairs: ${formatList(epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`))}`);
+  console.log(`Epic compatibility invalid: ${formatList(epicCompatibility.invalid.map((issue) => `${issue.slug}:${issue.type}`))}`);
   console.log(`Hook config writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
 
@@ -589,7 +784,8 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
   const blockCap = inspectClaudeStopHookBlockCap();
   const runtimeWritable = canWritePath(sessionRoot(root));
   const scriptReadable = canReadPath(HOOK_SCRIPT_PATH);
-  const ready = hookConfig.ready && !hookConfig.invalid && blockCap.ready && runtimeWritable.ok && scriptReadable.ok;
+  const epicCompatibility = inspectAndRepairEpicCompatibility(root);
+  const ready = hookConfig.ready && !hookConfig.invalid && blockCap.ready && runtimeWritable.ok && scriptReadable.ok && epicCompatibility.ready;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
   const status = {
     claudeCodeHookConfig: {
@@ -603,6 +799,7 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
       writable: hookConfig.writable,
     },
     command: hookConfig.command,
+    epicCompatibility,
     hookTarget: {
       exists: fs.existsSync(HOOK_SCRIPT_PATH),
       path: HOOK_SCRIPT_PATH,
@@ -638,6 +835,9 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
   console.log(`Claude Code settings: ${hookConfig.exists ? hookConfig.path : `${hookConfig.path} (missing)`}`);
   console.log(`Required events missing: ${formatList(hookConfig.missingEvents)}`);
   console.log(`Stale epic-loop hook entries: ${formatList(hookConfig.staleEvents)}`);
+  console.log(`Epic compatibility: ${epicCompatibility.ready ? "ready" : "repair-required"}`);
+  console.log(`Epic compatibility repairs: ${formatList(epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`))}`);
+  console.log(`Epic compatibility invalid: ${formatList(epicCompatibility.invalid.map((issue) => `${issue.slug}:${issue.type}`))}`);
   console.log(`Claude Code settings writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
   console.log(`Hook target exists: ${fs.existsSync(HOOK_SCRIPT_PATH) ? "yes" : "no"}`);

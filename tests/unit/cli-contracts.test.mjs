@@ -75,6 +75,104 @@ test("doctor and install-hooks expose readiness contracts in an isolated project
   }
 });
 
+test("doctor repairs structured epic compatibility without reading state markdown", () => {
+  const root = makeTempRoot("doctor-compat-");
+  const legacySlug = "legacy";
+  const emptySlug = "empty";
+
+  try {
+    fs.mkdirSync(path.join(root, ".codex"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".codex", "config.toml"), "[features]\nhooks = true\n", "utf8");
+
+    const legacyRoot = path.join(root, ".epic-loop", "epics", legacySlug);
+    fs.mkdirSync(path.join(legacyRoot, ".runtime"), { recursive: true });
+    fs.writeFileSync(
+      path.join(legacyRoot, "state-of-epic.md"),
+      [
+        "# State Of Epic",
+        "",
+        "Epic: Markdown Must Not Drive Mode",
+        "Slug: `legacy`",
+        "Current mode: review",
+        "Active phase: Phase 9 - Markdown Only",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(legacyRoot, ".runtime", "roadmap-state.json"),
+      `${JSON.stringify(
+        {
+          schema_version: 1,
+          slug: legacySlug,
+          title: "Structured Legacy Epic",
+          active_phase_id: "phase-1",
+          active_task_id: null,
+          phases: [
+            {
+              id: "phase-1",
+              status: "todo",
+              tasks: [],
+              title: "Structured Phase",
+            },
+          ],
+          follow_ups: [],
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    fs.mkdirSync(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime"), { recursive: true });
+
+    const doctor = runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]);
+    assertSuccess(doctor);
+    const status = JSON.parse(doctor.stdout);
+    assert.equal(status.epicCompatibility.ready, true);
+    assert.equal(status.epicCompatibility.checked, 2);
+    assert.deepEqual(
+      status.epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`).sort(),
+      ["empty:created-roadmap-state", "empty:created-runtime-state", "legacy:created-runtime-state"],
+    );
+
+    const legacyRuntime = readJsonFile(path.join(legacyRoot, ".runtime", "runtime-state.json"));
+    assert.equal(legacyRuntime.mode, "shaping");
+    assert.equal(legacyRuntime.title, "Structured Legacy Epic");
+    assert.equal(legacyRuntime.active_phase, "Phase 1 - Structured Phase");
+
+    const emptyRoadmap = readJsonFile(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime", "roadmap-state.json"));
+    const emptyRuntime = readJsonFile(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime", "runtime-state.json"));
+    assert.equal(emptyRoadmap.slug, emptySlug);
+    assert.equal(emptyRuntime.mode, "shaping");
+
+    fs.writeFileSync(
+      path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
+      `${JSON.stringify(
+        {
+          sessions: {
+            "session-legacy": {
+              active: true,
+              epic_slug: legacySlug,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    const hook = runHook(root, userPromptPayload(root, "session-legacy"));
+    assert.equal(
+      JSON.parse(hook.stdout).hookSpecificOutput.additionalContext,
+      "[epic-loop] epic=legacy mode=shaping — follow epic-loop skill mode rules",
+    );
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("doctor exposes a Claude Code platform readiness boundary", () => {
   const root = makeTempRoot("doctor-claude-");
 
