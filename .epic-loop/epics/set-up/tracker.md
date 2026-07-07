@@ -76,7 +76,7 @@ Epic: Linting And Skill Checks
 
 ### Phase 3: AI-Assisted Skill Quality Review
 
-- Phase status: doing
+- Phase status: done
 
 - [x] Kind: implementation | Status: done | Add a headless Codex skill review runner with structured JSON output.
   - Outcome: Semantic skill quality review can be launched as a normal script command while internally using `codex exec` in non-interactive mode.
@@ -114,7 +114,7 @@ Epic: Linting And Skill Checks
   - Acceptance: Slug/path helpers reject path separators, `.`/`..` segments, empty or invalid slugs, and any resolved epic path outside `.epic-loop/epics/`; existing valid slug behavior remains unchanged.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: doing | Verify the AI-assisted review command behaves like a deterministic script boundary.
+- [x] Kind: verification | Status: done | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
   - Acceptance: Prove the runner accepts valid reports, rejects malformed or missing reports, prints findings deterministically, keeps generated artifacts ignored, and documents whether the AI-backed command is excluded from or included in `pnpm run validate`.

@@ -217,3 +217,24 @@
 - Residual risk: Live AI review was intentionally not rerun in this correction slice; Phase 3 verification remains next and will rerun the AI-assisted command boundary checks.
 - Commit: task-owned commit containing this closure note
 - Next move: Rerun Phase 3 AI review command verification after the slug path boundary correction.
+
+## 2026-07-07T15:06:20+00:00 - closed: AI-assisted review command boundary is verified; live review produced schemaVersion=1 status=needs-review with zero error findings, and deterministic validation remains green.
+
+- Task: Phase 3 Task 8 - Verify the AI-assisted review command behaves like a deterministic script boundary
+- Verdict: closed: AI-assisted review command boundary is verified; live review produced schemaVersion=1 status=needs-review with zero error findings, and deterministic validation remains green.
+- Changed:
+  - No product files changed during verification
+  - tracker/state/risk artifacts mark Phase 3 verification and Phase 3 complete, and record remaining warning-level AI review findings as non-blocking follow-up context.
+- Verification:
+  - node --test tests/unit/skill-review-ai.test.mjs passed 7/7
+  - mocked valid report exited 0
+  - malformed report exited 1
+  - missing-output substitute exited 1
+  - mocked error report exited 1 with stable blocking diagnostics
+  - live pnpm run review:skills:ai exited 0 with schemaVersion=1 status=needs-review errorFindings=0 warningFindings=4
+  - pnpm run test:unit passed 78/78
+  - pnpm run validate passed
+  - .validation-output/ remained ignored and git status was clean before artifact closure updates.
+- Residual risk: Live AI review warnings remain non-blocking: workspace-read trigger breadth, broad re-entry reads, entrypoint/reference duplication, and mutating doctor readiness disclosure.
+- Commit: task-owned commit containing this closure note
+- Next move: Run mandatory Phase 3 closure housekeeping.
