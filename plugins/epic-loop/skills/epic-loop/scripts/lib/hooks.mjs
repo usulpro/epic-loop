@@ -16,7 +16,6 @@ import {
   nowIso,
   platformConfigPath,
   platformSetupCommand,
-  readRuntimePlatform,
   requireRuntimePlatform,
   readJson,
   readJsonStrict,

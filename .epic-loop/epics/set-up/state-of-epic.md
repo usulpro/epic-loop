@@ -1,23 +1,24 @@
 # State Of Epic
 
-Epic: Linting And English Checks
+Epic: Linting And Skill Checks
 Slug: `set-up`
 Created: 2026-07-06T02:54:26+00:00
-Current mode: shaping
+Current mode: implementation
 Active phase: Phase 1 - Tooling Baseline
-Active task: TBD
+Active task: Phase 1 Task 2 - Add Oxfmt configuration and non-mutating format validation
 
 ## Current State
 
 - Initial shaping captured the repository baseline: Node.js ESM, pnpm, existing syntax/package validation, and no current oxlint/Oxfmt configuration.
-- The roadmap is ready for implementation once the user confirms the implementation loop.
-- The central product requirement is adding linting, Oxfmt formatting, deterministic English-only lexical checks, deterministic skill package checks, and AI-assisted semantic skill review.
+- Phase 1 Task 1 is closed with accepted baseline debt: oxlint configuration, scripts, dependency, validation integration, and narrow baseline fixes are present; existing `max-lines` failures in `loop.mjs` and `hooks.mjs` are explicitly accepted for now and tracked as a Phase 1 refactor task before phase verification.
+- The central product requirement is adding linting, Oxfmt formatting, deterministic skill package checks, and AI-assisted semantic skill review.
 - Skill repository checks are split into deterministic script validation for mechanical invariants and a headless `codex exec` review runner that produces schema-validated JSON findings in an ignored output directory.
+- The repository language policy phase was removed during shaping after a real repository audit found no evidence of non-English committed prose; strict ASCII punctuation cleanup is intentionally out of scope for this epic.
 
 ## Blockers
 
-- None recorded.
+- `pnpm run lint` and `pnpm run validate` currently fail until the planned Phase 1 refactor splits `loop.mjs` and `hooks.mjs` below the accepted `max-lines` limit.
 
 ## Next Action
 
-- Confirm whether to start implementation in this session.
+- Continue with Phase 1 Task 2: add Oxfmt configuration and non-mutating format validation.

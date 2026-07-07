@@ -1,4 +1,4 @@
-# Linting And Language Policy
+# Linting And Skill Validation Policy
 
 ## Baseline
 
@@ -10,15 +10,16 @@
   - `pnpm run validate:epic-loop`
   - platform doctor scripts for Codex and Claude Code.
 - Current `validate` performs `node --check` over selected scripts and runs `scripts/validate-epic-loop-package.mjs`.
-- No oxlint, Oxfmt, EditorConfig, or spelling/language config is currently present.
+- No oxlint, Oxfmt, or EditorConfig is currently present.
 
 ## Policy Direction
 
-Use standard tooling for standard concerns and a small repository-owned script for project-specific language policy:
+Use standard tooling for standard concerns and small repository-owned scripts for project-specific skill package validation:
 
 - oxlint for JavaScript/ESM source, tests, scripts, and package code.
 - Oxfmt (`oxfmt`) for formatting supported text/code/doc files.
-- A custom Node.js validation script for English-only lexical usage, because the repository rule is product-specific and should be deterministic.
+- Deterministic Node.js validation for mechanical skill package invariants.
+- A separate AI-assisted review command for semantic skill quality signals.
 
 ## Proposed Oxlint Profile
 
@@ -52,33 +53,6 @@ Observed current repository findings with oxlint 1.73.0:
 - `perf` adds a small number of warning candidates, including `no-await-in-loop`, `prefer-set-has`, and `oxc/no-map-spread`; these are better handled after the baseline passes.
 - `style` and `restriction` generate large noisy reports and should not block the initial linting setup.
 
-## English-Only Check
-
-The check should inspect committed project text that humans maintain, while ignoring runtime/debug/generated surfaces.
-
-Candidate included surfaces:
-
-- `README.md`, `CHANGELOG.md`, `CLAUDE.md`, `AGENTS.md`
-- `package.json` files
-- `scripts/**/*.mjs`
-- `tests/**/*.mjs`
-- `packages/cli/src/**/*.mjs`
-- `plugins/epic-loop/skills/epic-loop/**/*.md`
-- `plugins/epic-loop/skills/epic-loop/**/*.mjs`
-- `plugins/epic-loop/skills/epic-loop/**/*.yaml`
-
-Candidate ignored surfaces:
-
-- `node_modules/`
-- lockfiles
-- `.git/`
-- `.epic-loop/epics/*/.runtime/`
-- `.epic-loop/.runtime/`
-- generated package output
-- hook captures, prompt logs, progress logs, and transcript/debug traces
-
-The script should report filename, line, column, and offending token or short excerpt. It should support a small allowlist for legitimate non-dictionary or non-English tokens, but the default direction is to remove Russian or other non-English prose from committed source and docs.
-
 ## Validation Contract
 
 `pnpm run validate` should become the single command that proves the repository is publishable:
@@ -88,7 +62,7 @@ The script should report filename, line, column, and offending token or short ex
 - unit tests either run directly or remain available through a documented validation script
 - oxlint check runs
 - Oxfmt check runs
-- English-only lexical check runs
+- deterministic skill package checks run
 
 Formatting write commands should be separate from check commands so validation remains non-mutating.
 

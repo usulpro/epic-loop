@@ -35,6 +35,6 @@ async function assertDirectory(dir, label) {
       throw new Error("not a directory");
     }
   } catch (error) {
-    throw new Error(`Cannot read ${label} at ${dir}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Cannot read ${label} at ${dir}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
 }

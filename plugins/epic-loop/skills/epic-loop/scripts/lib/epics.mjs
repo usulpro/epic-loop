@@ -451,7 +451,7 @@ function writeEpicRuntimeMode(root, slug, mode) {
     runtime = JSON.parse(fs.readFileSync(runtimePath, "utf8"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Cannot read runtime state: ${message}`);
+    throw new Error(`Cannot read runtime state: ${message}`, { cause: error });
   }
 
   if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {

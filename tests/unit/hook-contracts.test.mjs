@@ -31,7 +31,7 @@ function writeSessionBinding(root, slug, sessionId) {
       {
         ...runtime,
         implementation_loop: {
-          ...(runtime.implementation_loop ?? {}),
+          ...runtime.implementation_loop,
           driver_session_id: sessionId,
         },
         mode: "implementation",

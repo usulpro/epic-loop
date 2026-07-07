@@ -349,7 +349,7 @@ function formatTask(task) {
 }
 
 function createPhaseFromHeading(heading, fallbackNumber) {
-  const match = heading.match(/^Phase\s+(\d+)\s*[:\-]\s*(.+)$/iu);
+  const match = heading.match(/^Phase\s+(\d+)\s*[:-]\s*(.+)$/iu);
   const number = match ? Number(match[1]) : fallbackNumber;
   const title = match ? match[2].trim() : heading.trim();
   return {
