@@ -88,15 +88,7 @@ test("doctor repairs structured epic compatibility without reading state markdow
     fs.mkdirSync(path.join(legacyRoot, ".runtime"), { recursive: true });
     fs.writeFileSync(
       path.join(legacyRoot, "state-of-epic.md"),
-      [
-        "# State Of Epic",
-        "",
-        "Epic: Markdown Must Not Drive Mode",
-        "Slug: `legacy`",
-        "Current mode: review",
-        "Active phase: Phase 9 - Markdown Only",
-        "",
-      ].join("\n"),
+      ["# State Of Epic", "", "Epic: Markdown Must Not Drive Mode", "Slug: `legacy`", "Current mode: review", "Active phase: Phase 9 - Markdown Only", ""].join("\n"),
       "utf8",
     );
     fs.writeFileSync(
@@ -124,17 +116,20 @@ test("doctor repairs structured epic compatibility without reading state markdow
       "utf8",
     );
 
-    fs.mkdirSync(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime"), { recursive: true });
+    fs.mkdirSync(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime"), {
+      recursive: true,
+    });
 
     const doctor = runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]);
     assertSuccess(doctor);
     const status = JSON.parse(doctor.stdout);
     assert.equal(status.epicCompatibility.ready, true);
     assert.equal(status.epicCompatibility.checked, 2);
-    assert.deepEqual(
-      status.epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`).sort(),
-      ["empty:created-roadmap-state", "empty:created-runtime-state", "legacy:created-runtime-state"],
-    );
+    assert.deepEqual(status.epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`).sort(), [
+      "empty:created-roadmap-state",
+      "empty:created-runtime-state",
+      "legacy:created-runtime-state",
+    ]);
 
     const legacyRuntime = readJsonFile(path.join(legacyRoot, ".runtime", "runtime-state.json"));
     assert.equal(legacyRuntime.mode, "shaping");
@@ -164,10 +159,7 @@ test("doctor repairs structured epic compatibility without reading state markdow
     );
 
     const hook = runHook(root, userPromptPayload(root, "session-legacy"));
-    assert.equal(
-      JSON.parse(hook.stdout).hookSpecificOutput.additionalContext,
-      "[epic-loop] epic=legacy mode=shaping — follow epic-loop skill mode rules",
-    );
+    assert.equal(JSON.parse(hook.stdout).hookSpecificOutput.additionalContext, "[epic-loop] epic=legacy mode=shaping — follow epic-loop skill mode rules");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -396,8 +388,14 @@ test("install-hooks adds Claude Code project settings without damaging unrelated
     }
 
     const stopCommands = settings.hooks.Stop[0].hooks.map((hook) => hook.command);
-    assert.deepEqual(stopCommands.filter((command) => command === "echo unrelated"), ["echo unrelated"]);
-    assert.equal(stopCommands.some((command) => command === "node /old/epic-loop/hook.mjs"), false);
+    assert.deepEqual(
+      stopCommands.filter((command) => command === "echo unrelated"),
+      ["echo unrelated"],
+    );
+    assert.equal(
+      stopCommands.some((command) => command === "node /old/epic-loop/hook.mjs"),
+      false,
+    );
 
     const secondInstall = runNodeScript("install-hooks.mjs", ["--root", root]);
     assertSuccess(secondInstall);
@@ -509,7 +507,7 @@ test("bind-session current lookup uses fresh Claude Code hook captures", () => {
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"ready\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Claude current project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
@@ -773,7 +771,7 @@ test("auto-bind-session supports fresh Claude Code UserPromptSubmit captures", (
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"ready\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Auto Claude project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
@@ -835,7 +833,7 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
     assert.match(installMissing.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
 
     fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
-    fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), "{\"platform\":\"auto\"}\n", "utf8");
+    fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), '{"platform":"auto"}\n', "utf8");
 
     const doctorMissing = runNodeScript("doctor.mjs", ["--root", root, "--json"]);
     assert.equal(doctorMissing.status, 1);

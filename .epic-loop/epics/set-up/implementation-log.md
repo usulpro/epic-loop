@@ -14,3 +14,8 @@
 
 - Task: Phase 1 Task 1 - Add oxlint configuration for the current Node.js ESM repository
 - Verdict: closed: oxlint baseline added with known baseline debt accepted by user. lint and validate now include oxlint and currently fail only on planned max-lines refactor debt in loop.mjs and hooks.mjs; unit tests pass. Refactor task added before Phase 1 verification.
+
+## 2026-07-07T13:51:29+00:00 - closed: added oxfmt dependency, .oxfmtrc.json, format:check/format:write scripts, and validate integration. format:check passes; unit tests pass. pnpm run validate still fails only on accepted oxlint max-lines debt in hooks.mjs and loop.mjs. Markdown formatting excluded because oxfmt@0.57.0 produced unsafe markdown/template churn.
+
+- Task: Phase 1 Task 2 - Add Oxfmt configuration and non-mutating format validation
+- Verdict: closed: added oxfmt dependency, .oxfmtrc.json, format:check/format:write scripts, and validate integration. format:check passes; unit tests pass. pnpm run validate still fails only on accepted oxlint max-lines debt in hooks.mjs and loop.mjs. Markdown formatting excluded because oxfmt@0.57.0 produced unsafe markdown/template churn.

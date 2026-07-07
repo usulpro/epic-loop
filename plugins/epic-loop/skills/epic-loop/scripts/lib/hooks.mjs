@@ -576,7 +576,7 @@ function inspectAndRepairRuntimeState(root, slug, roadmap, bindingMode, result) 
     return;
   }
 
-  const mode = typeof strict.value.mode === "string" && MODES.includes(strict.value.mode) ? strict.value.mode : bindingMode ?? null;
+  const mode = typeof strict.value.mode === "string" && MODES.includes(strict.value.mode) ? strict.value.mode : (bindingMode ?? null);
   if (!mode) {
     result.invalid.push({
       path: runtimePath,
@@ -842,9 +842,7 @@ function doctorClaudeCode(root, platformConfig, flags = {}) {
   console.log(`Hook target exists: ${fs.existsSync(HOOK_SCRIPT_PATH) ? "yes" : "no"}`);
   console.log(`Hook target readable: ${scriptReadable.ok ? "yes" : `no (${scriptReadable.reason})`}`);
   console.log(
-    `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: ${
-      blockCap.ready ? `${blockCap.value}${blockCap.recommended ? "" : " (accepted with warning)"}` : `setup-required (${blockCap.reason})`
-    }`,
+    `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP: ${blockCap.ready ? `${blockCap.value}${blockCap.recommended ? "" : " (accepted with warning)"}` : `setup-required (${blockCap.reason})`}`,
   );
   if (blockCap.warning) {
     console.log(`Warning: ${blockCap.warning}`);

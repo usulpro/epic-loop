@@ -18,7 +18,10 @@ export function nowIso() {
 }
 
 export function eventTimestamp(date = new Date()) {
-  return date.toISOString().replace(/[-:]/gu, "").replace(/\.\d{3}Z$/u, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/gu, "")
+    .replace(/\.\d{3}Z$/u, "Z");
 }
 
 export function slugify(value) {
@@ -32,18 +35,15 @@ export function slugify(value) {
     return slug;
   }
 
-  const fallback = new Date().toISOString().replace(/[-:T.]/gu, "").slice(0, 14);
+  const fallback = new Date()
+    .toISOString()
+    .replace(/[-:T.]/gu, "")
+    .slice(0, 14);
   return `epic-${fallback}`;
 }
 
 export function epicSlugify(value) {
-  return slugify(value)
-    .split("-")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("-")
-    .slice(0, 30)
-    .replace(/-+$/u, "");
+  return slugify(value).split("-").filter(Boolean).slice(0, 2).join("-").slice(0, 30).replace(/-+$/u, "");
 }
 
 export function titleFromDescription(description) {
@@ -58,9 +58,7 @@ export function titleFromDescription(description) {
     return "Untitled Epic";
   }
 
-  return words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 
 export function expandHome(value) {
@@ -322,13 +320,7 @@ export function writeHookCapture(projectRoot, payload) {
 }
 
 export function writeClaudeHookCapture(projectRoot, payload) {
-  if (
-    !payload ||
-    typeof payload !== "object" ||
-    typeof payload.session_id !== "string" ||
-    typeof payload.cwd !== "string" ||
-    typeof payload.transcript_path !== "string"
-  ) {
+  if (!payload || typeof payload !== "object" || typeof payload.session_id !== "string" || typeof payload.cwd !== "string" || typeof payload.transcript_path !== "string") {
     return;
   }
 

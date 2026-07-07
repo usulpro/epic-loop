@@ -17,7 +17,9 @@
   "scripts": {
     "test:unit": "node --test \"tests/unit/**/*.test.mjs\"",
     "lint": "oxlint scripts plugins/epic-loop/skills/epic-loop/scripts tests packages/cli/src packages/cli/scripts",
-    "validate": "for f in scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done && pnpm run lint && node scripts/validate-epic-loop-package.mjs",
+    "format:check": "oxfmt --check package.json .oxlintrc.json .oxfmtrc.json \"scripts/*.mjs\" \"tests/**/*.mjs\" \"packages/cli/src/**/*.mjs\" \"packages/cli/scripts/**/*.mjs\" \"plugins/epic-loop/skills/epic-loop/scripts/**/*.mjs\"",
+    "format:write": "oxfmt --write package.json .oxlintrc.json .oxfmtrc.json \"scripts/*.mjs\" \"tests/**/*.mjs\" \"packages/cli/src/**/*.mjs\" \"packages/cli/scripts/**/*.mjs\" \"plugins/epic-loop/skills/epic-loop/scripts/**/*.mjs\"",
+    "validate": "for f in scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/*.mjs plugins/epic-loop/skills/epic-loop/scripts/lib/*.mjs; do node --check \"$f\" || exit 1; done && pnpm run lint && pnpm run format:check && node scripts/validate-epic-loop-package.mjs",
     "validate:epic-loop": "pnpm run validate",
     "doctor:epic-loop:codex": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex --json",
     "doctor:epic-loop:claude-code": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json",
@@ -34,6 +36,7 @@
   ],
   "packageManager": "pnpm@11.9.0",
   "devDependencies": {
+    "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0"
   }
 }

@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    ".cache/**",
+    "temp/**",
+    ".claude/**",
+    ".codex/**",
+    ".epic-loop/**",
+    "**/.runtime/**",
+    ".epic-loop/.runtime/**",
+    ".epic-loop/epics/*/.runtime/**"
+  ],
+  "printWidth": 180,
+  "sortPackageJson": false
+}

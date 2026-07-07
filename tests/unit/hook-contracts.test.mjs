@@ -282,7 +282,7 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"done\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"done"}}\n', "utf8");
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
     const result = runNodeScript("hook.mjs", ["--root", root], {
@@ -378,10 +378,7 @@ test("Claude Code synthetic implementation flow binds current capture and routes
     const techleadContinuation = JSON.parse(techleadStop.stdout);
     assert.equal(techleadContinuation.decision, "block");
     assert.match(techleadContinuation.reason, /techlead turn 2/u);
-    assert.match(
-      fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8"),
-      /Manager report from transcript/u,
-    );
+    assert.match(fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8"), /Manager report from transcript/u);
     const techleadRuntime = readJsonFile(runtimePath);
     assert.equal(techleadRuntime.implementation_loop.current_role, "techlead");
     assert.equal(techleadRuntime.implementation_loop.next_role, "awaiting-transition");
@@ -463,10 +460,18 @@ test("Claude Code bound Stop captures latest assistant transcript report", () =>
       transcriptPath,
       [
         JSON.stringify({ role: "user", content: "ignored user text" }),
-        JSON.stringify({ message: { role: "assistant", content: [{ type: "text", text: "Older assistant report" }] } }),
+        JSON.stringify({
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "Older assistant report" }],
+          },
+        }),
         "{malformed-json",
         JSON.stringify({ type: "assistant", message: { content: "Middle assistant report" } }),
-        JSON.stringify({ role: "assistant", content: [{ text: "Latest assistant" }, { type: "text", text: "report" }] }),
+        JSON.stringify({
+          role: "assistant",
+          content: [{ text: "Latest assistant" }, { type: "text", text: "report" }],
+        }),
         "",
       ].join("\n"),
       "utf8",

@@ -34,13 +34,13 @@ Epic: Linting And Skill Checks
   - Acceptance: A lint script exists, is included in aggregate validation, enforces targeted `max-lines` and `max-lines-per-function` limits, and reports only accepted baseline `max-lines` debt for `loop.mjs` and `hooks.mjs`, which is tracked as a follow-up refactor task before phase verification.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: doing | Add Oxfmt configuration and non-mutating format validation.
+- [x] Kind: implementation | Status: done | Add Oxfmt configuration and non-mutating format validation.
   - Outcome: Repository formatting is standardized and can be checked without modifying files during validation.
   - Surface: `package.json`, Oxfmt config/ignore files, supported source and documentation files.
-  - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit.
+  - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit; markdown is excluded because `oxfmt@0.57.0` produced unsafe markdown/template churn.
   - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines.
+- [ ] Kind: implementation | Status: doing | Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines.
   - Outcome: Existing source files that exceed the accepted oxlint source-file limit are split into smaller modules without changing hook routing or implementation-loop behavior.
   - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, `plugins/epic-loop/skills/epic-loop/scripts/lib/loop.mjs`, any extracted helper modules under the same `lib/` boundary, and related unit tests.
   - Acceptance: `pnpm run lint` no longer reports `max-lines` errors for `hooks.mjs` or `loop.mjs`; behavior covered by existing hook/loop tests remains unchanged.

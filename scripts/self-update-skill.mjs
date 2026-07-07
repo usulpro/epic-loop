@@ -5,17 +5,10 @@ import process from "node:process";
 const root = process.cwd();
 const source = path.join(root, "plugins", "epic-loop", "skills", "epic-loop");
 
-const codexRoot = process.env.CODEX_HOME
-  ? path.resolve(process.env.CODEX_HOME)
-  : path.join(root, ".codex");
-const claudeRoot = process.env.CLAUDE_HOME
-  ? path.resolve(process.env.CLAUDE_HOME)
-  : path.join(root, ".claude");
+const codexRoot = process.env.CODEX_HOME ? path.resolve(process.env.CODEX_HOME) : path.join(root, ".codex");
+const claudeRoot = process.env.CLAUDE_HOME ? path.resolve(process.env.CLAUDE_HOME) : path.join(root, ".claude");
 
-const destinations = [
-  path.join(codexRoot, "skills", "epic-loop"),
-  path.join(claudeRoot, "skills", "epic-loop"),
-];
+const destinations = [path.join(codexRoot, "skills", "epic-loop"), path.join(claudeRoot, "skills", "epic-loop")];
 
 await assertDirectory(source, "source skill");
 

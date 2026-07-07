@@ -58,21 +58,25 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
     });
   }
 
-  const nextLoop = withClaudeBlockCapMetadata(projectRoot, {
-    ...loop,
-    current_role: null,
-    active_turn_started_at: null,
-    active_turn_stopped_at: null,
-    driver_session_id: sessionId,
-    iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
-    last_reason: "implementation-start",
-    last_session_id: sessionId,
-    last_transition_at: timestamp,
-    last_transition_by: "bind-session",
-    next_role: "manager",
-    prompt_file: null,
-    status: "running",
-  }, timestamp);
+  const nextLoop = withClaudeBlockCapMetadata(
+    projectRoot,
+    {
+      ...loop,
+      current_role: null,
+      active_turn_started_at: null,
+      active_turn_stopped_at: null,
+      driver_session_id: sessionId,
+      iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
+      last_reason: "implementation-start",
+      last_session_id: sessionId,
+      last_transition_at: timestamp,
+      last_transition_by: "bind-session",
+      next_role: "manager",
+      prompt_file: null,
+      status: "running",
+    },
+    timestamp,
+  );
 
   writeJson(runtimePath, {
     ...runtime,
@@ -129,7 +133,7 @@ export function setNextRole(flags = {}) {
       prompt_file: promptFile,
       status,
     },
-    implementation_submode: role === "idle" ? runtime.implementation_submode ?? "techlead" : role,
+    implementation_submode: role === "idle" ? (runtime.implementation_submode ?? "techlead") : role,
     updated_at: timestamp,
   });
 
@@ -257,8 +261,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
   // so appending it to every prompt would misinform the agent.
   const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(prompt) : prompt;
-  const promptFile =
-    role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? loop.prompt_file ?? null : TECHLEAD_PROMPT_TEMPLATE_PATH;
+  const promptFile = role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? (loop.prompt_file ?? null) : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
 
   const nextLoop = incrementClaudeBlockCount(
@@ -689,7 +692,9 @@ function hasOpenTurn(loop) {
 }
 
 function renderTemplate(template, values) {
-  return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template).trim();
+  return Object.entries(values)
+    .reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template)
+    .trim();
 }
 
 function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp) {
@@ -949,15 +954,7 @@ function appendProgressMarkdown(filePath, entry) {
   ensureMarkdownFile(filePath, "# Implementation Progress Log\n");
   fs.appendFileSync(
     filePath,
-    [
-      "",
-      `## ${entry.timestamp ?? nowIso()} | ${entry.action ?? "event"}`,
-      "",
-      progressSummary(entry),
-      "",
-      ...formatProgressDetails(entry),
-      "",
-    ].join("\n"),
+    ["", `## ${entry.timestamp ?? nowIso()} | ${entry.action ?? "event"}`, "", progressSummary(entry), "", ...formatProgressDetails(entry), ""].join("\n"),
     "utf8",
   );
 }
@@ -1077,12 +1074,7 @@ function formatRoleCommands(commands) {
   }
 
   return commands.map((command) => {
-    const parts = [
-      `${command.timestamp}`,
-      `current=${command.current_role ?? "unknown"}`,
-      `next=${command.next_role ?? "unknown"}`,
-      `reason=${command.reason ?? "n/a"}`,
-    ];
+    const parts = [`${command.timestamp}`, `current=${command.current_role ?? "unknown"}`, `next=${command.next_role ?? "unknown"}`, `reason=${command.reason ?? "n/a"}`];
     if (command.prompt_file) {
       parts.push(`prompt=${command.prompt_file}`);
     }
@@ -1141,7 +1133,7 @@ function formatFieldValue(key, value) {
   }
 
   if (typeof value === "string") {
-    return value ? `\`${value}\`` : "`\"\"`";
+    return value ? `\`${value}\`` : '`""`';
   }
 
   if (typeof value === "number" || typeof value === "boolean") {
@@ -1192,11 +1184,22 @@ function groupNestedDurations(events) {
 }
 
 function firstEventTimestamp(events) {
-  return events.map((event) => event.timestamp).filter(Boolean).sort()[0] ?? null;
+  return (
+    events
+      .map((event) => event.timestamp)
+      .filter(Boolean)
+      .sort()[0] ?? null
+  );
 }
 
 function lastEventTimestamp(events) {
-  return events.map((event) => event.timestamp).filter(Boolean).sort().at(-1) ?? null;
+  return (
+    events
+      .map((event) => event.timestamp)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null
+  );
 }
 
 function durationMsBetween(start, end) {

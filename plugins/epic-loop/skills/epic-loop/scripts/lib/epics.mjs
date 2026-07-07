@@ -338,7 +338,10 @@ export function unbindSession(flags = {}) {
   const runtime = readJson(runtimePath, {});
   const normalizedRuntime = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime : {};
   const mode = typeof normalizedRuntime.mode === "string" ? normalizedRuntime.mode : typeof binding.mode === "string" ? binding.mode : "unknown";
-  const loop = normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop) ? normalizedRuntime.implementation_loop : {};
+  const loop =
+    normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop)
+      ? normalizedRuntime.implementation_loop
+      : {};
 
   sessions[sessionId] = {
     ...binding,
@@ -385,7 +388,12 @@ function resolveAutoBindSlug(root, flags = {}) {
     return flags.slug.trim();
   }
 
-  const rawPath = typeof flags.path === "string" && flags.path.trim() ? flags.path.trim() : typeof flags["epic-path"] === "string" && flags["epic-path"].trim() ? flags["epic-path"].trim() : null;
+  const rawPath =
+    typeof flags.path === "string" && flags.path.trim()
+      ? flags.path.trim()
+      : typeof flags["epic-path"] === "string" && flags["epic-path"].trim()
+        ? flags["epic-path"].trim()
+        : null;
   if (!rawPath) {
     throw new Error("Missing --slug or --path.");
   }
