@@ -4,7 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { epicRoot, epicRuntimeRoot, roadmapStatePath, runtimeStatePath, validateEpicSlug } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
+import {
+  epicRoot,
+  epicRuntimeRoot,
+  roadmapStatePath,
+  runtimeStatePath,
+  sessionPathSegment,
+  validateEpicSlug,
+} from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 
 test("epic path helpers preserve valid slug paths inside the epics root", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "epic-loop-common-paths-"));
@@ -36,4 +43,15 @@ test("epic path helpers reject invalid or escaping slugs before returning paths"
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
+});
+
+test("session path segments preserve simple ids and encode unsafe ids", () => {
+  assert.equal(sessionPathSegment("session-bound"), "session-bound");
+  assert.equal(sessionPathSegment("019f3c93-fbeb-74d0-ad69-804fe90b1f37"), "019f3c93-fbeb-74d0-ad69-804fe90b1f37");
+  assert.notEqual(sessionPathSegment("../outside"), "../outside");
+  assert.notEqual(sessionPathSegment("nested/session"), "nested/session");
+  assert.notEqual(sessionPathSegment("encoded-session-reserved"), "encoded-session-reserved");
+  assert.match(sessionPathSegment("../outside"), /^encoded-session-[A-Za-z0-9_-]+$/u);
+  assert.doesNotMatch(sessionPathSegment("../outside"), /[/.\\]/u);
+  assert.throws(() => sessionPathSegment(""), /Invalid session id/u);
 });

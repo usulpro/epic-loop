@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { Buffer } from "node:buffer";
 
 export const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
 export const MODES = ["shaping", "implementation", "review"];
@@ -334,6 +335,26 @@ export function runtimeStatePath(projectRoot, slug) {
 
 export function roadmapStatePath(projectRoot, slug) {
   return path.join(epicRuntimeRoot(projectRoot, slug), "roadmap-state.json");
+}
+
+const ENCODED_SESSION_ID_PREFIX = "encoded-session-";
+const SAFE_SESSION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+
+export function sessionPathSegment(sessionId) {
+  const value = String(sessionId ?? "");
+  if (value.length === 0) {
+    throw new Error("Invalid session id: expected a non-empty string.");
+  }
+
+  if (isSafeSessionPathSegment(value)) {
+    return value;
+  }
+
+  return `${ENCODED_SESSION_ID_PREFIX}${Buffer.from(value, "utf8").toString("base64url")}`;
+}
+
+function isSafeSessionPathSegment(value) {
+  return value !== "." && value !== ".." && !value.startsWith(ENCODED_SESSION_ID_PREFIX) && SAFE_SESSION_ID_PATTERN.test(value);
 }
 
 export function writeHookCapture(projectRoot, payload) {

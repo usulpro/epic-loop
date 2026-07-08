@@ -16,6 +16,7 @@ import {
   readJsonStrict,
   resolveRoot,
   runtimeStatePath,
+  sessionPathSegment,
   sessionRoot,
   slugify,
   writeHookCapture,
@@ -386,7 +387,7 @@ export function handleHook(rawInput, flags = {}) {
     captured_at: nowIso(),
     payload,
   };
-  const eventPath = path.join(sessionRoot(projectRoot), "hook-events", sessionId, eventFilename(payload));
+  const eventPath = path.join(sessionRoot(projectRoot), "hook-events", sessionPathSegment(sessionId), eventFilename(payload));
 
   writeJson(eventPath, eventRecord);
   writeJson(path.join(sessionRoot(projectRoot), "last-hook-event.json"), eventRecord);
@@ -402,7 +403,7 @@ export function handleHook(rawInput, flags = {}) {
 
 function updateSessionState(projectRoot, payload, eventPath) {
   const sessionId = String(payload.session_id ?? "no-session");
-  const statePath = path.join(sessionRoot(projectRoot), "sessions", `${sessionId}.json`);
+  const statePath = path.join(sessionRoot(projectRoot), "sessions", `${sessionPathSegment(sessionId)}.json`);
   const existingState = readJson(statePath, {});
   const state = existingState && typeof existingState === "object" && !Array.isArray(existingState) ? existingState : {};
   const turnIds = Array.isArray(state.turn_ids) ? state.turn_ids : [];
@@ -452,7 +453,7 @@ function mirrorBoundEvent(projectRoot, payload, eventRecord, binding) {
     return;
   }
 
-  const targetDir = path.join(epicRuntimeRoot(projectRoot, String(binding.epic_slug)), "sessions", sessionId);
+  const targetDir = path.join(epicRuntimeRoot(projectRoot, String(binding.epic_slug)), "sessions", sessionPathSegment(sessionId));
   const targetEventPath = path.join(targetDir, eventFilename(payload));
   writeJson(targetEventPath, eventRecord);
   writeJson(path.join(targetDir, "last-hook-event.json"), eventRecord);

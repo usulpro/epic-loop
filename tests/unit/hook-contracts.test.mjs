@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { sessionPathSegment } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
 
 function writeSessionBinding(root, slug, sessionId) {
@@ -160,6 +161,40 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
     assert.equal(nextRuntime.implementation_loop.iteration, 1);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "last-hook-event.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "sessions", sessionId, "last-hook-event.json")), true);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bound hook events store unsafe session ids under safe path segments", () => {
+  const root = makeTempRoot("hook-session-path-safe-");
+  const slug = "hook-safe";
+  const sessionId = "../escaped-session";
+  const safeSegment = sessionPathSegment(sessionId);
+  const runtimeRoot = path.join(root, ".epic-loop", ".runtime");
+  const epicRuntimeRoot = path.join(root, ".epic-loop", "epics", slug, ".runtime");
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Hook unsafe session id", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        turn_id: "turn-bound",
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "escaped-session")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "escaped-session.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "hook-events", safeSegment)), true);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", `${safeSegment}.json`)), true);
+    assert.equal(fs.existsSync(path.join(epicRuntimeRoot, "escaped-session")), false);
+    assert.equal(fs.existsSync(path.join(epicRuntimeRoot, "sessions", safeSegment, "last-hook-event.json")), true);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

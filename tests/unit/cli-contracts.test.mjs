@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { sessionPathSegment } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
 
 function runHook(root, payload) {
@@ -680,6 +681,35 @@ test("bind-session preserves explicit session-id binding on Claude Code", () => 
     assert.equal(bindings.sessions["explicit-claude-session"].source, "explicit-session-id");
     assert.equal(bindings.sessions["explicit-claude-session"].mode, undefined);
     assert.equal(bindings.active_sessions, undefined);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bind-session and unbind-session store unsafe session ids under safe path segments", () => {
+  const root = makeTempRoot("bind-session-path-safe-");
+  const slug = "bind-safe";
+  const unsafeSessionId = "../outside";
+  const safeSegment = sessionPathSegment(unsafeSessionId);
+  const runtimeRoot = path.join(root, ".epic-loop", "epics", slug, ".runtime");
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind unsafe session id project", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--session-id", unsafeSessionId, "--slug", slug, "--mode", "shaping"]);
+    assertSuccess(bind);
+
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions[unsafeSessionId].active, true);
+    assert.equal(bindings.sessions[unsafeSessionId].source, "explicit-session-id");
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "outside", "binding.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", safeSegment, "binding.json")), true);
+
+    const unbind = runNodeScript("unbind-session.mjs", ["--root", root, "--session-id", unsafeSessionId]);
+    assertSuccess(unbind);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "outside", "unbind.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", safeSegment, "unbind.json")), true);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

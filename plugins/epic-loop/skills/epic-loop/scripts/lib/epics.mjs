@@ -19,6 +19,7 @@ import {
   resolveRoot,
   roadmapStatePath,
   runtimeStatePath,
+  sessionPathSegment,
   sessionRoot,
   titleFromDescription,
   writeJson,
@@ -261,7 +262,7 @@ export function bindSession(flags = {}) {
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
-  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionId);
+  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionPathSegment(sessionId));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
@@ -371,7 +372,7 @@ export function unbindSession(flags = {}) {
     });
   }
 
-  const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionId);
+  const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionPathSegment(sessionId));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "unbind.json"), {
     epic_slug: epicSlug,
@@ -441,7 +442,7 @@ function writeMemberBinding(root, slug, currentSession, reason) {
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
-  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", currentSession.session_id);
+  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionPathSegment(currentSession.session_id));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
