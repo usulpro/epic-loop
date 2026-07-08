@@ -1,6 +1,6 @@
 # Tracker
 
-Epic: Linting And English Checks
+Epic: Linting And Skill Checks
 
 ## Task Statuses
 
@@ -26,88 +26,96 @@ Epic: Linting And English Checks
 
 ### Phase 1: Tooling Baseline
 
-- Phase status: todo
+- Phase status: done
 
-- [ ] Kind: implementation | Status: todo | Add oxlint configuration for the current Node.js ESM repository.
+- [x] Kind: implementation | Status: done | Add oxlint configuration for the current Node.js ESM repository.
   - Outcome: JavaScript source, scripts, tests, and plugin package code are linted consistently with the repository's ESM/Node style.
   - Surface: `package.json`, oxlint config, scripts/tests/plugin source under root and `packages/cli`.
-  - Acceptance: A lint script exists, runs without false positives on the intended source set, enforces targeted `max-lines` and `max-lines-per-function` limits, and is included in aggregate validation.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Acceptance: A lint script exists, is included in aggregate validation, enforces targeted `max-lines` and `max-lines-per-function` limits, and reports only accepted baseline `max-lines` debt for `loop.mjs` and `hooks.mjs`, which is tracked as a follow-up refactor task before phase verification.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Add Oxfmt configuration and non-mutating format validation.
+- [x] Kind: implementation | Status: done | Add Oxfmt configuration and non-mutating format validation.
   - Outcome: Repository formatting is standardized and can be checked without modifying files during validation.
   - Surface: `package.json`, Oxfmt config/ignore files, supported source and documentation files.
-  - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Acceptance: Format check and format write scripts exist; aggregate validation uses the check script only; ignored runtime/generated paths are explicit; markdown is excluded because `oxfmt@0.57.0` produced unsafe markdown/template churn.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify lint and format tooling through the repository validation path.
+- [x] Kind: implementation | Status: done | Refactor oversized hook and implementation loop modules to satisfy oxlint max-lines.
+  - Outcome: Existing source files that exceed the accepted oxlint source-file limit are split into smaller modules without changing hook routing or implementation-loop behavior.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, `plugins/epic-loop/skills/epic-loop/scripts/lib/loop.mjs`, any extracted helper modules under the same `lib/` boundary, and related unit tests.
+  - Acceptance: `pnpm run lint` no longer reports `max-lines` errors for `hooks.mjs` or `loop.mjs`; behavior covered by existing hook/loop tests remains unchanged.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [x] Kind: verification | Status: done | Verify lint and format tooling through the repository validation path.
   - Outcome: The first phase tooling is proven through the same command future contributors will run.
   - Surface: Local pnpm scripts, oxlint, Oxfmt, existing syntax/package validation.
   - Acceptance: Run `pnpm run validate` and any focused lint/format scripts; evidence includes exit codes and any required follow-up fixes, with no generated runtime artifacts committed.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
 ### Phase 2: Deterministic Skill Package Checks
 
-- Phase status: todo
+- Phase status: done
 
-- [ ] Kind: implementation | Status: todo | Add deterministic skill package validation for mechanical Agent Skills invariants.
+- [x] Kind: implementation | Status: done | Add deterministic skill package validation for mechanical Agent Skills invariants.
   - Outcome: Maintained skill packages fail validation when their file shape, frontmatter, naming, references, or generated-artifact boundaries violate portable skill package rules.
   - Surface: `scripts/validate-skills.mjs` or `scripts/validate-epic-loop-package.mjs`, `package.json` scripts, skill package files under `plugins/epic-loop/skills`.
   - Acceptance: The validator checks `SKILL.md` presence, YAML frontmatter, required `name` and `description`, kebab-case name constraints, directory-name match, description length, `SKILL.md` line budget, direct reference links, long-reference table of contents, forward-slash paths, script syntax, and ignored runtime/debug artifact absence.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Add focused tests or fixtures for deterministic skill package validation.
+- [x] Kind: implementation | Status: done | Add focused tests or fixtures for deterministic skill package validation.
   - Outcome: The deterministic skill validator has regression coverage for accepted package shape and representative failure cases.
   - Surface: `tests/unit`, validator fixtures/helpers, package validation scripts.
   - Acceptance: Tests cover valid skill metadata, invalid names, missing descriptions, long entrypoint files, missing table of contents for long references, Windows-style paths, and generated artifact detection.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify deterministic skill package checks through aggregate validation.
+- [x] Kind: verification | Status: done | Verify deterministic skill package checks through aggregate validation.
   - Outcome: Skill package mechanical validation is proven as part of the standard repository validation path.
   - Surface: `pnpm run validate`, focused validator command, unit tests, current plugin skill package.
   - Acceptance: Run focused validator tests, run the deterministic skill validator, and run `pnpm run validate` successfully; evidence includes exit codes and any required package cleanup.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
 ### Phase 3: AI-Assisted Skill Quality Review
 
-- Phase status: todo
+- Phase status: done
 
-- [ ] Kind: implementation | Status: todo | Add a headless Codex skill review runner with structured JSON output.
+- [x] Kind: implementation | Status: done | Add a headless Codex skill review runner with structured JSON output.
   - Outcome: Semantic skill quality review can be launched as a normal script command while internally using `codex exec` in non-interactive mode.
   - Surface: `package.json` scripts, AI review runner script, repo-local review skill or prompt, ignored `.validation-output/skill-review/` output path, JSON schema validation.
   - Acceptance: `pnpm run review:skills:ai` invokes `codex exec --ephemeral`, requires a structured JSON report, validates the report schema, prints stable findings, and exits non-zero for blocking findings, malformed JSON, missing output, unknown schema versions, or failed Codex execution.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: implementation | Status: todo | Define the AI skill quality review rubric and finding schema.
+- [x] Kind: implementation | Status: done | Fix unbound hook capture persistence surfaced by AI skill review.
+  - Outcome: Unbound hook invocations do not persist raw hook payloads or prompt/transcript metadata, while current-session binding remains reliable.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/hooks.mjs`, hook capture/session-binding helpers, and focused hook/unit tests.
+  - Acceptance: Unbound sessions remain silent/no-op for runtime records except any deliberately minimal, non-sensitive binding handshake needed by `bind-session --current`; bound hook routing and implementation-loop continuation behavior remain covered by tests.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [x] Kind: implementation | Status: done | Define the AI skill quality review rubric and finding schema.
   - Outcome: The model-backed review evaluates skill semantics consistently instead of producing free-form prose.
   - Surface: Review skill or prompt file, JSON schema fixture, review runner tests, skill policy docs.
   - Acceptance: The rubric covers invocation quality, trigger boundaries, progressive disclosure, task-local reference organization, degree of freedom, script/dependency safety concerns, and actionable recommendations with path and line evidence where possible.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
 
-- [ ] Kind: verification | Status: todo | Verify the AI-assisted review command behaves like a deterministic script boundary.
+- [x] Kind: implementation | Status: done | Fix prompt-file absolute path boundary surfaced by AI review.
+  - Outcome: Absolute `--prompt-file` values are normalized through the same project and epic path boundary checks as relative prompt files.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/loop-prompts.mjs`, `set-next-role.mjs` behavior, and focused CLI/unit tests.
+  - Acceptance: Absolute prompt paths outside the project or outside `.epic-loop/epics/<slug>/` are rejected; absolute prompt paths inside the active epic runtime prompt location are accepted and stored as normalized project-relative paths.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [x] Kind: implementation | Status: done | Align skill trigger and parallel-session instructions surfaced by AI review.
+  - Outcome: The maintained `epic-loop` skill instructions no longer contain the two live AI review blocking issues around package-name trigger breadth and same-epic parallel-mode consistency.
+  - Surface: `plugins/epic-loop/skills/epic-loop/SKILL.md` and `plugins/epic-loop/skills/epic-loop/references/parallel-sessions.md` if needed.
+  - Acceptance: The frontmatter trigger wording activates the skill for explicit epic-loop runtime/workspace work without broadly triggering on ordinary package/plugin development by name; same-epic parallel-session guidance is consistent between the entrypoint and reference docs.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [x] Kind: implementation | Status: done | Add central epic slug path boundary validation surfaced by AI review.
+  - Outcome: User-provided epic slugs can no longer escape `.epic-loop/epics/` through path separators, dot segments, or resolved-path traversal when runtime and artifact paths are constructed.
+  - Surface: `plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs`, path helper call sites as needed, and focused unit/CLI tests.
+  - Acceptance: Slug/path helpers reject path separators, `.`/`..` segments, empty or invalid slugs, and any resolved epic path outside `.epic-loop/epics/`; existing valid slug behavior remains unchanged.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.
+
+- [x] Kind: verification | Status: done | Verify the AI-assisted review command behaves like a deterministic script boundary.
   - Outcome: The AI-backed command is usable in maintainer workflows without ambiguous output handling.
   - Surface: `pnpm run review:skills:ai`, controlled valid and invalid JSON outputs, current skill package, ignored output directory.
   - Acceptance: Prove the runner accepts valid reports, rejects malformed or missing reports, prints findings deterministically, keeps generated artifacts ignored, and documents whether the AI-backed command is excluded from or included in `pnpm run validate`.
-  - Docs: `docs/linting-and-language-policy.md`.
-
-### Phase 4: Repository Language Policy
-
-- Phase status: todo
-
-- [ ] Kind: implementation | Status: todo | Implement deterministic English-only lexical validation for committed project content.
-  - Outcome: Validation fails with actionable diagnostics when maintained project files contain non-English prose or disallowed lexical tokens.
-  - Surface: Small Node.js validation script, package scripts, include/ignore policy, allowlist data if needed.
-  - Acceptance: The script reports path, line, column, and offending token/excerpt; runtime/debug/generated paths are ignored; legitimate technical tokens have an explicit allowlist path.
-  - Docs: `docs/linting-and-language-policy.md`.
-
-- [ ] Kind: implementation | Status: todo | Add focused tests or fixtures for the English-only lexical validator.
-  - Outcome: The custom repository policy has regression coverage for accepted English text, rejected non-English text, ignores, and allowlisted terms.
-  - Surface: `tests/unit`, validator script fixtures/helpers, package validation scripts.
-  - Acceptance: Tests cover pass and fail cases with deterministic assertions and run under the existing Node test runner.
-  - Docs: `docs/linting-and-language-policy.md`.
-
-- [ ] Kind: verification | Status: todo | Verify aggregate validation catches language policy violations and accepts the cleaned repository.
-  - Outcome: The language policy is proven both by focused tests and by aggregate validation.
-  - Surface: Validator script, test runner, `pnpm run validate`, temporary fixture or controlled failing input.
-  - Acceptance: Run focused validator tests, prove a controlled non-English sample fails with the expected diagnostic, remove any temporary sample, and run `pnpm run validate` successfully.
-  - Docs: `docs/linting-and-language-policy.md`.
+  - Docs: `docs/linting-and-skill-validation-policy.md`.

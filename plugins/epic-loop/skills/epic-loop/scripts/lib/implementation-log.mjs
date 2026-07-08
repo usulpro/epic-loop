@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { ensureDir, epicRuntimeRoot, epicsRoot, nowIso, requireFlag, resolveRoot } from "./common.mjs";
+import { ensureDir, epicRoot, epicRuntimeRoot, nowIso, requireFlag, resolveRoot } from "./common.mjs";
 
 export function appendImplementationLog(flags = {}) {
   const root = resolveRoot(flags.root);
@@ -19,7 +19,7 @@ export function appendImplementationLog(flags = {}) {
   };
 
   appendJsonLine(path.join(epicRuntimeRoot(root, slug), "implementation-log.jsonl"), entry);
-  appendMarkdown(path.join(epicsRoot(root), slug, "implementation-log.md"), entry);
+  appendMarkdown(path.join(epicRoot(root, slug), "implementation-log.md"), entry);
   console.log(`Appended implementation log entry for ${slug}.`);
 }
 
@@ -27,7 +27,7 @@ export function readImplementationLogTail(flags = {}) {
   const root = resolveRoot(flags.root);
   const slug = requireFlag(flags, "slug");
   const count = Number(flags.last ?? 3);
-  const filePath = path.join(epicsRoot(root), slug, "implementation-log.md");
+  const filePath = path.join(epicRoot(root, slug), "implementation-log.md");
 
   if (!fs.existsSync(filePath)) {
     return;

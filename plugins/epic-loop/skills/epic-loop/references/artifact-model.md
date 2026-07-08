@@ -1,5 +1,13 @@
 # Epic Artifact Model
 
+## Contents
+
+- [Workspace](#workspace)
+- [Required Files](#required-files)
+- [Runtime Files](#runtime-files)
+- [File Ownership Guidance](#file-ownership-guidance)
+- [Compaction Contract](#compaction-contract)
+
 ## Workspace
 
 Store each epic under:

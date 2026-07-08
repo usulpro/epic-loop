@@ -1,5 +1,22 @@
 # Implementation Manager / Techlead / Engineer Cycle
 
+## Contents
+
+- [Core Rule](#core-rule)
+- [Canonical Runtime Behavior](#canonical-runtime-behavior)
+- [Role References](#role-references)
+- [Cycle Entry](#cycle-entry)
+- [Turn Order](#turn-order)
+- [Techlead Turn Expectations](#techlead-turn-expectations)
+- [Engineer Turn Expectations](#engineer-turn-expectations)
+- [Manager Turn Expectations](#manager-turn-expectations)
+- [Closure Discipline](#closure-discipline)
+- [Phase Closure Discipline](#phase-closure-discipline)
+- [Reset Ladder](#reset-ladder)
+- [Exit Conditions](#exit-conditions)
+- [Prompt-Writing Rule](#prompt-writing-rule)
+- [Commit Discipline](#commit-discipline)
+
 ## Core Rule
 
 Implementation alternates between:

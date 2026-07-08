@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { sessionPathSegment } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
 
 function runHook(root, payload) {
@@ -88,15 +89,7 @@ test("doctor repairs structured epic compatibility without reading state markdow
     fs.mkdirSync(path.join(legacyRoot, ".runtime"), { recursive: true });
     fs.writeFileSync(
       path.join(legacyRoot, "state-of-epic.md"),
-      [
-        "# State Of Epic",
-        "",
-        "Epic: Markdown Must Not Drive Mode",
-        "Slug: `legacy`",
-        "Current mode: review",
-        "Active phase: Phase 9 - Markdown Only",
-        "",
-      ].join("\n"),
+      ["# State Of Epic", "", "Epic: Markdown Must Not Drive Mode", "Slug: `legacy`", "Current mode: review", "Active phase: Phase 9 - Markdown Only", ""].join("\n"),
       "utf8",
     );
     fs.writeFileSync(
@@ -124,17 +117,20 @@ test("doctor repairs structured epic compatibility without reading state markdow
       "utf8",
     );
 
-    fs.mkdirSync(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime"), { recursive: true });
+    fs.mkdirSync(path.join(root, ".epic-loop", "epics", emptySlug, ".runtime"), {
+      recursive: true,
+    });
 
     const doctor = runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]);
     assertSuccess(doctor);
     const status = JSON.parse(doctor.stdout);
     assert.equal(status.epicCompatibility.ready, true);
     assert.equal(status.epicCompatibility.checked, 2);
-    assert.deepEqual(
-      status.epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`).sort(),
-      ["empty:created-roadmap-state", "empty:created-runtime-state", "legacy:created-runtime-state"],
-    );
+    assert.deepEqual(status.epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`).sort(), [
+      "empty:created-roadmap-state",
+      "empty:created-runtime-state",
+      "legacy:created-runtime-state",
+    ]);
 
     const legacyRuntime = readJsonFile(path.join(legacyRoot, ".runtime", "runtime-state.json"));
     assert.equal(legacyRuntime.mode, "shaping");
@@ -164,10 +160,7 @@ test("doctor repairs structured epic compatibility without reading state markdow
     );
 
     const hook = runHook(root, userPromptPayload(root, "session-legacy"));
-    assert.equal(
-      JSON.parse(hook.stdout).hookSpecificOutput.additionalContext,
-      "[epic-loop] epic=legacy mode=shaping — follow epic-loop skill mode rules",
-    );
+    assert.equal(JSON.parse(hook.stdout).hookSpecificOutput.additionalContext, "[epic-loop] epic=legacy mode=shaping — follow epic-loop skill mode rules");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -396,8 +389,14 @@ test("install-hooks adds Claude Code project settings without damaging unrelated
     }
 
     const stopCommands = settings.hooks.Stop[0].hooks.map((hook) => hook.command);
-    assert.deepEqual(stopCommands.filter((command) => command === "echo unrelated"), ["echo unrelated"]);
-    assert.equal(stopCommands.some((command) => command === "node /old/epic-loop/hook.mjs"), false);
+    assert.deepEqual(
+      stopCommands.filter((command) => command === "echo unrelated"),
+      ["echo unrelated"],
+    );
+    assert.equal(
+      stopCommands.some((command) => command === "node /old/epic-loop/hook.mjs"),
+      false,
+    );
 
     const secondInstall = runNodeScript("install-hooks.mjs", ["--root", root]);
     assertSuccess(secondInstall);
@@ -450,6 +449,50 @@ test("task and role handoff CLIs update public files through process contracts",
   }
 });
 
+test("set-next-role validates absolute prompt-file paths through the normal epic boundary", () => {
+  const root = makeTempRoot("prompt-boundary-");
+  const outsideRoot = makeTempRoot("prompt-boundary-outside-");
+  const slug = "prompt-boundary";
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Prompt boundary project", "--slug", slug, "--no-gitignore"]));
+
+    const brief = runNodeScript("write-engineer-brief.mjs", ["--root", root, "--slug", slug, "--stdin"], {
+      input: "Implement a prompt boundary test.\n",
+    });
+    assertSuccess(brief);
+
+    const promptPath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "current-engineer-prompt.md");
+    const accepted = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", promptPath]);
+    assertSuccess(accepted);
+
+    const runtime = readJsonFile(path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json"));
+    assert.equal(runtime.implementation_loop.prompt_file, path.join(".epic-loop", "epics", slug, ".runtime", "current-engineer-prompt.md"));
+
+    const outsidePrompt = path.join(outsideRoot, "prompt.md");
+    fs.writeFileSync(outsidePrompt, "outside\n", "utf8");
+    const outsideProject = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", outsidePrompt]);
+    assert.equal(outsideProject.status, 1);
+    assert.match(outsideProject.stderr, /Prompt file must stay inside the project/u);
+
+    const insideProjectPrompt = path.join(root, "prompt.md");
+    fs.writeFileSync(insideProjectPrompt, "inside project\n", "utf8");
+    const outsideEpic = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", insideProjectPrompt]);
+    assert.equal(outsideEpic.status, 1);
+    assert.match(outsideEpic.stderr, new RegExp(`Prompt file must be inside \\.epic-loop/epics/${slug}/\\.`, "u"));
+
+    const otherEpicPrompt = path.join(root, ".epic-loop", "epics", "other-epic", ".runtime", "current-engineer-prompt.md");
+    fs.mkdirSync(path.dirname(otherEpicPrompt), { recursive: true });
+    fs.writeFileSync(otherEpicPrompt, "other epic\n", "utf8");
+    const wrongEpic = runNodeScript("set-next-role.mjs", ["--root", root, "--slug", slug, "--role", "engineer", "--prompt-file", otherEpicPrompt]);
+    assert.equal(wrongEpic.status, 1);
+    assert.match(wrongEpic.stderr, new RegExp(`Prompt file must be inside \\.epic-loop/epics/${slug}/\\.`, "u"));
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+    fs.rmSync(outsideRoot, { force: true, recursive: true });
+  }
+});
+
 test("bind-session current lookup requires explicit platform selection", () => {
   const root = makeTempRoot("bind-platform-");
 
@@ -472,8 +515,10 @@ test("bind-session current lookup requires explicit platform selection", () => {
 test("bind-session current lookup preserves Codex hook capture behavior", () => {
   const root = makeTempRoot("bind-codex-current-");
   const slug = "bind-codex";
+  const transcriptPath = path.join(root, "codex-transcript.jsonl");
 
   try {
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Codex current project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
 
@@ -481,11 +526,24 @@ test("bind-session current lookup preserves Codex hook capture behavior", () => 
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive codex prompt",
         session_id: "codex-current-session",
+        transcript_path: transcriptPath,
         turn_id: "turn-current",
       }),
     });
     assertSuccess(capture);
+
+    const handshake = readJsonFile(path.join(root, ".codex", "tmp", "last-hook-capture.json"));
+    assert.deepEqual(handshake.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "codex-current-session",
+      turn_id: "turn-current",
+    });
+    assert.equal(handshake.payload, undefined);
+    assert.equal(JSON.stringify(handshake).includes("sensitive codex prompt"), false);
+    assert.equal(JSON.stringify(handshake).includes(transcriptPath), false);
 
     const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
     assertSuccess(bind);
@@ -509,7 +567,7 @@ test("bind-session current lookup uses fresh Claude Code hook captures", () => {
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"ready\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind Claude current project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
@@ -517,12 +575,24 @@ test("bind-session current lookup uses fresh Claude Code hook captures", () => {
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive claude prompt",
         session_id: "claude-current-session",
         stop_hook_active: false,
         transcript_path: transcriptPath,
       }),
     });
     assertSuccess(capture);
+
+    const handshake = readJsonFile(path.join(root, ".epic-loop", ".runtime", "claude-code-last-hook-capture.json"));
+    assert.deepEqual(handshake.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "claude-current-session",
+      turn_id: null,
+    });
+    assert.equal(handshake.payload, undefined);
+    assert.equal(JSON.stringify(handshake).includes("sensitive claude prompt"), false);
+    assert.equal(JSON.stringify(handshake).includes(transcriptPath), false);
 
     const bind = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", slug, "--mode", "implementation"]);
     assertSuccess(bind);
@@ -611,6 +681,35 @@ test("bind-session preserves explicit session-id binding on Claude Code", () => 
     assert.equal(bindings.sessions["explicit-claude-session"].source, "explicit-session-id");
     assert.equal(bindings.sessions["explicit-claude-session"].mode, undefined);
     assert.equal(bindings.active_sessions, undefined);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bind-session and unbind-session store unsafe session ids under safe path segments", () => {
+  const root = makeTempRoot("bind-session-path-safe-");
+  const slug = "bind-safe";
+  const unsafeSessionId = "../outside";
+  const safeSegment = sessionPathSegment(unsafeSessionId);
+  const runtimeRoot = path.join(root, ".epic-loop", "epics", slug, ".runtime");
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Bind unsafe session id project", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+
+    const bind = runNodeScript("bind-session.mjs", ["--root", root, "--session-id", unsafeSessionId, "--slug", slug, "--mode", "shaping"]);
+    assertSuccess(bind);
+
+    const bindings = readJsonFile(path.join(root, ".epic-loop", ".runtime", "session-bindings.json"));
+    assert.equal(bindings.sessions[unsafeSessionId].active, true);
+    assert.equal(bindings.sessions[unsafeSessionId].source, "explicit-session-id");
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "outside", "binding.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", safeSegment, "binding.json")), true);
+
+    const unbind = runNodeScript("unbind-session.mjs", ["--root", root, "--session-id", unsafeSessionId]);
+    assertSuccess(unbind);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "outside", "unbind.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", safeSegment, "unbind.json")), true);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -773,7 +872,7 @@ test("auto-bind-session supports fresh Claude Code UserPromptSubmit captures", (
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"ready\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Auto Claude project", "--slug", slug, "--no-gitignore"]));
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
@@ -835,7 +934,7 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
     assert.match(installMissing.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
 
     fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
-    fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), "{\"platform\":\"auto\"}\n", "utf8");
+    fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), '{"platform":"auto"}\n', "utf8");
 
     const doctorMissing = runNodeScript("doctor.mjs", ["--root", root, "--json"]);
     assert.equal(doctorMissing.status, 1);

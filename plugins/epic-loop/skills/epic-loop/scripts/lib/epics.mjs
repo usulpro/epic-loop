@@ -5,6 +5,7 @@ import {
   CURRENT_SESSION_CAPTURE_TTL_MS,
   MODES,
   appendGitignore,
+  epicRoot,
   epicRuntimeRoot,
   epicSlugify,
   epicsRoot,
@@ -18,6 +19,7 @@ import {
   resolveRoot,
   roadmapStatePath,
   runtimeStatePath,
+  sessionPathSegment,
   sessionRoot,
   titleFromDescription,
   writeJson,
@@ -37,7 +39,7 @@ export function initEpic(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   ensureDir(path.join(epicDir, "docs"));
   ensureDir(epicRuntimeRoot(root, slug));
 
@@ -176,7 +178,7 @@ export function setEpicMode(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -194,7 +196,7 @@ export function status(flags = {}, positionals = []) {
     throw new Error("Missing epic slug.");
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   const statePath = path.join(epicDir, "state-of-epic.md");
   const runtimePath = runtimeStatePath(root, slug);
 
@@ -237,7 +239,7 @@ export function bindSession(flags = {}) {
     throw new Error(`Invalid --mode "${mode}". Expected one of: ${MODES.join(", ")}.`);
   }
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -260,7 +262,7 @@ export function bindSession(flags = {}) {
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
-  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionId);
+  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionPathSegment(sessionId));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
@@ -287,7 +289,7 @@ export function autoBindSession(flags = {}) {
   const currentPlatform = requireRuntimePlatform(root);
   const currentSession = flags.current ? (currentPlatform === "claude-code" ? readCurrentClaudeSession(root) : readCurrentCodexSession(root)) : null;
 
-  const epicDir = path.join(epicsRoot(root), slug);
+  const epicDir = epicRoot(root, slug);
   if (!fs.existsSync(epicDir)) {
     throw new Error(`Epic not found: ${epicDir}`);
   }
@@ -338,7 +340,10 @@ export function unbindSession(flags = {}) {
   const runtime = readJson(runtimePath, {});
   const normalizedRuntime = runtime && typeof runtime === "object" && !Array.isArray(runtime) ? runtime : {};
   const mode = typeof normalizedRuntime.mode === "string" ? normalizedRuntime.mode : typeof binding.mode === "string" ? binding.mode : "unknown";
-  const loop = normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop) ? normalizedRuntime.implementation_loop : {};
+  const loop =
+    normalizedRuntime.implementation_loop && typeof normalizedRuntime.implementation_loop === "object" && !Array.isArray(normalizedRuntime.implementation_loop)
+      ? normalizedRuntime.implementation_loop
+      : {};
 
   sessions[sessionId] = {
     ...binding,
@@ -367,7 +372,7 @@ export function unbindSession(flags = {}) {
     });
   }
 
-  const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionId);
+  const sessionDir = path.join(epicRuntimeRoot(root, epicSlug), "sessions", sessionPathSegment(sessionId));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "unbind.json"), {
     epic_slug: epicSlug,
@@ -385,7 +390,12 @@ function resolveAutoBindSlug(root, flags = {}) {
     return flags.slug.trim();
   }
 
-  const rawPath = typeof flags.path === "string" && flags.path.trim() ? flags.path.trim() : typeof flags["epic-path"] === "string" && flags["epic-path"].trim() ? flags["epic-path"].trim() : null;
+  const rawPath =
+    typeof flags.path === "string" && flags.path.trim()
+      ? flags.path.trim()
+      : typeof flags["epic-path"] === "string" && flags["epic-path"].trim()
+        ? flags["epic-path"].trim()
+        : null;
   if (!rawPath) {
     throw new Error("Missing --slug or --path.");
   }
@@ -404,7 +414,10 @@ function isAutoBindableCurrentSession(currentSession, platform) {
   }
 
   if (platform === "claude-code") {
-    return currentSession.source === "claude-hook-capture" && typeof currentSession.transcript_path === "string" && currentSession.transcript_path.length > 0;
+    return (
+      currentSession.source === "claude-hook-capture" &&
+      (currentSession.capture_kind === "handshake" || (typeof currentSession.transcript_path === "string" && currentSession.transcript_path.length > 0))
+    );
   }
 
   return currentSession.source === "hook-capture";
@@ -429,7 +442,7 @@ function writeMemberBinding(root, slug, currentSession, reason) {
   normalizedBindings.sessions = sessions;
   writeJson(bindingsPath, normalizedBindings);
 
-  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", currentSession.session_id);
+  const sessionDir = path.join(epicRuntimeRoot(root, slug), "sessions", sessionPathSegment(currentSession.session_id));
   ensureDir(sessionDir);
   writeJson(path.join(sessionDir, "binding.json"), {
     bound_at: boundAt,
@@ -451,7 +464,7 @@ function writeEpicRuntimeMode(root, slug, mode) {
     runtime = JSON.parse(fs.readFileSync(runtimePath, "utf8"));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Cannot read runtime state: ${message}`);
+    throw new Error(`Cannot read runtime state: ${message}`, { cause: error });
   }
 
   if (!runtime || typeof runtime !== "object" || Array.isArray(runtime)) {

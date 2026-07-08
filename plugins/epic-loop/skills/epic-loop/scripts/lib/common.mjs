@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { Buffer } from "node:buffer";
 
 export const HOOK_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"];
 export const MODES = ["shaping", "implementation", "review"];
@@ -18,7 +19,10 @@ export function nowIso() {
 }
 
 export function eventTimestamp(date = new Date()) {
-  return date.toISOString().replace(/[-:]/gu, "").replace(/\.\d{3}Z$/u, "Z");
+  return date
+    .toISOString()
+    .replace(/[-:]/gu, "")
+    .replace(/\.\d{3}Z$/u, "Z");
 }
 
 export function slugify(value) {
@@ -32,18 +36,15 @@ export function slugify(value) {
     return slug;
   }
 
-  const fallback = new Date().toISOString().replace(/[-:T.]/gu, "").slice(0, 14);
+  const fallback = new Date()
+    .toISOString()
+    .replace(/[-:T.]/gu, "")
+    .slice(0, 14);
   return `epic-${fallback}`;
 }
 
 export function epicSlugify(value) {
-  return slugify(value)
-    .split("-")
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("-")
-    .slice(0, 30)
-    .replace(/-+$/u, "");
+  return slugify(value).split("-").filter(Boolean).slice(0, 2).join("-").slice(0, 30).replace(/-+$/u, "");
 }
 
 export function titleFromDescription(description) {
@@ -58,9 +59,7 @@ export function titleFromDescription(description) {
     return "Untitled Epic";
   }
 
-  return words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 }
 
 export function expandHome(value) {
@@ -294,8 +293,40 @@ export function epicsRoot(projectRoot) {
   return path.join(epicLoopRoot(projectRoot), "epics");
 }
 
+export function validateEpicSlug(slug) {
+  if (typeof slug !== "string" || slug.length === 0) {
+    throw new Error("Invalid epic slug: expected a non-empty lowercase kebab-case path segment.");
+  }
+  if (slug !== slug.trim()) {
+    throw new Error(`Invalid epic slug "${slug}": leading or trailing whitespace is not allowed.`);
+  }
+  if (path.isAbsolute(slug) || slug.includes("/") || slug.includes("\\")) {
+    throw new Error(`Invalid epic slug "${slug}": path separators are not allowed.`);
+  }
+  if (slug === "." || slug === ".." || slug.includes("..")) {
+    throw new Error(`Invalid epic slug "${slug}": dot segments are not allowed.`);
+  }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug)) {
+    throw new Error(`Invalid epic slug "${slug}": expected lowercase kebab-case letters and numbers.`);
+  }
+  return slug;
+}
+
+export function epicRoot(projectRoot, slug) {
+  const safeSlug = validateEpicSlug(slug);
+  const root = epicsRoot(projectRoot);
+  const epicPath = path.join(root, safeSlug);
+  const relative = path.relative(path.resolve(root), path.resolve(epicPath));
+
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`Epic path must stay inside .epic-loop/epics/: ${slug}`);
+  }
+
+  return epicPath;
+}
+
 export function epicRuntimeRoot(projectRoot, slug) {
-  return path.join(epicsRoot(projectRoot), slug, ".runtime");
+  return path.join(epicRoot(projectRoot, slug), ".runtime");
 }
 
 export function runtimeStatePath(projectRoot, slug) {
@@ -306,15 +337,36 @@ export function roadmapStatePath(projectRoot, slug) {
   return path.join(epicRuntimeRoot(projectRoot, slug), "roadmap-state.json");
 }
 
+const ENCODED_SESSION_ID_PREFIX = "encoded-session-";
+const SAFE_SESSION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+
+export function sessionPathSegment(sessionId) {
+  const value = String(sessionId ?? "");
+  if (value.length === 0) {
+    throw new Error("Invalid session id: expected a non-empty string.");
+  }
+
+  if (isSafeSessionPathSegment(value)) {
+    return value;
+  }
+
+  return `${ENCODED_SESSION_ID_PREFIX}${Buffer.from(value, "utf8").toString("base64url")}`;
+}
+
+function isSafeSessionPathSegment(value) {
+  return value !== "." && value !== ".." && !value.startsWith(ENCODED_SESSION_ID_PREFIX) && SAFE_SESSION_ID_PATTERN.test(value);
+}
+
 export function writeHookCapture(projectRoot, payload) {
-  if (!payload || typeof payload !== "object" || typeof payload.session_id !== "string" || typeof payload.cwd !== "string") {
+  const handshake = hookHandshake(payload);
+  if (!handshake) {
     return;
   }
 
   try {
     writeJson(path.join(projectRoot, CODEX_HOOK_CAPTURE_RELATIVE_PATH), {
       capturedAt: nowIso(),
-      payload,
+      handshake,
     });
   } catch {
     // Best effort: capturing the live session must never break the hook itself.
@@ -322,20 +374,15 @@ export function writeHookCapture(projectRoot, payload) {
 }
 
 export function writeClaudeHookCapture(projectRoot, payload) {
-  if (
-    !payload ||
-    typeof payload !== "object" ||
-    typeof payload.session_id !== "string" ||
-    typeof payload.cwd !== "string" ||
-    typeof payload.transcript_path !== "string"
-  ) {
+  const handshake = hookHandshake(payload);
+  if (!handshake || typeof payload.transcript_path !== "string") {
     return;
   }
 
   try {
     writeJson(path.join(projectRoot, CLAUDE_HOOK_CAPTURE_RELATIVE_PATH), {
       capturedAt: nowIso(),
-      payload,
+      handshake,
     });
   } catch {
     // Best effort: capturing the live session must never break the hook itself.
@@ -346,19 +393,19 @@ export function readCurrentCodexSession(projectRoot) {
   const candidates = [];
   const capturePath = path.join(projectRoot, CODEX_HOOK_CAPTURE_RELATIVE_PATH);
   const capture = readJson(capturePath, null);
-  const payload = capture && typeof capture === "object" && capture.payload && typeof capture.payload === "object" ? capture.payload : null;
+  const capturedSession = readCapturedHookSession(capture);
 
-  if (payload && payload.cwd === projectRoot && typeof payload.session_id === "string") {
+  if (capturedSession && capturedSession.cwd === projectRoot && typeof capturedSession.session_id === "string") {
     const capturedMs = parseDateMs(capture.capturedAt);
     const captureCandidate = {
       captured_at: capture.capturedAt ?? null,
-      hook_event_name: payload.hook_event_name ?? null,
-      prompt: payload.prompt ?? null,
-      session_id: payload.session_id,
+      hook_event_name: capturedSession.hook_event_name ?? null,
+      prompt: null,
+      session_id: capturedSession.session_id,
       source: "hook-capture",
-      transcript_path: payload.transcript_path ?? null,
-      turn_id: payload.turn_id ?? null,
-      updated_at_ms: getMtimeMs(payload.transcript_path) ?? capturedMs ?? 0,
+      transcript_path: capturedSession.transcript_path ?? null,
+      turn_id: capturedSession.turn_id ?? null,
+      updated_at_ms: getMtimeMs(capturedSession.transcript_path) ?? capturedMs ?? 0,
     };
 
     // Codex passes the real session id to the hook on stdin, so a fresh capture is
@@ -383,9 +430,14 @@ export function readCurrentCodexSession(projectRoot) {
 export function readCurrentClaudeSession(projectRoot) {
   const capturePath = path.join(projectRoot, CLAUDE_HOOK_CAPTURE_RELATIVE_PATH);
   const capture = readJson(capturePath, null);
-  const payload = capture && typeof capture === "object" && capture.payload && typeof capture.payload === "object" ? capture.payload : null;
+  const capturedSession = readCapturedHookSession(capture);
 
-  if (!payload || payload.cwd !== projectRoot || typeof payload.session_id !== "string" || typeof payload.transcript_path !== "string") {
+  if (
+    !capturedSession ||
+    capturedSession.cwd !== projectRoot ||
+    typeof capturedSession.session_id !== "string" ||
+    (capturedSession.capture_kind === "legacy-payload" && typeof capturedSession.transcript_path !== "string")
+  ) {
     return null;
   }
 
@@ -396,14 +448,50 @@ export function readCurrentClaudeSession(projectRoot) {
 
   return {
     captured_at: capture.capturedAt ?? null,
-    hook_event_name: payload.hook_event_name ?? null,
-    prompt: payload.prompt ?? null,
-    session_id: payload.session_id,
+    capture_kind: capturedSession.capture_kind,
+    hook_event_name: capturedSession.hook_event_name ?? null,
+    prompt: null,
+    session_id: capturedSession.session_id,
     source: "claude-hook-capture",
-    transcript_path: payload.transcript_path,
-    turn_id: payload.turn_id ?? null,
-    updated_at_ms: getMtimeMs(payload.transcript_path) ?? capturedMs,
+    transcript_path: capturedSession.transcript_path ?? null,
+    turn_id: capturedSession.turn_id ?? null,
+    updated_at_ms: getMtimeMs(capturedSession.transcript_path) ?? capturedMs,
   };
+}
+
+function hookHandshake(payload) {
+  if (!payload || typeof payload !== "object" || typeof payload.session_id !== "string" || typeof payload.cwd !== "string") {
+    return null;
+  }
+
+  return {
+    cwd: payload.cwd,
+    hook_event_name: typeof payload.hook_event_name === "string" ? payload.hook_event_name : null,
+    session_id: payload.session_id,
+    turn_id: typeof payload.turn_id === "string" ? payload.turn_id : null,
+  };
+}
+
+function readCapturedHookSession(capture) {
+  if (!capture || typeof capture !== "object") {
+    return null;
+  }
+
+  if (capture.handshake && typeof capture.handshake === "object") {
+    return {
+      ...capture.handshake,
+      capture_kind: "handshake",
+    };
+  }
+
+  if (capture.payload && typeof capture.payload === "object") {
+    return {
+      ...capture.payload,
+      capture_kind: "legacy-payload",
+    };
+  }
+
+  return null;
 }
 
 function findLatestCodexTranscriptSession(projectRoot) {

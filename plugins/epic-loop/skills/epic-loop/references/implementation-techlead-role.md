@@ -4,6 +4,22 @@ Canonical live prompt: [../assets/templates/implementation-techlead-prompt.md](.
 
 Counterpart roles: [implementation-manager-role.md](implementation-manager-role.md), [implementation-engineer-role.md](implementation-engineer-role.md). Cycle overview: [implementation-cycle.md](implementation-cycle.md).
 
+## Contents
+
+- [Identity](#identity)
+- [Two Layers Of Responsibility](#two-layers-of-responsibility)
+- [Required Reads](#required-reads)
+- [Forbidden Runtime Surfaces](#forbidden-runtime-surfaces)
+- [Housekeeping Gate](#housekeeping-gate)
+- [How Techlead Reviews Work](#how-techlead-reviews-work)
+- [Challenge-Driven Review](#challenge-driven-review)
+- [Task Closure Standard](#task-closure-standard)
+- [Phase Closure Standard](#phase-closure-standard)
+- [Reset And Detour Judgment](#reset-and-detour-judgment)
+- [Commit Discipline](#commit-discipline)
+- [Engineer Prompt Contract](#engineer-prompt-contract)
+- [Role Handoff](#role-handoff)
+
 ## Identity
 
 The techlead is the governing loop for implementation mode.

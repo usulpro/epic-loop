@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
+import { sessionPathSegment } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
 import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
 
 function writeSessionBinding(root, slug, sessionId) {
@@ -31,7 +32,7 @@ function writeSessionBinding(root, slug, sessionId) {
       {
         ...runtime,
         implementation_loop: {
-          ...(runtime.implementation_loop ?? {}),
+          ...runtime.implementation_loop,
           driver_session_id: sessionId,
         },
         mode: "implementation",
@@ -70,14 +71,18 @@ function writeOpenImplementationTurn(root, slug, role = "engineer") {
 
 test("hook CLI captures unbound sessions without writing epic-loop runtime records", () => {
   const root = makeTempRoot("hook-unbound-");
+  const transcriptPath = path.join(root, "transcript.jsonl");
   const payload = {
     cwd: root,
     hook_event_name: "Stop",
+    prompt: "sensitive prompt text",
     session_id: "session-unbound",
+    transcript_path: transcriptPath,
     turn_id: "turn-1",
   };
 
   try {
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"ready"}}\n', "utf8");
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
 
     const result = runNodeScript("hook.mjs", ["--root", root], {
@@ -86,7 +91,16 @@ test("hook CLI captures unbound sessions without writing epic-loop runtime recor
 
     assertSuccess(result);
     assert.equal(result.stdout, "");
-    assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), true);
+    const capture = readJsonFile(path.join(root, ".codex", "tmp", "last-hook-capture.json"));
+    assert.deepEqual(capture.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "session-unbound",
+      turn_id: "turn-1",
+    });
+    assert.equal(capture.payload, undefined);
+    assert.equal(JSON.stringify(capture).includes("sensitive prompt text"), false);
+    assert.equal(JSON.stringify(capture).includes(transcriptPath), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
@@ -147,6 +161,40 @@ test("hook CLI builds a deterministic bound Stop continuation", () => {
     assert.equal(nextRuntime.implementation_loop.iteration, 1);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "last-hook-event.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "sessions", sessionId, "last-hook-event.json")), true);
+  } finally {
+    fs.rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("bound hook events store unsafe session ids under safe path segments", () => {
+  const root = makeTempRoot("hook-session-path-safe-");
+  const slug = "hook-safe";
+  const sessionId = "../escaped-session";
+  const safeSegment = sessionPathSegment(sessionId);
+  const runtimeRoot = path.join(root, ".epic-loop", ".runtime");
+  const epicRuntimeRoot = path.join(root, ".epic-loop", "epics", slug, ".runtime");
+
+  try {
+    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Hook unsafe session id", "--slug", slug, "--no-gitignore"]));
+    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
+    writeSessionBinding(root, slug, sessionId);
+
+    const result = runNodeScript("hook.mjs", ["--root", root], {
+      input: JSON.stringify({
+        cwd: root,
+        hook_event_name: "Stop",
+        session_id: sessionId,
+        turn_id: "turn-bound",
+      }),
+    });
+
+    assertSuccess(result);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "escaped-session")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "escaped-session.json")), false);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "hook-events", safeSegment)), true);
+    assert.equal(fs.existsSync(path.join(runtimeRoot, "sessions", `${safeSegment}.json`)), true);
+    assert.equal(fs.existsSync(path.join(epicRuntimeRoot, "escaped-session")), false);
+    assert.equal(fs.existsSync(path.join(epicRuntimeRoot, "sessions", safeSegment, "last-hook-event.json")), true);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }
@@ -277,18 +325,19 @@ test("non-driver UserPromptSubmit does not interrupt an open implementation turn
   }
 });
 
-test("Claude Code unbound hook payload exits without epic-loop runtime records", () => {
+test("Claude Code unbound hook payload records only a minimal current-session handshake", () => {
   const root = makeTempRoot("hook-claude-unbound-");
   const transcriptPath = path.join(root, "transcript.jsonl");
 
   try {
-    fs.writeFileSync(transcriptPath, "{\"type\":\"assistant\",\"message\":{\"content\":\"done\"}}\n", "utf8");
+    fs.writeFileSync(transcriptPath, '{"type":"assistant","message":{"content":"done"}}\n', "utf8");
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
 
     const result = runNodeScript("hook.mjs", ["--root", root], {
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
+        prompt: "sensitive claude prompt",
         session_id: "claude-session-unbound",
         stop_hook_active: false,
         transcript_path: transcriptPath,
@@ -298,6 +347,16 @@ test("Claude Code unbound hook payload exits without epic-loop runtime records",
     assertSuccess(result);
     assert.equal(result.stdout, "");
     assert.equal(fs.existsSync(path.join(root, ".codex", "tmp", "last-hook-capture.json")), false);
+    const capture = readJsonFile(path.join(root, ".epic-loop", ".runtime", "claude-code-last-hook-capture.json"));
+    assert.deepEqual(capture.handshake, {
+      cwd: root,
+      hook_event_name: "Stop",
+      session_id: "claude-session-unbound",
+      turn_id: null,
+    });
+    assert.equal(capture.payload, undefined);
+    assert.equal(JSON.stringify(capture).includes("sensitive claude prompt"), false);
+    assert.equal(JSON.stringify(capture).includes(transcriptPath), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "session-bindings.json")), false);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), false);
   } finally {
@@ -378,10 +437,7 @@ test("Claude Code synthetic implementation flow binds current capture and routes
     const techleadContinuation = JSON.parse(techleadStop.stdout);
     assert.equal(techleadContinuation.decision, "block");
     assert.match(techleadContinuation.reason, /techlead turn 2/u);
-    assert.match(
-      fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8"),
-      /Manager report from transcript/u,
-    );
+    assert.match(fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, ".runtime", "latest-manager-report.md"), "utf8"), /Manager report from transcript/u);
     const techleadRuntime = readJsonFile(runtimePath);
     assert.equal(techleadRuntime.implementation_loop.current_role, "techlead");
     assert.equal(techleadRuntime.implementation_loop.next_role, "awaiting-transition");
@@ -463,10 +519,18 @@ test("Claude Code bound Stop captures latest assistant transcript report", () =>
       transcriptPath,
       [
         JSON.stringify({ role: "user", content: "ignored user text" }),
-        JSON.stringify({ message: { role: "assistant", content: [{ type: "text", text: "Older assistant report" }] } }),
+        JSON.stringify({
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "Older assistant report" }],
+          },
+        }),
         "{malformed-json",
         JSON.stringify({ type: "assistant", message: { content: "Middle assistant report" } }),
-        JSON.stringify({ role: "assistant", content: [{ text: "Latest assistant" }, { type: "text", text: "report" }] }),
+        JSON.stringify({
+          role: "assistant",
+          content: [{ text: "Latest assistant" }, { type: "text", text: "report" }],
+        }),
         "",
       ].join("\n"),
       "utf8",

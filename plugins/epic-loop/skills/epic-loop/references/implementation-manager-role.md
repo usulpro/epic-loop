@@ -2,6 +2,17 @@
 
 Counterpart role: [implementation-techlead-role.md](implementation-techlead-role.md). Cycle overview: [implementation-cycle.md](implementation-cycle.md).
 
+## Contents
+
+- [Identity](#identity)
+- [When Manager Runs](#when-manager-runs)
+- [Responsibilities](#responsibilities)
+- [Required Reads](#required-reads)
+- [Implementation-Start Housekeeping](#implementation-start-housekeeping)
+- [Compaction Rules](#compaction-rules)
+- [Archive And Stub Format](#archive-and-stub-format)
+- [Handoff Constraint](#handoff-constraint)
+
 ## Identity
 
 The manager owns housekeeping inside implementation mode.
