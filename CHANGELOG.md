@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - Add `scripts/epic-loop.mjs` skill wrapper: runs the `epic-loop` npm CLI pinned to the skill version and passes the skill directory.
 - Move `doctor` into the CLI (`epic-loop doctor`); it now also reports the skill version, install type, and available updates.

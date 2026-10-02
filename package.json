@@ -1,6 +1,6 @@
 {
   "name": "epic-loop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Codex plugin for turning long-running engineering efforts into durable epic workspaces across agent sessions.",
   "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
