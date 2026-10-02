@@ -25,7 +25,7 @@ Active task: none - Phase 2 complete, loop idle; distribution foundation added o
 - **Published and manually verified (2026-07-04, post-closure)**: user published `epic-loop` to the public npm registry as `v0.1.0` and confirmed with a real `npx epic-loop` run — correctly listed all 4 real epics with slug/title/mode and `standalone-npx`'s own live implementation-loop state. This satisfies Phase 2's manual-publish step, which was explicitly out of the automated loop's scope.
 - **Distribution foundation (2026-10-02, direct user session, outside the loop, uncommitted at time of writing)**. Why: settle how the skill reaches the CLI and how versions, installs, and updates work before any more logic moves into the package. Details and rationale: `decision-log.md` → "Distribution Foundation"; evidence: `implementation-log.md` (2026-10-02 entry).
   - Skill wrapper `scripts/epic-loop.mjs`: runs `npx --prefer-offline epic-loop@<pinned version>` with the skill dir in `EPIC_LOOP_SKILL_DIR`; `EPIC_LOOP_CLI` dev override.
-  - One version across skill, plugin manifests, and npm package (`pnpm run release <x.y.z>`, enforced by `validate` and the CLI build).
+  - One version across skill, plugin manifests, and npm package (`scripts/release.mjs`, enforced by `validate` and the CLI build; `/release-epic` skill drives a full release with `npm publish` as the only manual step).
   - `doctor` migrated into the CLI (temporary lib duplication), now also reporting skill version, install type, and available updates; SKILL.md/references call it through the wrapper.
   - New CLI commands: `install --platform`, `update` (atomic local-copy swap; plugins pointed at host commands), `config` (machine-local `autoupdate`); daily npm update check; autoupdate for local copies.
   - npm package ships a copy of the skill; Claude Code plugin + marketplace manifests added.
@@ -38,6 +38,6 @@ Active task: none - Phase 2 complete, loop idle; distribution foundation added o
 
 ## Next Action
 
-- User: release `0.2.0` (`pnpm run release 0.2.0`, validate + tests, `npm publish` from `packages/cli`, then commit/tag/push), then `pnpm run self-update` for the runtime copies.
+- Merge `feature/distribution-foundation` into `main`, then release `0.2.0` with `/release-epic minor` (user only runs `npm publish` when prompted).
 - Then: resume shaping to refine Phase 3 (CLI/TUI stack research) against the adjusted task text, or explicitly confirm implementation to proceed into Phase 3.
 - Before starting Phase 3 work, consider picking up the recorded follow-up (`docs/bootstrap.md`) — small, non-blocking, but currently referenced by closed Phase 2 tasks without existing.

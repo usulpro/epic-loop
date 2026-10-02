@@ -146,7 +146,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Docs: docs/bootstrap.md
 
 - [ ] Kind: follow-up | Status: todo | Move npm publishing to CI, triggered by a pushed version tag
-  - Outcome: a release is "run `pnpm run release <x.y.z>`, commit, push tag"; CI validates, tests, builds, and publishes `packages/cli` to npm, which removes the manual publish-before-push ordering risk.
+  - Outcome: a release is "run `/release-epic` (or `scripts/release.mjs prepare`), push the tag" with no local `npm publish`; CI validates, tests, builds, and publishes `packages/cli` to npm, which removes the manual publish-before-push ordering risk.
   - Surface: CI workflow config, npm token secret, `scripts/release.mjs` next-step output, README "Releasing".
   - Acceptance: pushing a `v<x.y.z>` tag whose version matches all stamped files publishes `epic-loop@<x.y.z>`; a mismatched tag fails before publishing.
   - Docs: README "Releasing", `decision-log.md`.
