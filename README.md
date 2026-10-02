@@ -222,15 +222,17 @@ EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node <skill-dir>/scripts/epic-loop
 
 The skill, both plugin manifests, and the npm CLI share one version; `pnpm run validate` fails if they drift.
 
+In Claude Code, run `/release-epic [x.y.z|patch|minor|major]`. It fills in the changelog, prepares the release, tells you to run `npm publish`, waits for npm to serve the version, then tags, pushes, and syncs the runtime skill copies. The same steps by hand:
+
 ```bash
-pnpm run release <major.minor.patch>   # stamps the version everywhere, including the skill wrapper pin
-pnpm run validate && pnpm run test:unit
-cd packages/cli && npm publish          # prepack builds dist/ and copies the skill into the package
-git commit -am "release: v<version>" && git tag v<version>
-git push && git push --tags
+node scripts/release.mjs prepare minor    # preflight, stamp, changelog, validate, tests, build, local release commit
+cd packages/cli && npm publish            # the only manual step
+node scripts/release.mjs wait 0.2.0       # optional: block until npm serves the version
+node scripts/release.mjs finish 0.2.0     # npx smoke test, tag, push main + tag, self-update, runtime doctor check
+node scripts/release.mjs abort 0.2.0      # instead of publishing: drop the local release commit
 ```
 
-Publish before pushing: the skill on `main` pins the new version, so it must already exist on npm. Planned: move publishing to CI, so a release is just pushing a version tag.
+Publish before pushing: the skill on `main` pins the new version, so it must already exist on npm; `prepare` never pushes and `finish` refuses until npm has the version. Planned: move publishing to CI, so a release is just pushing a version tag.
 
 ### Helper Scripts
 

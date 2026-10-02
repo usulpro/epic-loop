@@ -145,7 +145,7 @@ function validateVersions(context) {
   const distinct = new Set(Object.values(versions));
   if (distinct.size !== 1 || distinct.has(null) || distinct.has(undefined)) {
     const details = Object.entries(versions).map(([key, value]) => `${VERSION_FILES[key]}=${value}`);
-    context.errors.push(`Release versions must match (run \`pnpm run release <version>\`): ${details.join(", ")}.`);
+    context.errors.push(`Release versions must match (run \`node scripts/release.mjs stamp <version>\`): ${details.join(", ")}.`);
   }
 }
 

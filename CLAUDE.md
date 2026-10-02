@@ -29,7 +29,8 @@ pnpm run validate           # node --check every script + validate-epic-loop-pac
 pnpm run self-update        # sync plugins/ -> .claude/ + .codex/ runtime copies
 pnpm run eval-fixture-reset # reset the eval-fixture epic to a clean baseline
 EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs doctor --platform claude-code --json  # hook readiness via local CLI
-pnpm run release <x.y.z>    # stamp one version into skill wrapper, plugin manifests, npm package
+node scripts/release.mjs stamp <x.y.z>   # stamp one version into skill wrapper, plugin manifests, npm package
+# Full release: /release-epic skill (.claude/skills/release-epic) drives release.mjs prepare -> (manual npm publish) -> wait -> finish
 (cd packages/cli && node scripts/build.mjs)  # build dist/ + copy skill into packages/cli/skill/
 ```
 
@@ -37,7 +38,7 @@ Tests use only the Node built-in test runner (no Jest/Vitest); each test spawns 
 
 ## Architecture
 
-**Skill ↔ npm CLI.** `scripts/epic-loop.mjs` in the skill is a thin wrapper that runs `npx --prefer-offline epic-loop@<SKILL_VERSION>` with `EPIC_LOOP_SKILL_DIR` set to its own skill dir (cwd stays the project). Skill, plugin manifests, and npm package share one version (`scripts/release.mjs` stamps it; `validate` enforces it), so a skill copy always runs the CLI it was released with. `EPIC_LOOP_CLI=<path to packages/cli/src/cli.mjs>` makes the wrapper run local CLI source instead (dev + tests). Logic migrates from skill scripts into the CLI incrementally; so far only `doctor` lives in the CLI (`packages/cli/src/doctor/`, with a deliberate temporary duplicate of the lib modules it needs — the skill's own `doctor.mjs` still exists). The CLI also owns `install`, `update` (atomic in-place replacement of local skill copies; plugin installs are pointed at host commands), `config` (machine-local `.epic-loop/.runtime/config.json`, e.g. `autoupdate`), and a once-a-day npm registry update check. The CLI may use npm deps and is built with esbuild before publish; skill scripts stay Node-built-ins-only.
+**Skill ↔ npm CLI.** `scripts/epic-loop.mjs` in the skill is a thin wrapper that runs `npx --prefer-offline epic-loop@<SKILL_VERSION>` with `EPIC_LOOP_SKILL_DIR` set to its own skill dir (cwd stays the project). Skill, plugin manifests, and npm package share one version (`scripts/release.mjs stamp` writes it; `validate` enforces it), so a skill copy always runs the CLI it was released with. `EPIC_LOOP_CLI=<path to packages/cli/src/cli.mjs>` makes the wrapper run local CLI source instead (dev + tests). Logic migrates from skill scripts into the CLI incrementally; so far only `doctor` lives in the CLI (`packages/cli/src/doctor/`, with a deliberate temporary duplicate of the lib modules it needs — the skill's own `doctor.mjs` still exists). The CLI also owns `install`, `update` (atomic in-place replacement of local skill copies; plugin installs are pointed at host commands), `config` (machine-local `.epic-loop/.runtime/config.json`, e.g. `autoupdate`), and a once-a-day npm registry update check. The CLI may use npm deps and is built with esbuild before publish; skill scripts stay Node-built-ins-only.
 
 **Platform abstraction.** The skill supports two host platforms, **Codex** and **Claude Code**, selected explicitly via `doctor --platform` (written to `.epic-loop/.runtime/platform.json`). Scripts must read the configured platform, never infer it from payload shape, cwd, or environment. `install-hooks.mjs` writes platform-appropriate hook config (`.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code).
 
@@ -59,4 +60,5 @@ Tests use only the Node built-in test runner (no Jest/Vitest); each test spawns 
 - Keep this repo shaped as a public plugin/skill package; do not add sample application code unless a plugin behavior test needs it.
 - After changing hook/loop behavior, update the matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` contracts and the affected `references/*.md`, then `self-update`.
 - CLI package behavior is covered by `tests/unit/cli-package.test.mjs` (spawns `packages/cli/src/cli.mjs` and the skill wrapper with `EPIC_LOOP_CLI`, `EPIC_LOOP_NO_UPDATE_CHECK=1`, and an isolated `HOME`; never hits the network).
-- Release order matters: `npm publish` before pushing to `main`, because the skill on `main` pins the new version. Moving publish to CI (tag-triggered) is planned.
+- Release order matters: `npm publish` before pushing to `main`, because the skill on `main` pins the new version. `scripts/release.mjs` enforces it (`prepare` commits locally only; `finish` pushes after verifying npm). Moving publish to CI (tag-triggered) is planned.
+- `.claude/` is gitignored except `.claude/skills/release-epic/` (a repo-maintenance skill, committed); the `.claude/skills/epic-loop` runtime copy stays untracked.

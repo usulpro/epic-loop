@@ -30,7 +30,11 @@ build/
 temp/
 .validation-output/
 
-.claude
+# Runtime skill copies and local agent state stay untracked; repo-maintenance skills are committed.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/release-epic/
 .codex
 .epic-loop/.runtime/
 .epic-loop/epics/*/.runtime/

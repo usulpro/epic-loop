@@ -11,7 +11,7 @@ const wrapper = readFileSync(path.join(skillSource, "scripts", "epic-loop.mjs"),
 const skillVersion = wrapper.match(/^const SKILL_VERSION = "([^"]+)";$/mu)?.[1];
 
 if (skillVersion !== version) {
-  console.error(`Skill wrapper pins ${skillVersion ?? "no version"} but the package is ${version}. Run \`pnpm run release <version>\` at the repo root.`);
+  console.error(`Skill wrapper pins ${skillVersion ?? "no version"} but the package is ${version}. Run \`node scripts/release.mjs stamp <version>\` at the repo root.`);
   process.exit(1);
 }
 
