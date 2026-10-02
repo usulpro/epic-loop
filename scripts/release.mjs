@@ -29,7 +29,7 @@ export const VERSION_FILES = {
 
 const WRAPPER_VERSION_PATTERN = /^const SKILL_VERSION = "([^"]+)";$/mu;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/u;
-const RELEASE_BRANCH = "main";
+const RELEASE_BRANCH = process.env.EPIC_LOOP_RELEASE_BRANCH || "main";
 const CHANGELOG = "CHANGELOG.md";
 const RUNTIME_SKILL_COPIES = [".claude/skills/epic-loop", ".codex/skills/epic-loop"];
 const SOURCE_SKILL = "plugins/epic-loop/skills/epic-loop";
