@@ -46,7 +46,9 @@ test("release prepare refuses to run outside the release branch before touching 
   spawnSync("git", ["init", "-q", "-b", "feature/x"], { cwd: root });
   spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "init"], { cwd: root });
 
-  const result = spawnSync(process.execPath, [releaseScript, "prepare", "patch"], { cwd: root, encoding: "utf8" });
+  const env = { ...process.env };
+  delete env.EPIC_LOOP_RELEASE_BRANCH;
+  const result = spawnSync(process.execPath, [releaseScript, "prepare", "patch"], { cwd: root, encoding: "utf8", env });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Releases are cut from main; current branch is feature\/x/u);
 });
