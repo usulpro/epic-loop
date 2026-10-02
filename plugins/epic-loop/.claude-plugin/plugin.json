@@ -1,0 +1,14 @@
+{
+  "name": "epic-loop",
+  "version": "0.1.0",
+  "description": "Shape large engineering efforts into durable epic workspaces, then run implementation across sessions through Codex or Claude Code hooks without losing intent, decisions, or task context.",
+  "author": {
+    "name": "Oleg Proskurin",
+    "email": "usulpro@gmail.com",
+    "url": "https://github.com/usulpro"
+  },
+  "homepage": "https://github.com/usulpro/epic-loop",
+  "repository": "https://github.com/usulpro/epic-loop",
+  "license": "MIT",
+  "keywords": ["codex", "claude-code", "skills", "epic", "automation", "hooks"]
+}

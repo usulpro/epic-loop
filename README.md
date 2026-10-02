@@ -86,35 +86,59 @@ These files **are** the epic: a durable, human-readable planning artifact you co
 
 - A supported host: **Codex** (with hooks enabled under `[features]` in the active config or profile) **or Claude Code**.
 - Trusted project-local command hooks for the current session (`.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code).
-- Node.js for the bundled `.mjs` helper scripts.
+- Node.js 18+ with `npx` (the skill's helper scripts and the `epic-loop` npm CLI).
 - A target repository where the epic workspace should be created.
 
 ## Installation
 
-Add this repository as a Codex plugin marketplace and install the plugin:
+Three supported ways to install, all ending in the same skill:
+
+**1. npx (project-local copy + hooks in one step).** From the target repository:
 
 ```bash
-codex plugin marketplace add usulpro/epic-loop --ref main
+npx epic-loop install --platform claude-code   # -> .claude/skills/epic-loop + .claude/settings.json hooks
+npx epic-loop install --platform codex         # -> .codex/skills/epic-loop + .codex/hooks.json hooks
+```
+
+**2. Plugin.** Codex:
+
+```bash
+codex plugin marketplace add usulpro/epic-loop --ref main   # or --ref v<version> for a pinned release
 codex plugin add epic-loop@epic-loop
 ```
 
-To install a pinned version, use the release tag or commit ref:
+Claude Code:
 
 ```bash
-codex plugin marketplace add usulpro/epic-loop --ref "<ref>"
-codex plugin add epic-loop@epic-loop
+claude plugin marketplace add usulpro/epic-loop
+claude plugin install epic-loop@epic-loop
 ```
 
-For local development from this checkout:
+**3. Manual copy.** Copy `plugins/epic-loop/skills/epic-loop/` into the project's `.claude/skills/` or `.codex/skills/`. This is the same end state as option 1, minus the hook setup.
+
+The skill runs its deterministic operations through the `epic-loop` npm CLI: `scripts/epic-loop.mjs` inside the skill invokes `npx epic-loop@<version>` pinned to the skill's own version, so a skill copy and the CLI it uses can never drift apart.
+
+### Updating
+
+`doctor` checks the npm registry once a day and reports when a newer version exists, with the exact update command for the install type:
+
+| Install | Update |
+|---|---|
+| npx install or manual copy | `npx epic-loop@<latest> update` replaces the copy in place (atomically; local edits are not preserved) |
+| Codex plugin | `codex plugin marketplace upgrade epic-loop && codex plugin add epic-loop@epic-loop` |
+| Claude Code plugin | `claude plugin marketplace update epic-loop && claude plugin update epic-loop@epic-loop`, then restart |
+
+After a plugin update, run `doctor` again: the plugin path changes, and doctor flags the stale hook command for reinstall.
+
+To let `doctor` update a local copy automatically, without asking, enable it per machine (stored in `.epic-loop/.runtime/config.json`, never committed):
 
 ```bash
-codex plugin marketplace add .
-codex plugin add epic-loop@epic-loop
+npx epic-loop config set autoupdate true
 ```
 
-On **Claude Code**, install the plugin through its plugin marketplace, or load the skill directly from `.claude/skills/epic-loop/` (this repo keeps that copy in sync via `pnpm run self-update`).
+Plugin installs are never auto-updated; they belong to the host.
 
-After installing the plugin, start a new Codex or Claude Code session in the target repository and invoke the skill by name:
+After installing, start a new Codex or Claude Code session in the target repository and invoke the skill by name:
 
 ```text
 $epic-loop start a new epic for the following area of functionality:
@@ -132,8 +156,8 @@ The first run checks whether the target project has the project-local hooks it n
 Hook setup is intentionally performed from the target project after user approval:
 
 ```bash
-# Check technical readiness for the chosen host.
-node <skill-dir>/scripts/doctor.mjs --platform codex|claude-code --json
+# Check technical readiness for the chosen host (and whether a skill update exists).
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform codex|claude-code --json
 
 # Install project-local hooks (.codex/hooks.json for Codex, .claude/settings.json for Claude Code).
 node <skill-dir>/scripts/install-hooks.mjs
@@ -156,24 +180,27 @@ For contributors working on the plugin itself.
 ### Repository Layout
 
 ```text
-.agents/
-  plugins/
-    marketplace.json
+.agents/plugins/marketplace.json     # Codex marketplace
+.claude-plugin/marketplace.json      # Claude Code marketplace
 plugins/
   epic-loop/
     .codex-plugin/plugin.json
+    .claude-plugin/plugin.json
     skills/
       epic-loop/
         SKILL.md
         agents/openai.yaml
-        scripts/
+        scripts/                     # scripts/epic-loop.mjs = pinned entry into the npm CLI
         references/
         assets/templates/
+packages/
+  cli/                               # `epic-loop` npm package (ships a copy of the skill)
 scripts/
+  release.mjs
   validate-epic-loop-package.mjs
 ```
 
-The distributable plugin surface is `plugins/epic-loop/`. The `.agents/plugins/marketplace.json` file exposes that plugin for local or Git-backed marketplace installation.
+The distributable plugin surface is `plugins/epic-loop/`, exposed to Codex by `.agents/plugins/marketplace.json` and to Claude Code by `.claude-plugin/marketplace.json`. The npm package in `packages/cli/` carries the CLI and, from its build step, a copy of the same skill for `npx epic-loop install|update`.
 
 ### Repository Commands
 
@@ -184,6 +211,26 @@ pnpm run validate
 # Sync the current skill into repo-local Codex and Claude Code skill folders.
 pnpm run self-update
 ```
+
+While developing, point the skill wrapper at the local CLI source instead of the published package:
+
+```bash
+EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node <skill-dir>/scripts/epic-loop.mjs doctor --platform claude-code
+```
+
+### Releasing
+
+The skill, both plugin manifests, and the npm CLI share one version; `pnpm run validate` fails if they drift.
+
+```bash
+pnpm run release <major.minor.patch>   # stamps the version everywhere, including the skill wrapper pin
+pnpm run validate && pnpm run test:unit
+cd packages/cli && npm publish          # prepack builds dist/ and copies the skill into the package
+git commit -am "release: v<version>" && git tag v<version>
+git push && git push --tags
+```
+
+Publish before pushing: the skill on `main` pins the new version, so it must already exist on npm. Planned: move publishing to CI, so a release is just pushing a version tag.
 
 ### Helper Scripts
 

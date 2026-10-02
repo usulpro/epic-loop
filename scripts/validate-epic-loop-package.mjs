@@ -4,9 +4,15 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 
+import { VERSION_FILES, readVersions } from "./release.mjs";
+
 const requiredFiles = [
   ".agents/plugins/marketplace.json",
+  ".claude-plugin/marketplace.json",
+  "packages/cli/package.json",
+  "plugins/epic-loop/.claude-plugin/plugin.json",
   "plugins/epic-loop/.codex-plugin/plugin.json",
+  "plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs",
   "plugins/epic-loop/skills/epic-loop/SKILL.md",
   "plugins/epic-loop/skills/epic-loop/agents/openai.yaml",
   "plugins/epic-loop/skills/epic-loop/assets/templates/implementation-manager-prompt.md",
@@ -51,6 +57,19 @@ export function validateEpicLoopPackage(options = {}) {
   if (plugin) {
     validatePlugin(context, plugin);
   }
+
+  const claudeMarketplace = readJson(context, ".claude-plugin/marketplace.json");
+  const claudePlugin = readJson(context, "plugins/epic-loop/.claude-plugin/plugin.json");
+
+  if (claudeMarketplace) {
+    validateClaudeMarketplace(context, claudeMarketplace);
+  }
+
+  if (claudePlugin) {
+    expectEqual(context, claudePlugin.name, "epic-loop", "Claude plugin name");
+  }
+
+  validateVersions(context);
 
   const skill = readText(context, "plugins/epic-loop/skills/epic-loop/SKILL.md");
   if (skill) {
@@ -99,6 +118,35 @@ function validatePlugin(context, plugin) {
   rejectIncludes(context, plugin.description, "driven by Codex hooks", "plugin description");
   expectIncludes(context, plugin.interface?.longDescription, "Codex or Claude Code hooks", "plugin interface.longDescription");
   rejectIncludes(context, plugin.interface?.longDescription, "driven by Codex hooks", "plugin interface.longDescription");
+}
+
+function validateClaudeMarketplace(context, marketplace) {
+  expectEqual(context, marketplace.name, "epic-loop", "Claude marketplace name");
+
+  const entry = Array.isArray(marketplace.plugins) ? marketplace.plugins.find((item) => item?.name === "epic-loop") : null;
+  if (!entry) {
+    context.errors.push(".claude-plugin/marketplace.json must include an epic-loop plugin entry.");
+    return;
+  }
+
+  expectEqual(context, entry.source, "./plugins/epic-loop", "Claude marketplace epic-loop source");
+}
+
+// The skill, both plugin manifests, and the npm CLI release in lockstep: the skill
+// wrapper pins the CLI version, so any drift breaks installed skills.
+function validateVersions(context) {
+  let versions;
+  try {
+    versions = readVersions(context.root);
+  } catch {
+    return;
+  }
+
+  const distinct = new Set(Object.values(versions));
+  if (distinct.size !== 1 || distinct.has(null) || distinct.has(undefined)) {
+    const details = Object.entries(versions).map(([key, value]) => `${VERSION_FILES[key]}=${value}`);
+    context.errors.push(`Release versions must match (run \`pnpm run release <version>\`): ${details.join(", ")}.`);
+  }
 }
 
 function validateSkill(context, skill) {

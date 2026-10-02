@@ -70,6 +70,14 @@ function validFixture(root) {
   writeFile(root, "plugins/epic-loop/skills/epic-loop/assets/templates/implementation-techlead-prompt.md", "Techlead template.\n");
   writeFile(root, "plugins/epic-loop/skills/epic-loop/references/guide.md", "# Guide\n\nShort reference.\n");
   writeFile(root, "plugins/epic-loop/skills/epic-loop/scripts/ok.mjs", "console.log('ok');\n");
+  writeJson(root, ".claude-plugin/marketplace.json", {
+    name: "epic-loop",
+    plugins: [{ name: "epic-loop", source: "./plugins/epic-loop" }],
+  });
+  writeJson(root, "plugins/epic-loop/.claude-plugin/plugin.json", { name: "epic-loop", version: "1.0.0" });
+  writeJson(root, "packages/cli/package.json", { name: "epic-loop", version: "1.0.0" });
+  writeJson(root, "package.json", { name: "epic-loop", private: true, version: "1.0.0" });
+  writeFile(root, "plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs", 'const SKILL_VERSION = "1.0.0";\nconsole.log(SKILL_VERSION);\n');
 }
 
 function withFixture(testName, callback) {
@@ -179,6 +187,20 @@ test("skill package validator rejects runtime artifacts in the skill package", (
     writeFile(root, "plugins/epic-loop/skills/epic-loop/.runtime/prompt-log.md", "debug trace\n");
 
     assertValidationError(root, /\.runtime looks like a runtime\/debug artifact/u);
+  });
+});
+
+test("skill package validator rejects release version drift between skill, plugins, and CLI", () => {
+  withFixture("version-drift", (root) => {
+    writeJson(root, "packages/cli/package.json", { name: "epic-loop", version: "1.1.0" });
+    assertValidationError(root, /Release versions must match.*packages\/cli\/package\.json=1\.1\.0/u);
+  });
+});
+
+test("skill package validator requires the Claude Code marketplace entry", () => {
+  withFixture("claude-marketplace", (root) => {
+    writeJson(root, ".claude-plugin/marketplace.json", { name: "epic-loop", plugins: [] });
+    assertValidationError(root, /\.claude-plugin\/marketplace\.json must include an epic-loop plugin entry/u);
   });
 });
 

@@ -246,7 +246,7 @@ export function normalizeRuntimePlatform(value) {
 }
 
 export function platformSetupCommand() {
-  return "doctor.mjs --platform codex|claude-code --json";
+  return "epic-loop.mjs doctor --platform codex|claude-code --json";
 }
 
 export function writeRuntimePlatform(projectRoot, platform) {

@@ -4,6 +4,7 @@
 
 - [Goal](#goal)
 - [Local Config](#local-config)
+- [Skill Updates](#skill-updates)
 - [Installer Behavior](#installer-behavior)
 - [Hook Payload](#hook-payload)
 - [Project-Local State](#project-local-state)
@@ -20,13 +21,15 @@ Epic-loop hooks must be project-local and session-aware. Parallel sessions in th
 Start by selecting the runtime platform explicitly. `--platform` is mandatory on every `doctor` run:
 
 ```bash
-node <skill-dir>/scripts/doctor.mjs --platform codex --json
-node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform codex --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform claude-code --json
 ```
+
+`scripts/epic-loop.mjs` runs the `epic-loop` npm CLI pinned to this skill's version (`npx epic-loop@<version>`) and passes `<skill-dir>` through `EPIC_LOOP_SKILL_DIR`, so the CLI checks hooks against this exact skill copy. Run it from the project root; cwd is the project.
 
 This writes the selected platform to `.epic-loop/.runtime/platform.json`. Platform-aware scripts read that runtime config; they must not infer the platform from hook payload shape, cwd, environment variables, `.codex/`, `.claude/`, transcript paths, or stale runtime config when running `doctor`.
 
-Do not run `doctor.mjs --json` without `--platform`; missing `--platform` must fail instead of falling back to a saved platform.
+Do not run `doctor --json` without `--platform`; missing `--platform` must fail instead of falling back to a saved platform.
 
 If setup is needed, preview the changes:
 
@@ -83,6 +86,14 @@ Hooks are configured. We can start the epic.
 ```
 
 Do not show full `doctor` output by default. Do not mention `ready: true`, config paths, global config, event lists, or other diagnostics unless the user asks. If install was attempted and failed, say that explicitly in one sentence.
+
+## Skill Updates
+
+`doctor` compares the skill version with the latest published `epic-loop` version (checked at most once a day, cached in `.epic-loop/.runtime/update-check.json`; offline means "not checked", never a failure) and reports the result in its `update` field.
+
+- Local skill copies (copied by hand or by `npx epic-loop install`) update with `update.command`, which reinstalls the copy in place atomically. Local edits to a copied skill are not preserved.
+- Plugin installs update through the host: `claude plugin marketplace update epic-loop && claude plugin update epic-loop@epic-loop` (restart required) or `codex plugin marketplace upgrade epic-loop && codex plugin add epic-loop@epic-loop`. The plugin path changes on update, so run `doctor` afterwards; it reports the stale hook command and the installer repairs it.
+- With machine-local `autoupdate` on (`npx epic-loop config set autoupdate true`, stored in `.epic-loop/.runtime/config.json`), `doctor` updates a local copy without asking and reruns itself as the new version, reporting `update.action: "applied"`. Plugin installs are never auto-updated.
 
 ## Installer Behavior
 

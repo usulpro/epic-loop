@@ -60,7 +60,7 @@ When an epic is invoked through an installed skill, runtime commands must use th
 For Codex local epic runtime in this repository:
 
 ```bash
-node .codex/skills/epic-loop/scripts/doctor.mjs --platform codex --json
+node .codex/skills/epic-loop/scripts/epic-loop.mjs doctor --platform codex --json
 node .codex/skills/epic-loop/scripts/install-hooks.mjs
 node .codex/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
@@ -68,10 +68,12 @@ node .codex/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-sl
 For Claude Code local epic runtime in this repository:
 
 ```bash
-node .claude/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json
+node .claude/skills/epic-loop/scripts/epic-loop.mjs doctor --platform claude-code --json
 node .claude/skills/epic-loop/scripts/install-hooks.mjs
 node .claude/skills/epic-loop/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation
 ```
+
+`scripts/epic-loop.mjs` runs the published `epic-loop` npm CLI pinned to the skill's version. To exercise unreleased CLI changes, prefix the command with `EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs"`; the wrapper then runs the local CLI source with the same skill directory.
 
 If the matching installed skill copy is missing, do not silently fall back to `plugins/epic-loop/skills/epic-loop`. Report the missing runtime skill copy and ask before changing runtime setup.
 
@@ -110,7 +112,7 @@ Required hook events:
 The runtime platform is selected explicitly (never inferred from payload shape, cwd, or environment) and stored in `.epic-loop/.runtime/platform.json`. Always run readiness checks through the matching platform:
 
 ```bash
-node <runtime-skill-dir>/scripts/doctor.mjs --platform codex|claude-code --json
+node <runtime-skill-dir>/scripts/epic-loop.mjs doctor --platform codex|claude-code --json
 ```
 
 Only bound sessions may write epic-loop runtime state. Unbound sessions must produce no epic-loop records.
@@ -155,12 +157,12 @@ Source files under `plugins/epic-loop/skills/epic-loop/` are the package being d
 Use source-package scripts only for package development, validation, and tests:
 
 ```bash
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex --json
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json
+EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs doctor --platform codex --json
+EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs doctor --platform claude-code --json
 pnpm run validate
 ```
 
-When run from the source package, `doctor.mjs` and `install-hooks.mjs` compute hook targets relative to `plugins/epic-loop/skills/epic-loop`. A source-package doctor may report installed runtime hooks as stale. During normal local epic runtime operation, do not treat that as permission to repair hooks from the source package.
+When run from the source package, doctor (via the wrapper) and `install-hooks.mjs` compute hook targets relative to `plugins/epic-loop/skills/epic-loop`. A source-package doctor may report installed runtime hooks as stale. During normal local epic runtime operation, do not treat that as permission to repair hooks from the source package.
 
 Only use source-package `install-hooks.mjs` when deliberately testing the source package as the live runtime, and only after explicit user confirmation.
 
@@ -189,7 +191,7 @@ pnpm run validate
 For source package readiness in this checkout:
 
 ```bash
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex|claude-code --json
+EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs doctor --platform codex|claude-code --json
 ```
 
 ## Context Hygiene
