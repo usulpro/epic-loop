@@ -64,14 +64,14 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 - Phase status: todo
 
 - [ ] Kind: documentation-only | Status: todo | Research candidate libraries for CLI argument parsing, styled output, and interactive TUI, and shortlist 2-4 stacks.
-  - Outcome: a written comparison of shortlisted stacks with tradeoffs relevant to this CLI's needs (zero/near-zero dependency footprint preference, interactive epic picker, pretty status output).
+  - Outcome: a written comparison of shortlisted stacks with tradeoffs relevant to this CLI's needs (zero/near-zero dependency footprint preference, interactive epic picker, pretty status output, and a non-interactive `--json` mode for agent-facing commands such as `doctor`, which the skill calls through `scripts/epic-loop.mjs`).
   - Surface: `docs/cli-stack-research.md`.
   - Acceptance: the doc lists shortlisted CLI-parsing, output-styling, and interactive-TUI libraries/approaches with pros/cons and a recommendation basis for the prototype step.
   - Docs: `docs/cli-stack-research.md`.
 
 - [ ] Kind: implementation | Status: todo | Build competing prototype variants of the same small feature set on different shortlisted stacks.
   - Outcome: 2-3 runnable prototypes, each implementing the same UX (epic list/status, interactive epic picker when no slug is given, an epic mode-switch command, styled output) on a different candidate stack, ready for side-by-side user review.
-  - Surface: isolated prototype locations inside `packages/cli` (e.g. per-stack experiment folders), interactive epic-selection flow, mode-switch command.
+  - Surface: isolated prototype locations inside `packages/cli` (e.g. per-stack experiment folders), interactive epic-selection flow, mode-switch command. Prototypes must not disturb the shipped commands in `packages/cli/src/` (`doctor`, `install`, `update`, `config`, zero-arg status).
   - Acceptance: each prototype runs standalone and demonstrably covers: epic list, interactive picker (no-slug path), explicit mode-switch command, styled/pretty output.
   - Docs: `docs/cli-stack-research.md`.
 
@@ -84,10 +84,10 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 - [ ] Kind: implementation | Status: todo | Consolidate the package onto the selected stack.
   - Outcome: `packages/cli` is left in a single clean state built only on the chosen stack; losing prototypes and their dependencies are removed.
   - Surface: `packages/cli` source tree, `packages/cli/package.json` dependencies.
-  - Acceptance: only the selected stack's dependencies remain; the Phase 2 zero-arg command and build process still work on the consolidated stack.
+  - Acceptance: only the selected stack's dependencies remain; the zero-arg command, `doctor`, `install`, `update`, and `config` keep their behavior and `--json` contracts on the consolidated stack (`tests/unit/cli-package.test.mjs` passes); the build still copies the skill into the package and enforces the wrapper/package version match.
   - Docs: `docs/cli-stack-research.md`.
 
-- [ ] Kind: verification | Status: todo | Verify the consolidated CLI on the chosen stack, covering both the zero-arg status command and the new interactive/mode-switch commands.
+- [ ] Kind: verification | Status: todo | Verify the consolidated CLI on the chosen stack, covering the zero-arg status command, the existing distribution commands (doctor/install/update/config, including through the skill wrapper), and the new interactive/mode-switch commands.
   - Docs: `docs/cli-stack-research.md`.
 
 ### Phase 4: Design And Ship The Full User Command Surface
@@ -95,7 +95,7 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 - Phase status: todo
 
 - [ ] Kind: documentation-only | Status: todo | Research and brainstorm the full user-facing command surface, then commit a CLI command spec.
-  - Outcome: a committed spec enumerating the full command set for convenient epic management and fast status/problem visibility (browse/list, detail/status, mode transitions, repair/fix operations, diagnostics), each with purpose, arguments, flags, and example output.
+  - Outcome: a committed spec enumerating the full command set for convenient epic management and fast status/problem visibility (browse/list, detail/status, mode transitions, repair/fix operations, diagnostics), each with purpose, arguments, flags, and example output. The spec starts from the commands that already exist (`doctor`, `install`, `update`, `config`, zero-arg status) and either keeps or deliberately revises them; it also decides whether hook installation (`install-hooks`, still a skill script) becomes a standalone CLI command beyond `install`.
   - Surface: `docs/cli-command-spec.md`.
   - Acceptance: every command a user needs for day-to-day epic management is represented in the spec with concrete example output, not just a name.
   - Docs: `docs/cli-command-spec.md`.
@@ -114,22 +114,22 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 - Phase status: todo
 
 - [ ] Kind: documentation-only | Status: todo | Inventory every script the skill invokes today and map each to its planned CLI replacement.
-  - Outcome: a complete mapping from current `scripts/*.mjs` call sites (as referenced in `SKILL.md` and `references/*.md`) to the CLI subcommand that would replace each one, including any gaps needing new CLI functionality.
+  - Outcome: a complete mapping from current `scripts/*.mjs` call sites (as referenced in `SKILL.md` and `references/*.md`) to the CLI subcommand that would replace each one, including any gaps needing new CLI functionality. `doctor` is already migrated (2026-10-02) and serves as the reference pattern: invoked as `node <skill-dir>/scripts/epic-loop.mjs <command>`, skill dir passed via `EPIC_LOOP_SKILL_DIR`. The map also lists the temporary lib duplicates in `packages/cli/src/doctor/` that the migration must retire, and treats the hook entry (`hook.mjs`, hot path) separately with the measured npx overhead in mind.
   - Surface: `docs/skill-migration-map.md`.
   - Acceptance: every script invocation referenced in `SKILL.md`/`references/*.md` has an identified CLI replacement or an explicit noted gap.
   - Docs: `docs/skill-migration-map.md`.
 
 - [ ] Kind: implementation | Status: todo | Expose the skill-facing operations as a dedicated internal command branch of the CLI.
-  - Outcome: the CLI has a stable, unambiguous internal command surface the skill can call in place of individual scripts, distinct from the user-facing command surface from Phase 4.
+  - Outcome: the CLI has a stable, unambiguous internal command surface the skill can call in place of individual scripts, distinct from the user-facing command surface from Phase 4, reachable through the existing skill wrapper (no new invocation mechanism).
   - Surface: `packages/cli` internal command branch.
   - Acceptance: the internal command branch covers the full mapping from the inventory task; each internal command is independently runnable/testable outside the skill.
   - Docs: `docs/skill-migration-map.md`.
 
-- [ ] Kind: verification | Status: todo | Capture baseline speed/token metrics of the skill running on today's scripts, via eval-fixture runs coordinated with the `test-coverage` epic.
+- [ ] Kind: verification | Status: todo | Capture baseline speed/token metrics of the skill running on today's scripts, via eval-fixture runs coordinated with the `test-coverage` epic. Capture and store the evidence explicitly (copy the relevant session transcripts and `.runtime` traces): Claude Code deletes transcripts after 30 days by default (`cleanupPeriodDays`), and this repo's historical `.runtime` traces were lost when the checkout moved, so no usable baseline exists from past sessions.
   - Docs: `docs/skill-eval-metrics.md`.
 
 - [ ] Kind: implementation | Status: todo | Switch the skill's `SKILL.md`/`references/*.md` and script call sites to the new CLI internal commands.
-  - Outcome: the skill invokes the CLI package instead of individual scripts for every mapped operation.
+  - Outcome: the skill invokes the CLI package (through `scripts/epic-loop.mjs`) instead of individual scripts for every mapped operation; migrated skill scripts and the temporary lib duplicates are removed, including the skill's legacy `scripts/doctor.mjs`.
   - Surface: `plugins/epic-loop/skills/epic-loop/SKILL.md`, `plugins/epic-loop/skills/epic-loop/references/*.md`, existing script call sites, matching unit/contract tests.
   - Acceptance: the skill runs end-to-end using only CLI-mediated calls for the mapped operations; `hook-contracts.test.mjs`/`cli-contracts.test.mjs` and related tests are updated to match.
   - Docs: `docs/skill-migration-map.md`.
@@ -140,8 +140,20 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
 ## Follow-Up Tasks
 
 - [ ] Kind: documentation-only | Status: todo | Write docs/bootstrap.md summarizing packages/cli bootstrap, build, and verification decisions
-  - Outcome: docs/bootstrap.md exists and documents the packages/cli bootstrap approach (standalone install, no workspace), the esbuild-based build pipeline (src -> dist, prepack hook), and the zero-arg command's project-root discovery/epic-listing design, so future phases and shaping sessions don't have to reconstruct this from commit history.
+  - Outcome: docs/bootstrap.md exists and documents the packages/cli bootstrap approach (standalone install, no workspace; `pnpm-workspace.yaml` holds only pnpm 11 `allowBuilds`), the esbuild-based build pipeline (src -> dist, prepack hook, skill copied into `packages/cli/skill/`, wrapper/package version check), the zero-arg command's project-root discovery/epic-listing design, and the distribution foundation from 2026-10-02 (skill wrapper, one version, install types and update paths, release flow) by linking `decision-log.md` rather than duplicating it.
   - Surface: docs/bootstrap.md
-  - Acceptance: the doc exists and accurately reflects the current packages/cli layout (src/, dist/ gitignored+built, package.json bin/files/scripts).
+  - Acceptance: the doc exists and accurately reflects the current packages/cli layout (src/ incl. src/doctor/, dist/ and skill/ gitignored+built, package.json bin/files/scripts).
   - Docs: docs/bootstrap.md
+
+- [ ] Kind: follow-up | Status: todo | Move npm publishing to CI, triggered by a pushed version tag
+  - Outcome: a release is "run `pnpm run release <x.y.z>`, commit, push tag"; CI validates, tests, builds, and publishes `packages/cli` to npm, which removes the manual publish-before-push ordering risk.
+  - Surface: CI workflow config, npm token secret, `scripts/release.mjs` next-step output, README "Releasing".
+  - Acceptance: pushing a `v<x.y.z>` tag whose version matches all stamped files publishes `epic-loop@<x.y.z>`; a mismatched tag fails before publishing.
+  - Docs: README "Releasing", `decision-log.md`.
+
+- [ ] Kind: verification | Status: todo | Verify plugin installs end-to-end on both hosts after the first release that ships the wrapper
+  - Outcome: evidence that a Claude Code marketplace install and a Codex marketplace install of the released version run `doctor` through the wrapper, report the correct install type and update command, and that a host-side plugin update followed by `doctor` flags and repairs the stale hook path.
+  - Surface: `.claude-plugin/marketplace.json`, `plugins/epic-loop/.claude-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `packages/cli/src/skill.mjs` (plugin discovery and install-type detection).
+  - Acceptance: both hosts install from the GitHub marketplace, `doctor` reports `installType` `claude-plugin` / `codex-plugin`, and the documented host update commands work as written.
+  - Docs: README "Installation"/"Updating", `references/hooks-and-session-routing.md`.
 

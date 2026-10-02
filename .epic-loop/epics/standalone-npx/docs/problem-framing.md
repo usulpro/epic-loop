@@ -43,3 +43,8 @@ The package also grows a small utility surface: install hooks for Claude Code / 
 - Exact user-facing command surface (names, flags, output shape) is deliberately deferred to Phase 4 research/spec.
 - Exact CLI-parsing/output/TUI library choice is deliberately deferred to Phase 3 research + prototype comparison.
 - Coordination mechanics with the `test-coverage` epic for Phase 5 (who builds/owns the shared eval harness, how the two epics hand off) are not yet detailed — to be worked out when Phase 5 starts, informed by `test-coverage`'s own progress at that time.
+
+## Scope Addendum (2026-10-02)
+
+Item (3) of the original problem ("install hooks, detect what's set up") and the version/update concerns behind item (2) were partially delivered ahead of the roadmap as a distribution foundation: the skill wrapper and one-version contract, `doctor` in the CLI, `install`/`update`/`config`, update checks with optional autoupdate, Claude Code plugin manifests, and a release script. See `decision-log.md` → "Distribution Foundation". Phases 3-5 now build on it rather than designing those pieces from scratch.
+
