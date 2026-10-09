@@ -10,7 +10,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const SKILL_VERSION = "0.2.0";
+const SKILL_VERSION = "0.2.1";
 
 const skillDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const devCli = process.env.EPIC_LOOP_CLI;

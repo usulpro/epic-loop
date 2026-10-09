@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- `doctor` now offers the update (and runs autoupdate when enabled) for pre-wrapper skill copies that have no version; they were previously treated as up to date.
+- `doctor` on Claude Code no longer suggests rerunning `install-hooks` when the hooks are installed and only `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` is missing.
+
 ## 0.2.0
 
 - Add `scripts/epic-loop.mjs` skill wrapper: runs the `epic-loop` npm CLI pinned to the skill version and passes the skill directory.

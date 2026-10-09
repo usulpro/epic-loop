@@ -1,6 +1,6 @@
 {
   "name": "epic-loop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shape large engineering efforts into durable epic workspaces, then run implementation across sessions through Codex or Claude Code hooks without losing intent, decisions, or task context.",
   "author": {
     "name": "Oleg Proskurin",
