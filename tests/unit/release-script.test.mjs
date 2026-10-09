@@ -52,3 +52,27 @@ test("release prepare refuses to run outside the release branch before touching 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Releases are cut from main; current branch is feature\/x/u);
 });
+
+test("release prepare accepts an edited changelog but rejects any other change", () => {
+  const root = makeTempRoot("release-dirty");
+  const git = (...args) => spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: root, encoding: "utf8" });
+  git("init", "-q", "-b", "main");
+  fs.writeFileSync(path.join(root, "CHANGELOG.md"), "# Changelog\n", "utf8");
+  git("add", "CHANGELOG.md");
+  git("commit", "-q", "-m", "init");
+  fs.appendFileSync(path.join(root, "CHANGELOG.md"), "\n## Unreleased\n\n- Change.\n", "utf8");
+
+  const env = { ...process.env };
+  delete env.EPIC_LOOP_RELEASE_BRANCH;
+  const run = () => spawnSync(process.execPath, [releaseScript, "prepare", "patch"], { cwd: root, encoding: "utf8", env });
+
+  const changelogOnly = run();
+  assert.equal(changelogOnly.status, 1);
+  assert.doesNotMatch(changelogOnly.stderr, /Working tree must be clean/u);
+
+  fs.writeFileSync(path.join(root, "stray.txt"), "x\n", "utf8");
+  const withStray = run();
+  assert.equal(withStray.status, 1);
+  assert.match(withStray.stderr, /Working tree must be clean[^]*stray\.txt/u);
+  assert.doesNotMatch(withStray.stderr, /CHANGELOG\.md\n/u);
+});

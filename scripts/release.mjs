@@ -205,10 +205,11 @@ function stamp(root, version) {
 async function prepare(root, spec) {
   assertReleaseBranch(root);
 
-  const dirty = git(["status", "--porcelain"], { cwd: root })
-    .split("\n")
+  // Changed paths, not `git status --porcelain` lines: the git() helper trims output,
+  // which would eat the status column of the first line.
+  const dirty = [...git(["diff", "--name-only", "HEAD"], { cwd: root }).split("\n"), ...git(["ls-files", "--others", "--exclude-standard"], { cwd: root }).split("\n")]
     .filter(Boolean)
-    .filter((line) => line.slice(3) !== CHANGELOG);
+    .filter((file) => file !== CHANGELOG);
   if (dirty.length > 0) {
     throw new Error(`Working tree must be clean (only ${CHANGELOG} may be edited):\n${dirty.join("\n")}`);
   }
