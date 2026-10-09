@@ -54,6 +54,7 @@ env -u EPIC_LOOP_CLI -u EPIC_LOOP_SKILL_DIR CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0 ti
 - The prompt pre-answers every question the skill would ask and states the approvals explicitly. Copy it into the run directory as `session-prompt.txt`.
 - Run it in the background and wait for the completion notification. Do not poll.
 - Never use `--dangerously-skip-permissions`; widen the allowlist instead and log why.
+- Behavior that needs a real TUI (Esc, typing while the agent works) and Codex runs: follow `LEARNINGS.md` D-6/D-7 and use `tools/ptydrive.py` and `tools/codex-trust-args.mjs`.
 
 ## 4. Observe from the right sources
 
