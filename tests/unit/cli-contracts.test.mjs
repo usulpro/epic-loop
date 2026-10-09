@@ -33,7 +33,7 @@ test("doctor and install-hooks expose readiness contracts in an isolated project
 
     const missingPlatform = runNodeScript("doctor.mjs", ["--root", root, "--json"]);
     assert.equal(missingPlatform.status, 1);
-    assert.match(missingPlatform.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.match(missingPlatform.stderr, /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
 
     const before = runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]);
     assertSuccess(before);
@@ -501,7 +501,7 @@ test("bind-session current lookup requires explicit platform selection", () => {
 
     const missingPlatform = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", "bind-platform", "--mode", "implementation"]);
     assert.equal(missingPlatform.status, 1);
-    assert.match(missingPlatform.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.match(missingPlatform.stderr, /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
 
     assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "claude-code", "--json"]));
     const claudeCurrent = runNodeScript("bind-session.mjs", ["--root", root, "--current", "--slug", "bind-platform", "--mode", "implementation"]);
@@ -931,7 +931,7 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
   try {
     const installMissing = runNodeScript("install-hooks.mjs", ["--root", root]);
     assert.equal(installMissing.status, 1);
-    assert.match(installMissing.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.match(installMissing.stderr, /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
 
     fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
     fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), '{"platform":"auto"}\n', "utf8");
@@ -939,7 +939,7 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
     const doctorMissing = runNodeScript("doctor.mjs", ["--root", root, "--json"]);
     assert.equal(doctorMissing.status, 1);
     assert.match(doctorMissing.stderr, /Missing required --platform/u);
-    assert.match(doctorMissing.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.match(doctorMissing.stderr, /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
 
     const doctorInvalid = runNodeScript("doctor.mjs", ["--root", root, "--platform", "auto", "--json"]);
     assert.equal(doctorInvalid.status, 1);
@@ -953,7 +953,7 @@ test("platform-aware CLIs reject missing or invalid runtime platform config", ()
       }),
     });
     assert.equal(hookInvalid.status, 1);
-    assert.match(hookInvalid.stderr, /doctor\.mjs --platform codex\|claude-code --json/u);
+    assert.match(hookInvalid.stderr, /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

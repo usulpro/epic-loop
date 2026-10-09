@@ -1,0 +1,19 @@
+{
+  "name": "epic-loop",
+  "owner": {
+    "name": "Oleg Proskurin",
+    "email": "usulpro@gmail.com",
+    "url": "https://github.com/usulpro"
+  },
+  "metadata": {
+    "description": "Turn the intent, specs, decisions, risks, and task breakdowns around a large engineering effort into a durable epic workspace. Shape the work into phases and tasks, then run implementation through Codex or Claude Code hooks in a techlead/engineer loop that can resume across sessions without losing context."
+  },
+  "plugins": [
+    {
+      "name": "epic-loop",
+      "source": "./plugins/epic-loop",
+      "description": "Keep long-running engineering epics coherent across agent sessions.",
+      "category": "productivity"
+    }
+  ]
+}

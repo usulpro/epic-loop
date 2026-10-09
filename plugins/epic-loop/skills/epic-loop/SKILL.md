@@ -16,13 +16,20 @@ When commands use `<skill-dir>`, replace it with the absolute directory that con
 Before asking for the epic title or lifecycle mode, run `doctor` with an explicit runtime platform. `--platform` is mandatory on every doctor run:
 
 ```bash
-node <skill-dir>/scripts/doctor.mjs --platform codex --json
-node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform codex --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform claude-code --json
 ```
 
-The selected platform is stored in project-local runtime config under `.epic-loop/.runtime/platform.json` for other platform-aware scripts. Do not infer the platform from payload shape, cwd, environment variables, `.codex/`, `.claude/`, transcript paths, or an existing `platform.json`. Switching platforms in the same checkout requires running `doctor.mjs --platform <platform> --json` again and reinstalling hooks for that platform.
+`scripts/epic-loop.mjs` is the skill's entry into the `epic-loop` npm CLI, pinned to this skill's version; it passes `<skill-dir>` to the CLI, so always run doctor through it from the project root.
 
-Never run `doctor.mjs --json` without `--platform`; missing `--platform` is a hard error.
+The selected platform is stored in project-local runtime config under `.epic-loop/.runtime/platform.json` for other platform-aware scripts. Do not infer the platform from payload shape, cwd, environment variables, `.codex/`, `.claude/`, transcript paths, or an existing `platform.json`. Switching platforms in the same checkout requires running `doctor --platform <platform> --json` again and reinstalling hooks for that platform.
+
+Never run `doctor --json` without `--platform`; missing `--platform` is a hard error.
+
+Doctor also reports skill updates in its `update` field:
+
+- `update.action` is `applied`: the skill was auto-updated in place (machine-local `autoupdate` is on). Re-read this `SKILL.md` before continuing, then tell the user in one line which version is now installed.
+- `update.available` is true otherwise: tell the user in one line that a new version exists and give `update.command`; do not run it without approval. Plugin installs update through the host (`claude plugin update` / `codex plugin`), then doctor must be rerun.
 
 If the result is `ready`, continue to local epic discovery.
 
@@ -352,9 +359,9 @@ When parallel work may collide, read current files immediately before editing an
 Use project-local hooks for epic-loop work. Select the runtime platform first, then install hooks from the project root with:
 
 ```bash
-node <skill-dir>/scripts/doctor.mjs --platform codex --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform codex --json
 # or:
-node <skill-dir>/scripts/doctor.mjs --platform claude-code --json
+node <skill-dir>/scripts/epic-loop.mjs doctor --platform claude-code --json
 
 node <skill-dir>/scripts/install-hooks.mjs
 ```

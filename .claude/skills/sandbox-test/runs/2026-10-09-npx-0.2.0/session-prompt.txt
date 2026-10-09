@@ -1,0 +1,7 @@
+You are working in a disposable sandbox project. Use the epic-loop skill (project-local copy in .claude/skills/epic-loop) to run one small epic end to end. Treat everything below as the user's explicit answers and approvals: do not ask questions; make reasonable decisions and record them in the epic.
+
+Epic "Stats helpers": add mean(values) and median(values) to src/stats.mjs, each covered by node:test tests in test/stats.test.mjs. Both throw a RangeError for an empty array.
+
+1. Follow the skill's First Move exactly (doctor through the skill wrapper, platform claude-code). Hooks are already installed and approved.
+2. Shape quickly: a single implementation phase with two tasks (mean, median) and a final verification task. Keep docs minimal. The user approves the shaped plan.
+3. The user explicitly confirms starting the implementation loop now. Bind this session and keep going through the loop until the phase is complete and the loop is idle. Commit as the loop prescribes.

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **development repository for the `epic-loop` skill/plugin itself** — not a project that consumes it. `epic-loop` orchestrates long-lived, autonomous engineering epics across sessions via lifecycle modes, disk-backed state, and a Stop-hook-driven manager/techlead/engineer implementation loop.
 
-The distributable surface is `plugins/epic-loop/`; the reusable skill source is `plugins/epic-loop/skills/epic-loop/`.
+The distributable surface is `plugins/epic-loop/` (Codex manifest `.codex-plugin/`, Claude Code manifest `.claude-plugin/`; marketplaces at `.agents/plugins/marketplace.json` and `.claude-plugin/marketplace.json`); the reusable skill source is `plugins/epic-loop/skills/epic-loop/`. `packages/cli/` is the public `epic-loop` npm package (CLI + a build-time copy of the skill for `npx epic-loop install|update`).
 
 ## Source vs. runtime copies (read this first)
 
@@ -28,14 +28,19 @@ node --test --test-name-pattern "reentry continues" tests/unit/hook-contracts.te
 pnpm run validate           # node --check every script + validate-epic-loop-package.mjs
 pnpm run self-update        # sync plugins/ -> .claude/ + .codex/ runtime copies
 pnpm run eval-fixture-reset # reset the eval-fixture epic to a clean baseline
-node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json  # hook readiness
+EPIC_LOOP_CLI="$PWD/packages/cli/src/cli.mjs" node plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs doctor --platform claude-code --json  # hook readiness via local CLI
+node scripts/release.mjs stamp <x.y.z>   # stamp one version into skill wrapper, plugin manifests, npm package
+# Full release: /release-epic skill (.claude/skills/release-epic) drives release.mjs prepare -> (manual npm publish) -> wait -> finish
+(cd packages/cli && node scripts/build.mjs)  # build dist/ + copy skill into packages/cli/skill/
 ```
 
 Tests use only the Node built-in test runner (no Jest/Vitest); each test spawns the real scripts via `runNodeScript` against a temp project root, so they exercise CLI + hook contracts end-to-end.
 
 ## Architecture
 
-**Platform abstraction.** The skill supports two host platforms, **Codex** and **Claude Code**, selected explicitly via `doctor.mjs --platform` (written to `.epic-loop/.runtime/platform.json`). Scripts must read the configured platform, never infer it from payload shape, cwd, or environment. `install-hooks.mjs` writes platform-appropriate hook config (`.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code).
+**Skill ↔ npm CLI.** `scripts/epic-loop.mjs` in the skill is a thin wrapper that runs `npx --prefer-offline epic-loop@<SKILL_VERSION>` with `EPIC_LOOP_SKILL_DIR` set to its own skill dir (cwd stays the project). Skill, plugin manifests, and npm package share one version (`scripts/release.mjs stamp` writes it; `validate` enforces it), so a skill copy always runs the CLI it was released with. `EPIC_LOOP_CLI=<path to packages/cli/src/cli.mjs>` makes the wrapper run local CLI source instead (dev + tests). Logic migrates from skill scripts into the CLI incrementally; so far only `doctor` lives in the CLI (`packages/cli/src/doctor/`, with a deliberate temporary duplicate of the lib modules it needs — the skill's own `doctor.mjs` still exists). The CLI also owns `install`, `update` (atomic in-place replacement of local skill copies; plugin installs are pointed at host commands), `config` (machine-local `.epic-loop/.runtime/config.json`, e.g. `autoupdate`), and a once-a-day npm registry update check. The CLI may use npm deps and is built with esbuild before publish; skill scripts stay Node-built-ins-only.
+
+**Platform abstraction.** The skill supports two host platforms, **Codex** and **Claude Code**, selected explicitly via `doctor --platform` (written to `.epic-loop/.runtime/platform.json`). Scripts must read the configured platform, never infer it from payload shape, cwd, or environment. `install-hooks.mjs` writes platform-appropriate hook config (`.codex/hooks.json` for Codex, `.claude/settings.json` for Claude Code).
 
 **Hook entry point.** `scripts/hook.mjs` reads a JSON hook payload on stdin and delegates to `lib/hooks.mjs → handleHook`. Hooks fire on `SessionStart`, `UserPromptSubmit`, and `Stop`. **Unbound sessions are silent no-ops** — a session only produces epic-loop state after `bind-session.mjs` records it in `.epic-loop/.runtime/session-bindings.json` (keyed by `session_id`, with an `active_sessions` map so parallel sessions in one project route correctly).
 
@@ -54,3 +59,8 @@ Tests use only the Node built-in test runner (no Jest/Vitest); each test spawns 
 - Small, deterministic Node `.mjs` scripts with no runtime dependencies (Node built-ins only).
 - Keep this repo shaped as a public plugin/skill package; do not add sample application code unless a plugin behavior test needs it.
 - After changing hook/loop behavior, update the matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` contracts and the affected `references/*.md`, then `self-update`.
+- CLI package behavior is covered by `tests/unit/cli-package.test.mjs` (spawns `packages/cli/src/cli.mjs` and the skill wrapper with `EPIC_LOOP_CLI`, `EPIC_LOOP_NO_UPDATE_CHECK=1`, and an isolated `HOME`; never hits the network).
+- Release order matters: `npm publish` before pushing to `main`, because the skill on `main` pins the new version. `scripts/release.mjs` enforces it (`prepare` checks npm login and commits locally only; `finish` pushes after verifying npm). Moving publish to CI (tag-triggered) is planned.
+- Release tags (`v<npm version>`) and GitHub Releases go on `main` only; PRs are squash-merged, so any tag on a feature branch is temporary. Stay on 0.x until most skill scripts run through the CLI, then release `1.0.0`.
+- `.claude/` is gitignored except the committed repo-maintenance skills `.claude/skills/release-epic/` and `.claude/skills/sandbox-test/`; the `.claude/skills/epic-loop` runtime copy stays untracked.
+- `sandbox-test` is experimental: every disposable-sandbox run adds a text log under `.claude/skills/sandbox-test/runs/` and updates its `LEARNINGS.md`; consolidate into `SKILL.md` once the criteria in `LEARNINGS.md` are met.

@@ -30,7 +30,15 @@ build/
 temp/
 .validation-output/
 
-.claude
+# Runtime skill copies and local agent state stay untracked; repo-maintenance skills are committed.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/release-epic/
+!.claude/skills/sandbox-test/
 .codex
 .epic-loop/.runtime/
 .epic-loop/epics/*/.runtime/
+
+# epic-loop CLI build output (skill copy shipped in the npm package)
+packages/cli/skill/

@@ -1,6 +1,6 @@
 {
   "name": "epic-loop",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "CLI for browsing, managing, and repairing epic-loop epics.",
   "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
   "license": "MIT",
@@ -29,6 +29,7 @@
   },
   "files": [
     "dist",
+    "skill",
     "README.md"
   ],
   "scripts": {

@@ -1,6 +1,6 @@
 {
-  "name": "epic-loop",
-  "version": "0.1.0",
+  "name": "epic-loop-repo",
+  "version": "0.2.1",
   "private": true,
   "description": "Codex plugin for turning long-running engineering efforts into durable epic workspaces across agent sessions.",
   "author": "Oleg Proskurin <usulpro@gmail.com> (https://github.com/usulpro)",
@@ -25,7 +25,8 @@
     "doctor:epic-loop:codex": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform codex --json",
     "doctor:epic-loop:claude-code": "node plugins/epic-loop/skills/epic-loop/scripts/doctor.mjs --platform claude-code --json",
     "eval-fixture-reset": "node scripts/eval-fixture-reset.mjs",
-    "self-update": "node scripts/self-update-skill.mjs"
+    "self-update": "node scripts/self-update-skill.mjs",
+    "release": "node scripts/release.mjs"
   },
   "keywords": [
     "codex",

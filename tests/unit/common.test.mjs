@@ -61,8 +61,8 @@ test("runtime platform helpers persist and validate explicit platform selection"
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "epic-loop-platform-"));
 
   try {
-    assert.throws(() => requireRuntimePlatform(tempRoot), /doctor\.mjs --platform codex\|claude-code --json/u);
-    assert.equal(platformSetupCommand(), "doctor.mjs --platform codex|claude-code --json");
+    assert.throws(() => requireRuntimePlatform(tempRoot), /epic-loop\.mjs doctor --platform codex\|claude-code --json/u);
+    assert.equal(platformSetupCommand(), "epic-loop.mjs doctor --platform codex|claude-code --json");
 
     const codexConfig = writeRuntimePlatform(tempRoot, "codex");
     assert.equal(codexConfig.platform, "codex");
