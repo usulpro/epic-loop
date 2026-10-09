@@ -232,7 +232,9 @@ node scripts/release.mjs finish 0.2.0     # npx smoke test, tag, push main + tag
 node scripts/release.mjs abort 0.2.0      # instead of publishing: drop the local release commit
 ```
 
-Publish before pushing: the skill on `main` pins the new version, so it must already exist on npm; `prepare` never pushes and `finish` refuses until npm has the version. Planned: move publishing to CI, so a release is just pushing a version tag.
+Publish before pushing: the skill on `main` pins the new version, so it must already exist on npm; `prepare` checks the npm login, never pushes, and `finish` refuses until npm has the version.
+
+Release tags (`v<version>`, matching the npm version) and GitHub Releases exist only on `main`; `finish` creates both, with notes from the changelog. Feature branches may carry temporary tags during development, which go away with the squash merge. The repo stays on 0.x until most skill scripts run through the CLI; that milestone ships as `1.0.0`. Planned: move publishing to CI, so a release is just pushing a version tag.
 
 ### Helper Scripts
 

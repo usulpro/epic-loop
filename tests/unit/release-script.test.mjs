@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
-import { VERSION_FILES, demoteChangelog, isNewer, nextVersion, promoteChangelog, readVersions, writeVersion } from "../../scripts/release.mjs";
+import { VERSION_FILES, changelogSection, demoteChangelog, isNewer, nextVersion, promoteChangelog, readVersions, writeVersion } from "../../scripts/release.mjs";
 import { makeTempRoot, repoRoot } from "./test-utils.mjs";
 
 const releaseScript = path.join(repoRoot, "scripts", "release.mjs");
@@ -75,4 +75,11 @@ test("release prepare accepts an edited changelog but rejects any other change",
   assert.equal(withStray.status, 1);
   assert.match(withStray.stderr, /Working tree must be clean[^]*stray\.txt/u);
   assert.doesNotMatch(withStray.stderr, /CHANGELOG\.md\n/u);
+});
+
+test("release notes come from the version's changelog section", () => {
+  const changelog = "# Changelog\n\n## 0.2.1\n\n- Fix a.\n- Fix b.\n\n## 0.2.0\n\n- Feature.\n";
+  assert.equal(changelogSection(changelog, "0.2.1"), "- Fix a.\n- Fix b.");
+  assert.equal(changelogSection(changelog, "0.2.0"), "- Feature.");
+  assert.throws(() => changelogSection(changelog, "0.3.0"), /no "## 0\.3\.0" section/u);
 });

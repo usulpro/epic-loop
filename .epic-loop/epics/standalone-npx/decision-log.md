@@ -39,6 +39,12 @@ Decided with the user and implemented in the same session; deliberately not adde
 - **Release model**: still a manual `npm publish` by the user; everything around it is scripted in `scripts/release.mjs` (`prepare` → manual `npm publish` → `wait` → `finish`, plus `abort`) and driven end-to-end by the repo-local `/release-epic` Claude Code skill (`.claude/skills/release-epic/`, committed via a narrow `.gitignore` exception). `prepare` only commits locally; `finish` pushes only after npm serves the version and an `npx` smoke test passes, then syncs and verifies the runtime skill copies. Order is mandatory: the skill on `main` pins the new version, so npm must have it first. Planned: move publishing to CI, so a release becomes "push a version tag".
 - **"No pnpm workspace" still holds**: `packages/cli/pnpm-workspace.yaml` exists only because pnpm 11 keeps settings there (`allowBuilds: esbuild: true`, required for `prepack`); it declares no workspace packages.
 
+## Release Policy (2026-10-09)
+
+- Release tags `v<npm version>` and GitHub Releases are placed on `main` only, after the squash merge. Feature branches may carry temporary tags for convenience during development; they are expected to vanish with the squash. GitHub Releases start with `v0.2.1`, the first release on `main`. `v0.2.0`/`v0.2.1` had been tagged on feature-branch commits and were replaced accordingly.
+- `pre-distribution-foundation` (annotated tag on `45e2d66`) marks `main` before this epic's distribution foundation: the rollback point.
+- **Major version**: stay on 0.x for now. Release `1.0.0` once most skill scripts have moved into the CLI package (Phase 5 migration), since that is when the skill↔CLI contract becomes the primary interface.
+
 ## Historical Decisions
 
 - None recorded yet.

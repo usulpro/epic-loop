@@ -60,7 +60,7 @@ When the waiter exits successfully:
 node scripts/release.mjs finish <version>
 ```
 
-It smoke-tests `npx epic-loop@<version>`, tags `v<version>`, pushes `main` and the tag, runs the runtime skill sync (`self-update`), verifies the `.claude`/`.codex` copies match the source, and runs doctor through the runtime copy against the published CLI.
+It smoke-tests `npx epic-loop@<version>`, pushes `main`, tags `v<version>`, pushes the tag, creates the GitHub Release (notes = the version's changelog section), runs the runtime skill sync (`self-update`), verifies the `.claude`/`.codex` copies match the source, and runs doctor through the runtime copy against the published CLI.
 
 Report a short summary: version, tag pushed, runtime copies verified.
 
@@ -83,3 +83,5 @@ It drops the local release commit, restores the versions, and turns the changelo
 - Never run `npm publish` yourself, and never push before `finish`.
 - Never edit version fields by hand; `scripts/release.mjs` owns them.
 - Publishing to npm must come before any push: the skill on `main` pins the new version.
+- Release tags and GitHub Releases live on `main` only. Temporary tags on a feature branch are fine during development; they are expected to disappear with the squash merge. If a release had to be cut from a branch (`EPIC_LOOP_RELEASE_BRANCH`), `finish` skips the tag and the GitHub Release; put both on the squash-merge commit on `main` afterwards.
+- Major version: stay on 0.x until most skill scripts run through the npm CLI (`standalone-npx` Phase 5), then release `1.0.0`.

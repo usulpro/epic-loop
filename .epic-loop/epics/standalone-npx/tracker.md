@@ -157,3 +157,9 @@ Epic: epic-loop Standalone CLI Package (`npx epic-loop`)
   - Acceptance: both hosts install from the GitHub marketplace, `doctor` reports `installType` `claude-plugin` / `codex-plugin`, and the documented host update commands work as written.
   - Docs: README "Installation"/"Updating", `references/hooks-and-session-routing.md`.
 
+- [ ] Kind: follow-up | Status: todo | Release 1.0.0 once most skill scripts run through the npm CLI
+  - Outcome: the skill↔CLI contract, with most operations behind `scripts/epic-loop.mjs`, ships as the first major version.
+  - Surface: `scripts/release.mjs prepare major`, `CHANGELOG.md`, GitHub Release `v1.0.0`.
+  - Acceptance: Phase 5's migration decision is "adopt", and most `scripts/*.mjs` call sites in `SKILL.md`/`references/*.md` go through the CLI; then `1.0.0` is released from `main` with a GitHub Release.
+  - Docs: `decision-log.md` → "Release Policy".
+

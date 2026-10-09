@@ -104,6 +104,14 @@ export function promoteChangelog(content, version) {
   return content.replace("\n## Unreleased\n", `\n## ${version}\n`);
 }
 
+export function changelogSection(content, version) {
+  const match = content.match(new RegExp(`\\n## ${version.replaceAll(".", "\\.")}\\n([\\s\\S]*?)(?=\\n## |$)`, "u"));
+  if (!match) {
+    throw new Error(`${CHANGELOG} has no "## ${version}" section.`);
+  }
+  return match[1].trim();
+}
+
 export function demoteChangelog(content, version) {
   return content.replace(`\n## ${version}\n`, "\n## Unreleased\n");
 }
@@ -337,6 +345,18 @@ function smokeRuntimeDoctor(root, version) {
   console.log(`Runtime skill copy runs the published CLI: doctor reports cli ${version}, skill ${version}.`);
 }
 
+function createGithubRelease(root, version) {
+  const tag = `v${version}`;
+  if (spawnSync("gh", ["release", "view", tag], { cwd: root, stdio: "ignore" }).status === 0) {
+    console.log(`GitHub Release ${tag} already exists.`);
+    return;
+  }
+
+  const notesPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "epic-loop-release-notes-")), "notes.md");
+  fs.writeFileSync(notesPath, `${changelogSection(fs.readFileSync(path.join(root, CHANGELOG), "utf8"), version)}\n`, "utf8");
+  run("gh", ["release", "create", tag, "--verify-tag", "--title", tag, "--notes-file", notesPath], { cwd: root });
+}
+
 async function finish(root, version) {
   requireVersion(version);
   assertReleaseBranch(root);
@@ -351,11 +371,19 @@ async function finish(root, version) {
 
   await smokePublishedCli(version);
 
-  if (!tagExists(root, `v${version}`, false)) {
-    git(["tag", "-a", `v${version}`, "-m", `epic-loop v${version}`], { cwd: root });
-  }
+  // Release tags and GitHub Releases only ever point at main. A release cut from another
+  // branch gets them after its squash merge (see README "Releasing").
+  const onMain = RELEASE_BRANCH === "main";
   run("git", ["push", "origin", RELEASE_BRANCH], { cwd: root });
-  run("git", ["push", "origin", `v${version}`], { cwd: root });
+  if (onMain) {
+    if (!tagExists(root, `v${version}`, false)) {
+      git(["tag", "-a", `v${version}`, "-m", `epic-loop v${version}`], { cwd: root });
+    }
+    run("git", ["push", "origin", `v${version}`], { cwd: root });
+    createGithubRelease(root, version);
+  } else {
+    console.log(`Released from ${RELEASE_BRANCH}: no release tag or GitHub Release here; add both on main after the squash merge.`);
+  }
 
   run(process.execPath, ["scripts/self-update-skill.mjs"], { cwd: root });
   for (const copy of RUNTIME_SKILL_COPIES) {
@@ -367,7 +395,7 @@ async function finish(root, version) {
   console.log(`
 Released epic-loop v${version}:
   - npm: epic-loop@${version}
-  - git: release commit + tag v${version} pushed to origin/${RELEASE_BRANCH}
+  - git: release commit pushed to origin/${RELEASE_BRANCH}${onMain ? `, tag v${version} + GitHub Release` : " (tag + GitHub Release pending the merge to main)"}
   - runtime skill copies (.claude, .codex) synced and verified
 Plugin users pick it up via their host's marketplace update.`);
 }
