@@ -61,4 +61,5 @@ Tests use only the Node built-in test runner (no Jest/Vitest); each test spawns 
 - After changing hook/loop behavior, update the matching `hook-contracts.test.mjs` / `cli-contracts.test.mjs` contracts and the affected `references/*.md`, then `self-update`.
 - CLI package behavior is covered by `tests/unit/cli-package.test.mjs` (spawns `packages/cli/src/cli.mjs` and the skill wrapper with `EPIC_LOOP_CLI`, `EPIC_LOOP_NO_UPDATE_CHECK=1`, and an isolated `HOME`; never hits the network).
 - Release order matters: `npm publish` before pushing to `main`, because the skill on `main` pins the new version. `scripts/release.mjs` enforces it (`prepare` commits locally only; `finish` pushes after verifying npm). Moving publish to CI (tag-triggered) is planned.
-- `.claude/` is gitignored except `.claude/skills/release-epic/` (a repo-maintenance skill, committed); the `.claude/skills/epic-loop` runtime copy stays untracked.
+- `.claude/` is gitignored except the committed repo-maintenance skills `.claude/skills/release-epic/` and `.claude/skills/sandbox-test/`; the `.claude/skills/epic-loop` runtime copy stays untracked.
+- `sandbox-test` is experimental: every disposable-sandbox run adds a text log under `.claude/skills/sandbox-test/runs/` and updates its `LEARNINGS.md`; consolidate into `SKILL.md` once the criteria in `LEARNINGS.md` are met.

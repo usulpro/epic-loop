@@ -35,6 +35,7 @@ temp/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/release-epic/
+!.claude/skills/sandbox-test/
 .codex
 .epic-loop/.runtime/
 .epic-loop/epics/*/.runtime/
