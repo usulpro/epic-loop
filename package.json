@@ -1,5 +1,5 @@
 {
-  "name": "epic-loop",
+  "name": "epic-loop-repo",
   "version": "0.2.1",
   "private": true,
   "description": "Codex plugin for turning long-running engineering efforts into durable epic workspaces across agent sessions.",

@@ -135,6 +135,13 @@ function validateClaudeMarketplace(context, marketplace) {
 // The skill, both plugin manifests, and the npm CLI release in lockstep: the skill
 // wrapper pins the CLI version, so any drift breaks installed skills.
 function validateVersions(context) {
+  // npx resolves `epic-loop@<v>` to a local package of the same name, so a root package
+  // named epic-loop breaks the skill wrapper for anyone working inside this repo.
+  const rootPackage = readJson(context, "package.json");
+  if (rootPackage?.name === "epic-loop") {
+    context.errors.push('Root package.json must not be named "epic-loop" (npx would resolve it instead of the published CLI).');
+  }
+
   let versions;
   try {
     versions = readVersions(context.root);

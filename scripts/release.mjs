@@ -310,7 +310,9 @@ function smokeRuntimeDoctor(root, version) {
   delete env.EPIC_LOOP_SKILL_DIR;
 
   const wrapper = path.join(root, RUNTIME_SKILL_COPIES[0], "scripts", "epic-loop.mjs");
-  const output = run(process.execPath, [wrapper, "doctor", "--platform", "claude-code", "--json", "--root", projectRoot], { capture: true, env });
+  // Run from the throwaway project, as a user would: inside this repo npx could resolve a
+  // local package instead of the published one.
+  const output = run(process.execPath, [wrapper, "doctor", "--platform", "claude-code", "--json"], { capture: true, cwd: projectRoot, env });
   const status = JSON.parse(output);
   if (status.cli?.version !== version || status.skill?.version !== version) {
     throw new Error(`Runtime doctor reports cli ${status.cli?.version} / skill ${status.skill?.version}, expected ${version}.`);

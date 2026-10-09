@@ -76,7 +76,7 @@ function validFixture(root) {
   });
   writeJson(root, "plugins/epic-loop/.claude-plugin/plugin.json", { name: "epic-loop", version: "1.0.0" });
   writeJson(root, "packages/cli/package.json", { name: "epic-loop", version: "1.0.0" });
-  writeJson(root, "package.json", { name: "epic-loop", private: true, version: "1.0.0" });
+  writeJson(root, "package.json", { name: "epic-loop-repo", private: true, version: "1.0.0" });
   writeFile(root, "plugins/epic-loop/skills/epic-loop/scripts/epic-loop.mjs", 'const SKILL_VERSION = "1.0.0";\nconsole.log(SKILL_VERSION);\n');
 }
 
@@ -194,6 +194,13 @@ test("skill package validator rejects release version drift between skill, plugi
   withFixture("version-drift", (root) => {
     writeJson(root, "packages/cli/package.json", { name: "epic-loop", version: "1.1.0" });
     assertValidationError(root, /Release versions must match.*packages\/cli\/package\.json=1\.1\.0/u);
+  });
+});
+
+test("skill package validator rejects a root package that shadows the published CLI name", () => {
+  withFixture("root-name", (root) => {
+    writeJson(root, "package.json", { name: "epic-loop", private: true, version: "1.0.0" });
+    assertValidationError(root, /Root package\.json must not be named "epic-loop"/u);
   });
 });
 
