@@ -178,6 +178,22 @@ function tagExists(root, tag, remote) {
   return spawnSync("git", ["rev-parse", "-q", "--verify", `refs/tags/${tag}`], { cwd: root }).status === 0;
 }
 
+// Fails fast on an expired or missing npm login: otherwise the release is fully prepared
+// and only `npm publish` reports it, as a misleading E404.
+export function assertNpmPublisher() {
+  const whoami = spawnSync("npm", ["whoami"], { encoding: "utf8" });
+  const user = whoami.stdout?.trim();
+  if (whoami.status !== 0 || !user) {
+    throw new Error("npm is not logged in (npm whoami failed). Run `npm login`, then prepare again.");
+  }
+
+  const owners = run("npm", ["owner", "ls", "epic-loop"], { capture: true });
+  if (!owners.split("\n").some((line) => line.split(" ")[0] === user)) {
+    throw new Error(`npm user ${user} is not an owner of epic-loop (owners: ${owners.replace(/\n/gu, ", ")}).`);
+  }
+  console.log(`npm publisher OK: ${user}`);
+}
+
 function checkPackedTarball(root, version) {
   const cliDir = path.join(root, "packages", "cli");
   const [pack] = JSON.parse(run("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { capture: true, cwd: cliDir }));
@@ -219,6 +235,7 @@ async function prepare(root, spec) {
   if (behind > 0) {
     throw new Error(`${RELEASE_BRANCH} is ${behind} commit(s) behind origin; pull first.`);
   }
+  assertNpmPublisher();
 
   const current = readVersions(root).cliPackage;
   assertVersionsEqual(root, current);

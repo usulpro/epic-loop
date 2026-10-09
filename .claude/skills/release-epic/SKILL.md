@@ -32,7 +32,7 @@ Add missing entries as short English bullets. Do not commit: `prepare` folds `CH
 node scripts/release.mjs prepare <version|patch|minor|major>
 ```
 
-It refuses to run unless on an up-to-date, clean `main` (only `CHANGELOG.md` may be edited), with the version not yet tagged or published. Then it stamps the version everywhere, runs `pnpm run validate` and the full unit suite, builds the package, checks the packed tarball, and creates the local commit `release: v<version>`. Nothing is pushed. Allow up to 10 minutes.
+It refuses to run unless it is on an up-to-date, clean `main` (only `CHANGELOG.md` may be edited), npm is logged in as an owner of `epic-loop`, and the version is neither tagged nor published yet. If npm login is the problem, tell the user to run `npm login` and rerun `prepare`. Then it stamps the version everywhere, runs `pnpm run validate` and the full unit suite, builds the package, checks the packed tarball, and creates the local commit `release: v<version>`. Nothing is pushed. Allow up to 10 minutes.
 
 On failure the script restores the versioned files and the changelog by itself. Report the failing step and the key error in two or three lines and stop. Do not fix code inside the release flow unless the user asks.
 
