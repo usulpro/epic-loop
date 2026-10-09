@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
+export const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 export const MANAGER_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-manager-prompt.md");
 export const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-techlead-prompt.md");
 const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md";
@@ -93,4 +93,15 @@ function renderTemplate(template, values) {
   return Object.entries(values)
     .reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template)
     .trim();
+}
+
+// The user aborted this role's previous turn (Esc / Ctrl+C) and was answered in a plain
+// user turn; the role runs again from the top, so it must re-check what already landed.
+export function prependResumeNote(prompt, role) {
+  return [
+    `Resuming the ${role} turn that the user interrupted.`,
+    "Re-check the current state first (changed files, git status, epic artifacts) and do not redo steps that already landed.",
+    "",
+    prompt.trim(),
+  ].join("\n");
 }

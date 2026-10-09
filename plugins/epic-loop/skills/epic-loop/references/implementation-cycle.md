@@ -78,7 +78,14 @@ Codex and Claude Code share the same loop core and Stop continuation shape. Plat
 11. When techlead explicitly requests housekeeping, the hook starts one manager turn and immediately pre-sets the following role to `techlead`.
 12. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
 
-If the user interrupts a running implementation turn, a later `UserPromptSubmit` in the same bound session marks that open turn as `turn-interrupted`, sets the loop status to `interrupted`, and prevents silent auto-continuation. If implementation is restarted while an older open turn exists, the old turn is closed as interrupted without inventing active duration.
+User messages in the driver session do not stop the loop. The loop records the host turn that carries it as `turn_key` (Claude Code `prompt_id`, Codex `turn_id`; both stay the same across Stop-hook continuations) and classifies each `UserPromptSubmit`:
+
+- **Synthetic** (only `<task-notification>`/`<system-reminder>` blocks, e.g. background-task completions): ignored, logged as `synthetic-prompt-ignored`. Roles may use background tasks.
+- **Same `turn_key`** (the user typed while the role was working; both hosts inject it into the running turn): logged as `user-message-in-turn`; the agent answers briefly and finishes the role turn with its full report (the answer alone must not become the report), and the loop continues.
+- **New `turn_key` while a role turn is open**: the user aborted that turn with Esc / Ctrl+C, which fires no `Stop` on either host. The turn is closed as `turn-aborted` without a report, and when the user's turn ends the `Stop` hook resumes the same role with a "Resuming the <role> turn" note, so the answer to the user is never taken for the role's report. A missing turn identity is treated the same way.
+- **Stop request**: the agent runs `stop-loop.mjs --slug <slug>` when the user asks to stop or pause in any wording; the exact message `stop loop mode` is handled by the hook directly. Both set the loop to `interrupted` / `idle` and log `loop-stopped`. Rebinding with `bind-session.mjs --mode implementation` restarts the loop from a manager turn.
+
+If implementation is restarted while an older open turn exists, the old turn is closed as interrupted without inventing active duration.
 
 Claude Code Stop hooks include `stop_hook_active`. Real Claude Code marks the Stop after a previous Stop-hook block as `stop_hook_active: true`. This flag is informational, not a hard gate: epic-loop keeps chaining roles across reentries, recording each role report and issuing the next block continuation in the same turn. This is what makes the loop run autonomously without per-role manual nudging.
 

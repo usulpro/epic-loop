@@ -41,3 +41,67 @@ export function readJsonFile(filePath) {
 export function assertSuccess(result) {
   assert.equal(result.status, 0, result.stderr);
 }
+
+export function writeSessionBinding(root, slug, sessionId) {
+  fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
+    `${JSON.stringify(
+      {
+        sessions: {
+          [sessionId]: {
+            active: true,
+            epic_slug: slug,
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+  const runtime = readJsonFile(runtimePath);
+  fs.writeFileSync(
+    runtimePath,
+    `${JSON.stringify(
+      {
+        ...runtime,
+        implementation_loop: {
+          ...runtime.implementation_loop,
+          driver_session_id: sessionId,
+        },
+        mode: "implementation",
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
+
+export function writeOpenImplementationTurn(root, slug, role = "engineer", extra = {}) {
+  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
+  const runtime = readJsonFile(runtimePath);
+  fs.writeFileSync(
+    runtimePath,
+    `${JSON.stringify(
+      {
+        ...runtime,
+        implementation_loop: {
+          active_turn_started_at: "2026-07-01T00:00:00+00:00",
+          current_role: role,
+          driver_session_id: runtime.implementation_loop?.driver_session_id ?? null,
+          iteration: 2,
+          next_role: "techlead",
+          status: "running",
+          ...extra,
+        },
+        mode: "implementation",
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+}
