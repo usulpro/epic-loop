@@ -14,7 +14,14 @@ const cliVersion = readJsonFile(path.join(repoRoot, "packages", "cli", "package.
 
 function baseEnv(home, extra = {}) {
   const env = { ...process.env, EPIC_LOOP_CLI: cliEntry, EPIC_LOOP_NO_UPDATE_CHECK: "1", HOME: home, ...extra };
-  for (const key of ["EPIC_LOOP_SKILL_DIR", "EPIC_LOOP_SKILL_VERSION", "EPIC_LOOP_UPDATED_FROM", "EPIC_LOOP_SKIP_AUTOUPDATE", "EPIC_LOOP_REGISTRY_URL"]) {
+  for (const key of [
+    "EPIC_LOOP_SKILL_DIR",
+    "EPIC_LOOP_SKILL_VERSION",
+    "EPIC_LOOP_UPDATED_FROM",
+    "EPIC_LOOP_SKIP_AUTOUPDATE",
+    "EPIC_LOOP_REGISTRY_URL",
+    "CLAUDE_CODE_STOP_HOOK_BLOCK_CAP",
+  ]) {
     if (!(key in extra)) {
       delete env[key];
     }
@@ -116,6 +123,8 @@ test("cli install copies the skill, selects the platform, and installs hooks", (
   const settings = readJsonFile(path.join(root, ".claude", "settings.json"));
   assert.equal(settings.hooks.Stop[0].hooks[0].command, `node '${path.join(skillDir, "scripts", "hook.mjs")}' --root '${root}'`);
   assert.match(result.stdout, /Required events missing: none/u);
+  assert.match(result.stdout, /Next: set the Stop-hook block cap \(hooks are already installed\)/u);
+  assert.doesNotMatch(result.stdout, /install-hooks\.mjs/u);
 
   const again = runCli(["install", "--platform", "claude-code", "--no-hooks"], { cwd: root, env });
   assertSuccess(again);
@@ -188,6 +197,26 @@ test("cli doctor reports an available update with the install-specific command",
   assert.equal(update.available, true);
   assert.equal(update.latest, "9.9.9");
   assert.equal(update.reason, "cache");
+  assert.equal(update.command, `npx --yes epic-loop@9.9.9 update --skill-dir '${skillDir}'`);
+});
+
+test("cli doctor offers the update for a pre-wrapper skill copy that has no version", () => {
+  const root = makeTempRoot("cli-update-legacy");
+  const skillDir = path.join(root, ".claude", "skills", "epic-loop");
+  copySkill(skillDir);
+  fs.rmSync(path.join(skillDir, "scripts", "epic-loop.mjs"));
+  const registry = "http://registry.invalid";
+  seedUpdateCache(root, "9.9.9", registry);
+
+  const result = runCli(["doctor", "--platform", "claude-code", "--json"], {
+    cwd: root,
+    env: baseEnv(root, { EPIC_LOOP_NO_UPDATE_CHECK: undefined, EPIC_LOOP_REGISTRY_URL: registry }),
+  });
+  assertSuccess(result);
+  const { skill, update } = JSON.parse(result.stdout);
+  assert.equal(skill.version, null);
+  assert.equal(update.available, true);
+  assert.equal(update.action, "notify");
   assert.equal(update.command, `npx --yes epic-loop@9.9.9 update --skill-dir '${skillDir}'`);
 });
 

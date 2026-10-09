@@ -51,7 +51,8 @@ export async function runDoctor(flags = {}, { argv = [], env = process.env } = {
 async function evaluateUpdate(root, skill, env) {
   const autoupdate = readConfig(root).autoupdate;
   const result = await checkLatestVersion(root, env);
-  const available = result.checked && isNewerVersion(result.latest, skill.version);
+  // A copy without a version predates the wrapper, so any published version is newer.
+  const available = result.checked && (skill.version === null || isNewerVersion(result.latest, skill.version));
   const update = {
     autoupdate,
     available,
@@ -300,9 +301,13 @@ function doctorClaudeCode(context) {
   }
 
   if (setupPossible) {
-    console.log("Next: configure Claude Code hooks and block cap:");
-    console.log(`  ${buildInstallHooksCommand(skill.dir)}`);
-    console.log("  export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0");
+    console.log(hookConfig.ready ? "Next: set the Stop-hook block cap (hooks are already installed):" : "Next: configure Claude Code hooks and block cap:");
+    if (!hookConfig.ready) {
+      console.log(`  ${buildInstallHooksCommand(skill.dir)}`);
+    }
+    if (!blockCap.ready) {
+      console.log("  export CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0");
+    }
     return;
   }
 
