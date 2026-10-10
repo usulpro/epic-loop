@@ -42,3 +42,7 @@ temp/
 
 # epic-loop CLI build output (skill copy shipped in the npm package)
 packages/cli/skill/
+
+# Python bytecode (sandbox-test tools)
+__pycache__/
+*.pyc

@@ -4,70 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { sessionPathSegment } from "../../plugins/epic-loop/skills/epic-loop/scripts/lib/common.mjs";
-import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript } from "./test-utils.mjs";
-
-function writeSessionBinding(root, slug, sessionId) {
-  fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
-  fs.writeFileSync(
-    path.join(root, ".epic-loop", ".runtime", "session-bindings.json"),
-    `${JSON.stringify(
-      {
-        sessions: {
-          [sessionId]: {
-            active: true,
-            epic_slug: slug,
-          },
-        },
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
-  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
-  const runtime = readJsonFile(runtimePath);
-  fs.writeFileSync(
-    runtimePath,
-    `${JSON.stringify(
-      {
-        ...runtime,
-        implementation_loop: {
-          ...runtime.implementation_loop,
-          driver_session_id: sessionId,
-        },
-        mode: "implementation",
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
-}
-
-function writeOpenImplementationTurn(root, slug, role = "engineer") {
-  const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
-  const runtime = readJsonFile(runtimePath);
-  fs.writeFileSync(
-    runtimePath,
-    `${JSON.stringify(
-      {
-        ...runtime,
-        implementation_loop: {
-          active_turn_started_at: "2026-07-01T00:00:00+00:00",
-          current_role: role,
-          driver_session_id: runtime.implementation_loop?.driver_session_id ?? null,
-          iteration: 2,
-          next_role: "techlead",
-          status: "running",
-        },
-        mode: "implementation",
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
-}
+import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript, writeOpenImplementationTurn, writeSessionBinding } from "./test-utils.mjs";
 
 test("hook CLI captures unbound sessions without writing epic-loop runtime records", () => {
   const root = makeTempRoot("hook-unbound-");
@@ -269,62 +206,6 @@ test("bound Stop continuation only runs for the implementation driver", () => {
   }
 });
 
-test("non-driver UserPromptSubmit does not interrupt an open implementation turn", () => {
-  const root = makeTempRoot("hook-driver-interrupt-");
-  const slug = "driver-interrupt";
-  const driverSessionId = "session-driver";
-  const observerSessionId = "session-observer";
-
-  try {
-    assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", "codex", "--json"]));
-    assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Driver interrupt project", "--slug", slug, "--no-gitignore"]));
-    writeOpenImplementationTurn(root, slug, "engineer");
-    writeSessionBinding(root, slug, driverSessionId);
-
-    const bindingsPath = path.join(root, ".epic-loop", ".runtime", "session-bindings.json");
-    const bindings = readJsonFile(bindingsPath);
-    bindings.sessions[observerSessionId] = {
-      active: true,
-      epic_slug: slug,
-    };
-    fs.writeFileSync(bindingsPath, `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
-
-    const runtimePath = path.join(root, ".epic-loop", "epics", slug, ".runtime", "runtime-state.json");
-    const observerPrompt = runNodeScript("hook.mjs", ["--root", root], {
-      input: JSON.stringify({
-        cwd: root,
-        hook_event_name: "UserPromptSubmit",
-        session_id: observerSessionId,
-        turn_id: "observer-prompt",
-      }),
-    });
-    assertSuccess(observerPrompt);
-    assert.equal(
-      JSON.parse(observerPrompt.stdout).hookSpecificOutput.additionalContext,
-      `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,
-    );
-    let runtime = readJsonFile(runtimePath);
-    assert.equal(runtime.implementation_loop.status, "running");
-    assert.equal(runtime.implementation_loop.active_turn_stopped_at, undefined);
-
-    const driverPrompt = runNodeScript("hook.mjs", ["--root", root], {
-      input: JSON.stringify({
-        cwd: root,
-        hook_event_name: "UserPromptSubmit",
-        session_id: driverSessionId,
-        turn_id: "driver-prompt",
-      }),
-    });
-    assertSuccess(driverPrompt);
-    assert.equal(driverPrompt.stdout, "");
-    runtime = readJsonFile(runtimePath);
-    assert.equal(runtime.implementation_loop.status, "interrupted");
-    assert.equal(runtime.implementation_loop.last_interrupt_session_id, driverSessionId);
-  } finally {
-    fs.rmSync(root, { force: true, recursive: true });
-  }
-});
-
 test("Claude Code unbound hook payload records only a minimal current-session handshake", () => {
   const root = makeTempRoot("hook-claude-unbound-");
   const transcriptPath = path.join(root, "transcript.jsonl");
@@ -416,7 +297,7 @@ test("Claude Code synthetic implementation flow binds current capture and routes
       prompt: "Continue the synthetic implementation loop.",
     });
     assertSuccess(boundPromptSubmit);
-    assert.equal(boundPromptSubmit.stdout, "");
+    assert.match(JSON.parse(boundPromptSubmit.stdout).hookSpecificOutput.additionalContext, /loop running\. Answer the user; the loop continues after this reply\./u);
     assert.equal(fs.existsSync(path.join(root, ".epic-loop", ".runtime", "hook-events")), true);
 
     writeTranscript("manager housekeeping finished");

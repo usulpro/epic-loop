@@ -37,7 +37,8 @@ import {
   inspectHookConfig,
 } from "./hook-config.mjs";
 import { inspectAndRepairEpicCompatibility } from "./hook-compatibility.mjs";
-import { markInterruptedTurnIfNeeded, maybeBuildImplementationContinuation } from "./loop.mjs";
+import { maybeBuildImplementationContinuation } from "./loop.mjs";
+import { handleDriverUserPrompt, isSyntheticUserPrompt } from "./loop-user-prompt.mjs";
 
 export { buildHookCommand };
 
@@ -323,7 +324,7 @@ const MODE_REMINDER_TEXT = {
 };
 
 export function buildModeReminder(projectRoot, payload, binding) {
-  if (payload.hook_event_name !== "UserPromptSubmit") {
+  if (payload.hook_event_name !== "UserPromptSubmit" || isSyntheticUserPrompt(payload.prompt)) {
     return null;
   }
   const runtime = readJson(runtimeStatePath(projectRoot, binding.epic_slug), {});
@@ -393,9 +394,10 @@ export function handleHook(rawInput, flags = {}) {
   writeJson(path.join(sessionRoot(projectRoot), "last-hook-event.json"), eventRecord);
   updateSessionState(projectRoot, payload, eventPath);
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
-  markInterruptedTurnIfNeeded(projectRoot, payload, binding);
-
-  const continuation = maybeBuildImplementationContinuation(projectRoot, payload, binding) ?? buildModeReminder(projectRoot, payload, binding);
+  const continuation =
+    handleDriverUserPrompt(projectRoot, payload, binding) ??
+    maybeBuildImplementationContinuation(projectRoot, payload, binding) ??
+    buildModeReminder(projectRoot, payload, binding);
   if (continuation) {
     console.log(JSON.stringify(continuation));
   }

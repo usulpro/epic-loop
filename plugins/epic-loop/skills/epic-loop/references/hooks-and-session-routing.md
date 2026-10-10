@@ -212,6 +212,8 @@ Hooks can:
 - inject an advisory implementation lock marker for non-driver member sessions while another session drives the implementation loop: `[epic-loop] epic=<slug> mode=implementation — loop running in another session; read-only, do not edit epic artifacts`
 - continue the current session from `Stop` by returning `{ "decision": "block", "reason": "<prompt>" }`
 - keep chaining Claude Code roles across `stop_hook_active: true` Stop reentries within the same turn; `stop_hook_active` is informational, not a hard gate, so each reentry records the role report and issues the next block continuation
+- ignore harness-injected `UserPromptSubmit` prompts. Claude Code delivers background-task completions (`run_in_background` Bash, `Monitor`) as a `UserPromptSubmit` whose `prompt` is only `<task-notification>` (and possibly `<system-reminder>`) blocks, often mid-turn. A prompt that is empty after stripping those blocks is logged as `synthetic-prompt-ignored` and gets no context, except when it wakes a role turn that ended to wait for its own background task (see `implementation-cycle.md`). A missing `prompt`, or one with any other text, is treated as user input
+- give the implementation driver a one-line `[epic-loop]` note on each user prompt: answer and continue the role turn (same `turn_key`), answer and let the loop resume the aborted role, or the next role it already chose (new `turn_key`), how to stop (`stop-loop.mjs`), or, once stopped, how to resume. The exact prompt `stop loop mode` stops the loop in the hook itself. See `implementation-cycle.md` for the full classification
 - give an external runner enough data to recover the right session when hook continuation did not run
 
 Hooks cannot be assumed to:
