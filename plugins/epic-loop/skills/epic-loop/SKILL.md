@@ -285,7 +285,7 @@ A user message never stops the implementation loop by itself; only an explicit r
 - If the user asks to stop or pause the loop, in any wording, run `node <skill-dir>/scripts/stop-loop.mjs --slug "<epic-slug>"`. The exact message `stop loop mode` stops it without the agent.
 - After a stop, resume only when the user asks: `node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation` restarts the loop from a manager turn.
 
-Harness-injected prompts that contain only `<task-notification>`/`<system-reminder>` blocks, such as background-task completions, are not user input and are ignored. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
+Harness-injected prompts that contain only `<task-notification>`/`<system-reminder>` blocks, such as background-task completions, are not user input and are ignored. A role turn that ends while its own background task still runs is not closed: the loop waits once for the task's notification to wake the role, which then ends with its full report. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
 
 `techlead` owns tactical orchestration:
 

@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { appendLoopLog, durationMsBetween } from "./loop-artifacts.mjs";
+import { isWaitingForBackgroundTasks } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
 import { SKILL_DIR } from "./loop-prompts.mjs";
 
@@ -46,10 +47,7 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   const logBase = { iteration: Number.isFinite(loop.iteration) ? loop.iteration : null, role: loop.current_role ?? null, session_id: payload.session_id ?? null, slug, timestamp };
 
   if (isSyntheticUserPrompt(payload.prompt)) {
-    if (hasOpenTurn(loop)) {
-      appendLoopLog(projectRoot, { action: "synthetic-prompt-ignored", reason: "harness-injected-prompt", ...logBase });
-    }
-    return null;
+    return hasOpenTurn(loop) ? continueOpenTurn(projectRoot, slug, runtime, loop, payload, { logBase, timestamp }) : null;
   }
 
   if (loop.status === "interrupted") {
@@ -88,6 +86,26 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   const continuation = nextRole === role ? `the loop resumes the ${role} turn` : `the loop continues with the ${nextRole} turn the ${role} already chose`;
   return userPromptContext(
     `[epic-loop] epic=${slug} mode=implementation — the user interrupted the ${role} turn. Answer the user's message; when you finish, ${continuation}. ${stopHint(slug)}`,
+  );
+}
+
+// A harness-injected prompt never ends the open role turn. When it wakes an idle session (a
+// background task finished after the role ended its turn to wait, or after Esc), it starts a
+// new host turn that carries the role turn on, so the loop adopts that turn's identity.
+function continueOpenTurn(projectRoot, slug, runtime, loop, payload, { logBase, timestamp }) {
+  const key = turnKeyOf(payload);
+  const adoptKey = Boolean(key) && key !== loop.turn_key;
+  if (adoptKey) {
+    writeJson(runtimeStatePath(projectRoot, slug), { ...runtime, implementation_loop: { ...loop, turn_key: key }, updated_at: timestamp });
+  }
+  appendLoopLog(projectRoot, { action: "synthetic-prompt-ignored", reason: "harness-injected-prompt", turn_key_adopted: adoptKey, ...logBase });
+
+  if (!adoptKey || !isWaitingForBackgroundTasks(loop)) {
+    return null;
+  }
+  const role = loop.current_role;
+  return userPromptContext(
+    `[epic-loop] epic=${slug} mode=implementation — background work finished while the ${role} turn was waiting. Continue the ${role} turn; your final message must be the complete ${role} report, because the loop records it.`,
   );
 }
 

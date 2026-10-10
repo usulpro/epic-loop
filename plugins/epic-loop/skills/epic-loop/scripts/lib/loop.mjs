@@ -12,6 +12,7 @@ import {
   rebuildProgressMarkdown,
   rebuildProgressReport,
 } from "./loop-artifacts.mjs";
+import { runningBackgroundTaskIds, shouldWaitForBackgroundTasks, waitForBackgroundTasks } from "./loop-background.mjs";
 import {
   ensureClaudeBlockCapMetadata,
   getClaudeBlockCapProximityRoute,
@@ -167,6 +168,13 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     return null;
   }
 
+  // The role ended its turn to wait for a background task it started: let the turn end
+  // without a report and pick it up when the task's notification wakes the session.
+  if (platform === "claude-code" && hasOpenTurn(loop) && shouldWaitForBackgroundTasks(loop, payload)) {
+    waitForBackgroundTasks(projectRoot, slug, runtime, loop, payload, timestamp);
+    return null;
+  }
+
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
 
@@ -263,6 +271,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       ...loop,
       active_turn_started_at: timestamp,
       active_turn_stopped_at: null,
+      background_task_baseline: runningBackgroundTaskIds(payload),
       current_role: role,
       iteration,
       last_continuation_at: timestamp,

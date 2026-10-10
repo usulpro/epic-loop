@@ -282,3 +282,60 @@ test("Codex routes steer and aborted turns by turn_id the same way", () => {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
 });
+
+const runningTask = (id) => ({ command: "node scripts/slow-check.mjs", description: "slow check", id, status: "running", type: "shell" });
+
+test("a role that ends its turn to wait for its background task is picked up when the task finishes", () => {
+  const ctx = setupDriverLoop("hook-background-wait-");
+  const reportPath = path.join(ctx.epicRuntime, "latest-engineer-report.md");
+
+  try {
+    assert.equal(ctx.hook("Stop", { background_tasks: [runningTask("bg-check")], prompt_id: TURN_KEY, stop_hook_active: true }), null);
+    let loop = ctx.loop();
+    assert.equal(loop.active_turn_stopped_at, undefined);
+    assert.equal(loop.background_wait_iteration, 2);
+    assert.deepEqual(loop.background_wait_task_ids, ["bg-check"]);
+    assert.equal(fs.existsSync(reportPath), false);
+    assert.match(ctx.progress(), /"action":"turn-waiting-background"[^\n]*"background_task_ids":\["bg-check"\]/u);
+
+    const woken = ctx.prompt(TASK_NOTIFICATION, "prompt-woken");
+    assert.match(
+      ctx.context(woken),
+      /background work finished while the engineer turn was waiting\. Continue the engineer turn; your final message must be the complete engineer report/u,
+    );
+    loop = ctx.loop();
+    assert.equal(loop.turn_key, "prompt-woken");
+    assert.equal(loop.active_turn_stopped_at, undefined);
+    assert.match(ctx.progress(), /"action":"synthetic-prompt-ignored"[^\n]*"turn_key_adopted":true/u);
+
+    assert.match(ctx.context(ctx.prompt("quick question", "prompt-woken")), /the user wrote during the engineer turn/u);
+
+    const continuation = ctx.hook("Stop", { background_tasks: [], prompt_id: "prompt-woken", stop_hook_active: false });
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /techlead/iu);
+    assert.ok(fs.existsSync(reportPath));
+    assert.equal(ctx.loop().current_role, "techlead");
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("the loop waits for background tasks once per role turn and only for tasks the role started", () => {
+  const once = setupDriverLoop("hook-background-wait-once-");
+  const preexisting = setupDriverLoop("hook-background-wait-baseline-", { extra: { background_task_baseline: ["dev-server"] } });
+
+  try {
+    const stillRunning = { background_tasks: [runningTask("bg-check")], prompt_id: TURN_KEY, stop_hook_active: true };
+    assert.equal(once.hook("Stop", stillRunning), null);
+    assert.equal(once.hook("Stop", stillRunning).decision, "block");
+    assert.equal(once.loop().current_role, "techlead");
+    assert.deepEqual(once.loop().background_task_baseline, ["bg-check"]);
+
+    const devServer = preexisting.hook("Stop", { background_tasks: [runningTask("dev-server")], prompt_id: TURN_KEY, stop_hook_active: true });
+    assert.equal(devServer.decision, "block");
+    assert.doesNotMatch(preexisting.progress(), /turn-waiting-background/u);
+  } finally {
+    fs.rmSync(once.root, { force: true, recursive: true });
+    fs.rmSync(preexisting.root, { force: true, recursive: true });
+  }
+});
