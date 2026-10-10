@@ -145,6 +145,7 @@ function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp,
     slug,
     started_at: loop.active_turn_started_at,
     task: runtime.active_task ?? null,
+    timestamp,
     turn_id: turnId ?? null,
   });
 }

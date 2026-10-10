@@ -148,6 +148,36 @@ test("a user message after an aborted turn is answered, then the same role resum
   }
 });
 
+test("an aborted turn is closed in the progress artifacts", () => {
+  const ctx = setupDriverLoop("hook-user-abort-progress-");
+
+  try {
+    const progressPath = path.join(ctx.epicRuntime, "progress-log.jsonl");
+    const turnStart = { action: "turn-start", iteration: 2, role: "engineer", slug: ctx.slug, timestamp: "2026-07-01T00:00:00+00:00" };
+    fs.appendFileSync(progressPath, `${JSON.stringify(turnStart)}\n`, "utf8");
+
+    ctx.prompt("what is going on?", "prompt-after-esc");
+    const aborted = ctx
+      .progress()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line))
+      .find((event) => event.action === "turn-aborted");
+    assert.equal(typeof aborted.timestamp, "string");
+    assert.equal(aborted.timestamp, aborted.ended_at);
+
+    assertSuccess(runNodeScript("rebuild-progress.mjs", ["--root", ctx.root, "--slug", ctx.slug]));
+    const report = fs.readFileSync(path.join(ctx.epicRuntime, "progress-report.md"), "utf8");
+    assert.match(report, /- Aborted turns: 1/u);
+    assert.match(report, /## Open Turns\n\n- No open turns\./u);
+    const markdown = fs.readFileSync(path.join(ctx.epicRuntime, "progress-log.md"), "utf8");
+    assert.ok(markdown.includes(`## ${aborted.timestamp} | turn-aborted`));
+    assert.match(markdown, /Turn 2 was aborted by the user after/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
 test("an unknown turn identity is treated as an aborted turn", () => {
   const ctx = setupDriverLoop("hook-user-unknown-turn-", { extra: { turn_key: null } });
 
