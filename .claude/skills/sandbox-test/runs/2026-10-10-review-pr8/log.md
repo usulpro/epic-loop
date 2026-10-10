@@ -13,7 +13,7 @@ Questions this run answers:
 
 Layout:
 
-- Sandbox (disposable): `/projects/my-projects/epic-loop-workspace/sandbox-review-pr8/`
+- Sandboxes (disposable, removed): `/projects/my-projects/epic-loop-workspace/sandbox-review-pr8/` (repro), `sandbox-review-pr8-fix/` (fix re-verification)
 - Heavy artifacts (local only, not in git): `/projects/my-projects/epic-loop-workspace/sandbox-logs/2026-10-10-review-pr8/artifacts/`
 
 ## Journal
@@ -71,12 +71,28 @@ Layout:
 
 ### 4. Fixes
 
-- [FEATURE] None in this run. The confirmed items (bug B and the `turn-aborted` progress-report bug) go to PR #8 as review comments. Bug A and the dismissed items do not.
+- [FEATURE] The confirmed items (bug B and the `turn-aborted` progress-report bug) went to PR #8 as review comments. Bug A and the dismissed items did not.
+- [FEATURE] FIX `ba42c71`: `turn-aborted` logs `timestamp`. `loop-artifacts.mjs` counts it as an ended turn, reports "Aborted turns", and gives it a summary line. Regression test red before, green after.
+- [FEATURE] FIX `afb4750`: `abortOpenTurn` keeps `next_role` when `set-next-role` ran inside the aborted turn (strictly after the turn start), skips the resume note in that case, logs `next_role` on `turn-aborted`, and tells the agent which turn follows. New techlead test red before, green after. The engineer-resume test now also carries an older `set-next-role` transition. Docs updated. `pnpm run test:unit` 111/111, `pnpm run validate` OK, `self-update` in sync.
+- [SANDBOX] DECISION: re-verify in a fresh sandbox (`sandbox-review-pr8-fix`, same fixture commit, local-CLI install from the fixed branch) with the same steps. The composer gate became `shift\+tab\s*to\s*cycle`, because `❯` also appears in the trust dialog. It passed in 1 s.
+- [FEATURE] PASS, both fixes re-verified (`artifacts/fix/`):
+  - Esc 1 s after techlead iter 2's `set-next-role engineer`: `turn-aborted` with `"next_role":"engineer"`, and the next `Stop` started engineer iter 3 directly. No repeated techlead turn.
+  - After `rebuild-progress`: "Aborted turns: 1", "Open Turns: No open turns.", and `progress-log.md` dates the abort `17:03:45` (when it happened).
+  - The loop ran 12 iterations to `idle` with 3 task commits.
+- [FEATURE] BUG (new, reproduced 3/3 in the re-verification run): a role that ends its turn while its background task still runs has that message recorded as its report.
+  - Engineer iter 3 started `slow-check.mjs` in the background, ran `npm test`, started a `Monitor` on the output, and ended the turn with "Waiting for the slow-check output." That is the idiomatic Claude Code wait: end the turn and let the notification wake the session.
+  - The `Stop` payload says so: `background_tasks: [{"id":"bdk5my329","status":"running",…}, {"id":"bu6evoncf","status":"running",…}]`.
+  - The loop still recorded "Waiting for the slow-check output." as the engineer report and chained to techlead. The notification then arrived inside the techlead turn (`synthetic-prompt-ignored`, role `techlead`).
+  - Engineer iters 5 and 7 did the same; their reports say "not fully verified" / "verification is not complete yet". The techlead closed the tasks from the markers.
+  - My Esc (at `17:04:01.95`) is unrelated: it landed 160 ms after that `Stop`, in techlead turn 4.
+  - In the first run, engineers waited in the foreground, so this did not show. `dontAsk` denials of some wait commands probably push the model towards ending the turn, but iter 3 had no denial before it ended.
+  - Not fixed here: the obvious fix (defer the report and the continuation while `background_tasks` has running entries) would stall the loop forever on a long-lived task such as a dev server. That needs a design decision.
 
 ### 5. Archive and cleanup
 
 - [SANDBOX] Archived into `artifacts/90-archive/`: git bundle (verified and restore-tested by cloning it and running `npm test`: 6/6), `.epic-loop/` including `.runtime`, `.claude/settings.json`, `.sandbox/markers.log`, `uncommitted.diff`, and the host transcript directory.
-- [SANDBOX] Removed the sandbox directory and `~/.claude/projects/-projects-my-projects-epic-loop-workspace-sandbox-review-pr8/`. No background processes remain. `~/.claude.json` keeps one trust entry for the sandbox path (left alone, as in run 2). The npx cache is kept.
+- [SANDBOX] Fix re-verification archived in `artifacts/fix/90-archive/` the same way (bundle restore-tested: `npm test` 9/9).
+- [SANDBOX] Removed the sandbox directories and `~/.claude/projects/-projects-my-projects-epic-loop-workspace-sandbox-review-pr8/`. No background processes remain. `~/.claude.json` keeps one trust entry for the sandbox path (left alone, as in run 2). The npx cache is kept.
 
 ## Summary
 
@@ -84,6 +100,8 @@ Layout:
 
 - **Bug B confirmed, low impact.** `abortOpenTurn` overwrites a `next_role` the techlead already set. The techlead re-ran, recovered from the resume note, and re-applied the same decision. Cost: one extra turn. No state corruption.
 - **New bug confirmed.** `turn-aborted` has no `timestamp`, and the progress report does not know the event: the aborted turn stays under "Open Turns" for good, "Interrupted turns" is 0, and a rebuild re-dates the event.
+- **Both confirmed bugs fixed** (`ba42c71`, `afb4750`) and re-verified in a fresh sandbox.
+- **New bug, open:** a role that ends its turn while a background task runs (the Stop payload lists it as `running`) gets its "waiting…" message recorded as its report, and the loop moves on. Reproduced 3/3. The fix needs a design decision because of long-lived background tasks.
 - **Bug A: mechanism confirmed, no harm.** A notification after Esc starts a new host turn with a new `prompt_id` and is ignored. Its reply is recorded as the engineer report, but that reply is the complete report.
 - **Bug C dismissed** by analysis: it needs cap 1, under which no engineer turn ever runs.
 - Unquoted skill paths and `payload.turn_id` logging predate the PR and belong in separate issues.
