@@ -121,7 +121,8 @@ test("a user message inside the running turn is answered without stopping the lo
 });
 
 test("a user message after an aborted turn is answered, then the same role resumes", () => {
-  const ctx = setupDriverLoop("hook-user-abort-");
+  // The techlead chose this engineer turn before it started; that is not a decision made inside it.
+  const ctx = setupDriverLoop("hook-user-abort-", { extra: { last_transition_at: "2026-07-01T00:00:00+00:00", last_transition_by: "set-next-role" } });
 
   try {
     const answer = ctx.prompt("what is going on?", "prompt-after-esc");
@@ -143,6 +144,36 @@ test("a user message after an aborted turn is answered, then the same role resum
     assert.equal(loop.turn_key, "prompt-after-esc");
 
     assert.match(ctx.context(ctx.prompt("and now?", "prompt-after-esc")), /the user wrote during the engineer turn/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("an aborted techlead turn keeps the next role it already chose", () => {
+  const ctx = setupDriverLoop("hook-user-abort-techlead-", { extra: { next_role: "awaiting-transition" }, role: "techlead" });
+
+  try {
+    const promptFile = `.epic-loop/epics/${ctx.slug}/.runtime/current-engineer-prompt.md`;
+    assertSuccess(runNodeScript("set-next-role.mjs", ["--root", ctx.root, "--slug", ctx.slug, "--role", "engineer", "--prompt-file", promptFile]));
+
+    const answer = ctx.prompt("what were you doing?", "prompt-after-esc");
+    assert.match(
+      ctx.context(answer),
+      /the user interrupted the techlead turn\. Answer the user's message; when you finish, the loop continues with the engineer turn the techlead already chose/u,
+    );
+    let loop = ctx.loop();
+    assert.equal(loop.next_role, "engineer");
+    assert.equal(loop.prompt_file, promptFile);
+    assert.equal(loop.resume_after_user_turn, false);
+    assert.match(ctx.progress(), /"action":"turn-aborted"[^\n]*"next_role":"engineer"/u);
+
+    const continuation = ctx.stop("prompt-after-esc");
+    assert.equal(continuation.decision, "block");
+    assert.doesNotMatch(continuation.reason, /Resuming/u);
+    assert.match(continuation.reason, /Add mean\(values\) to src\/stats\.mjs\./u);
+    loop = ctx.loop();
+    assert.equal(loop.current_role, "engineer");
+    assert.equal(loop.next_role, "techlead");
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }

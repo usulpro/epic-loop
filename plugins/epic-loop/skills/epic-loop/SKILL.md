@@ -281,7 +281,7 @@ Manager turns are also role-specific and non-product. They perform housekeeping 
 A user message never stops the implementation loop by itself; only an explicit request does. When the user writes in the driver session, the hook adds a one-line `[epic-loop]` note to the prompt:
 
 - During a running role turn: answer briefly, then finish the role turn; the final message is still the full role report.
-- After the user aborted a role turn (Esc / Ctrl+C): answer the message; the loop then resumes the same role.
+- After the user aborted a role turn (Esc / Ctrl+C): answer the message; the loop then resumes the same role, or continues with the next role if the techlead had already set it.
 - If the user asks to stop or pause the loop, in any wording, run `node <skill-dir>/scripts/stop-loop.mjs --slug "<epic-slug>"`. The exact message `stop loop mode` stops it without the agent.
 - After a stop, resume only when the user asks: `node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation` restarts the loop from a manager turn.
 

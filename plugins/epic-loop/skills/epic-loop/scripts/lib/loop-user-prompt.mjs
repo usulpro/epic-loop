@@ -81,11 +81,13 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   }
 
   // A new host turn while a role turn is still open: the user aborted that turn (Esc /
-  // Ctrl+C), which fires no Stop. Close it without a report and resume the same role
-  // once this user turn ends, so the answer is never taken for the role's report.
-  abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId: payload.session_id ?? null, timestamp, turnId: key });
+  // Ctrl+C), which fires no Stop. Close it without a report and, once this user turn ends,
+  // resume the same role (or the next role it already chose), so the answer is never taken
+  // for the role's report.
+  const nextRole = abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId: payload.session_id ?? null, timestamp, turnId: key });
+  const continuation = nextRole === role ? `the loop resumes the ${role} turn` : `the loop continues with the ${nextRole} turn the ${role} already chose`;
   return userPromptContext(
-    `[epic-loop] epic=${slug} mode=implementation — the user interrupted the ${role} turn. Answer the user's message; when you finish, the loop resumes the ${role} turn. ${stopHint(slug)}`,
+    `[epic-loop] epic=${slug} mode=implementation — the user interrupted the ${role} turn. Answer the user's message; when you finish, ${continuation}. ${stopHint(slug)}`,
   );
 }
 
@@ -121,14 +123,15 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
 }
 
 function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp, turnId }) {
+  const nextRole = roleChosenDuringTurn(loop) ? loop.next_role : loop.current_role;
   writeJson(runtimeStatePath(projectRoot, slug), {
     ...runtime,
     implementation_loop: {
       ...loop,
       active_turn_stopped_at: timestamp,
       last_reason: "user-aborted-turn",
-      next_role: loop.current_role,
-      resume_after_user_turn: true,
+      next_role: nextRole,
+      resume_after_user_turn: nextRole === loop.current_role,
     },
     updated_at: timestamp,
   });
@@ -138,6 +141,7 @@ function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp,
     duration_ms: durationMsBetween(loop.active_turn_started_at, timestamp),
     ended_at: timestamp,
     iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
+    next_role: nextRole,
     phase: runtime.active_phase ?? null,
     reason: "user-aborted-turn",
     role: loop.current_role,
@@ -148,6 +152,20 @@ function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp,
     timestamp,
     turn_id: turnId ?? null,
   });
+
+  return nextRole;
+}
+
+// The techlead's `set-next-role` inside the aborted turn already decided what comes next;
+// re-running the role would only redo that decision. Strictly after the turn start, so a
+// command from the previous turn in the same second still resumes the aborted role.
+function roleChosenDuringTurn(loop) {
+  if (loop.last_transition_by !== "set-next-role" || !loop.next_role) {
+    return false;
+  }
+  const chosenAt = Date.parse(loop.last_transition_at);
+  const startedAt = Date.parse(loop.active_turn_started_at);
+  return Number.isFinite(chosenAt) && Number.isFinite(startedAt) && chosenAt > startedAt;
 }
 
 function stopHint(slug) {
