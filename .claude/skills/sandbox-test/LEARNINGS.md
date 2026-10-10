@@ -25,7 +25,7 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 | --- | --- | --- |
 | [2026-10-09-npx-0.2.0](runs/2026-10-09-npx-0.2.0/log.md) | `feature/distribution-foundation` + published `epic-loop@0.2.0`: npm path, full epic, legacy upgrade | Feature verified; 1 bug fixed (`d8c2485`); method worked after 1 workaround |
 | [2026-10-09-bg-task-interrupt](runs/2026-10-09-bg-task-interrupt/log.md) | Issue #4 on published `epic-loop@0.2.1` (headless repro), then the new user-prompt contract on Claude Code and Codex (interactive) | Bug reproduced and fixed; contract changed and verified on both hosts; 1 incident (Codex self-update via blind typing), several workarounds |
-| [2026-10-10-review-pr8](runs/2026-10-10-review-pr8/log.md) | PR #8 review findings on the branch (local-CLI install, interactive Claude) | 2 findings confirmed (1 new), 1 confirmed without harm, 1 dismissed by analysis; no workaround needed |
+| [2026-10-10-review-pr8](runs/2026-10-10-review-pr8/log.md) | PR #8 review findings on the branch (local-CLI install, interactive Claude) | 2 findings confirmed (1 new) and fixed; 1 more bug found and fixed during re-verification (background wait); 1 confirmed without harm, 1 dismissed; 3 sandboxes, no workaround needed |
 
 ## Decisions
 
@@ -51,6 +51,7 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 | `progress-log.jsonl` plus the host transcript are enough to reconstruct the role chain and every hook continuation; hook captures (`.epic-loop/.runtime/hook-events`, with `prompt` / `last_assistant_message`) cover what the agent said when no transcript exists | 3 | run 1, run 2, run 3 |
 | Copying a real old install (e.g. from another local project) into the sandbox is a cheap, realistic migration test | 1 | run 1 |
 | Git bundle plus a restore test (clone, run tests) proves the archive is usable before deleting | 3 | run 1, run 2, run 3 |
+| Re-verifying a fix in a fresh sandbox with the same scenario also surfaces new bugs (run 3 found the background-wait bug this way) | 1 | run 3 |
 | A minimal probe sandbox with payload-logging hooks answers harness questions (what fires on Esc, steer, notifications) before designing a fix | 1 | run 2 |
 | Interactive pty driving gated on `progress-log.jsonl` / marker files (D-6), several scenario steps in one session | 2 | run 2, run 3 |
 | `runtime-state.json` history via `tools/state-history.mjs` (D-9) | 1 | run 3 |

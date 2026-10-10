@@ -86,11 +86,23 @@ Layout:
   - Engineer iters 5 and 7 did the same; their reports say "not fully verified" / "verification is not complete yet". The techlead closed the tasks from the markers.
   - My Esc (at `17:04:01.95`) is unrelated: it landed 160 ms after that `Stop`, in techlead turn 4.
   - In the first run, engineers waited in the foreground, so this did not show. `dontAsk` denials of some wait commands probably push the model towards ending the turn, but iter 3 had no denial before it ended.
-  - Not fixed here: the obvious fix (defer the report and the continuation while `background_tasks` has running entries) would stall the loop forever on a long-lived task such as a dev server. That needs a design decision.
+  - A plain "defer while `background_tasks` has running entries" would stall the loop forever on a long-lived task such as a dev server, so the fix needed a design decision.
+- [FEATURE] DECISION (user, 2026-10-11): fix it in PR #8, deferring at most once per role turn.
+- [FEATURE] FIX `646742b`:
+  - A Claude Code `Stop` on an open role turn whose `background_tasks` has `running` tasks that were not running when the turn started logs `turn-waiting-background` and returns no continuation, at most once per role turn.
+  - The baseline is recorded from the `Stop` that starts each turn (`background_task_baseline`), so a task left by an earlier role never defers.
+  - A synthetic prompt with a new `turn_key` on an open turn now adopts that key (`turn_key_adopted`). Without that, a user message in the woken turn would count as an abort.
+  - After a background wait, the woken turn gets "Continue the <role> turn; your final message must be the complete <role> report".
+  - Logic lives in the new `scripts/lib/loop-background.mjs`. 2 new contract tests (red before, green after). Docs updated. 113/113, validate OK, `self-update` in sync.
+- [FEATURE] PASS, re-verified in a fresh sandbox (`sandbox-review-pr8-bgwait`, same fixture and prompt, no Esc, `artifacts/bgwait/`):
+  - In all 3 engineer turns: `turn-waiting-background` with the slow-check task id, then the notification woke the session (`synthetic-prompt-ignored`, `turn_key_adopted: true`), then the same engineer turn ended with a full report including `slow-check: OK`.
+  - Before the fix, 3/3 reports were "waiting" or "not verified".
+  - The loop reached `idle` with 3 task commits. `progress-report.md`: 10 completed, 0 aborted, no open turns.
 
 ### 5. Archive and cleanup
 
 - [SANDBOX] Archived into `artifacts/90-archive/`: git bundle (verified and restore-tested by cloning it and running `npm test`: 6/6), `.epic-loop/` including `.runtime`, `.claude/settings.json`, `.sandbox/markers.log`, `uncommitted.diff`, and the host transcript directory.
+- [SANDBOX] The background-wait re-verification was archived the same way in `artifacts/bgwait/90-archive/` (bundle restore-tested: `npm test` 10/10), and its sandbox and host transcript directory were removed.
 - [SANDBOX] Fix re-verification archived in `artifacts/fix/90-archive/` the same way (bundle restore-tested: `npm test` 9/9).
 - [SANDBOX] Removed the sandbox directories and `~/.claude/projects/-projects-my-projects-epic-loop-workspace-sandbox-review-pr8/`. No background processes remain. `~/.claude.json` keeps one trust entry for the sandbox path (left alone, as in run 2). The npx cache is kept.
 
@@ -101,7 +113,7 @@ Layout:
 - **Bug B confirmed, low impact.** `abortOpenTurn` overwrites a `next_role` the techlead already set. The techlead re-ran, recovered from the resume note, and re-applied the same decision. Cost: one extra turn. No state corruption.
 - **New bug confirmed.** `turn-aborted` has no `timestamp`, and the progress report does not know the event: the aborted turn stays under "Open Turns" for good, "Interrupted turns" is 0, and a rebuild re-dates the event.
 - **Both confirmed bugs fixed** (`ba42c71`, `afb4750`) and re-verified in a fresh sandbox.
-- **New bug, open:** a role that ends its turn while a background task runs (the Stop payload lists it as `running`) gets its "waiting…" message recorded as its report, and the loop moves on. Reproduced 3/3. The fix needs a design decision because of long-lived background tasks.
+- **New bug, fixed (`646742b`):** a role that ended its turn while its own background task ran had its "waiting…" message recorded as its report, and the loop moved on (3/3). The loop now waits once per role turn for tasks the role started, then takes the full report. Re-verified 3/3 with full reports.
 - **Bug A: mechanism confirmed, no harm.** A notification after Esc starts a new host turn with a new `prompt_id` and is ignored. Its reply is recorded as the engineer report, but that reply is the complete report.
 - **Bug C dismissed** by analysis: it needs cap 1, under which no engineer turn ever runs.
 - Unquoted skill paths and `payload.turn_id` logging predate the PR and belong in separate issues.
