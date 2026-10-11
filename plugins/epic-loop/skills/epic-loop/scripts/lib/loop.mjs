@@ -12,7 +12,7 @@ import {
   rebuildProgressMarkdown,
   rebuildProgressReport,
 } from "./loop-artifacts.mjs";
-import { runningBackgroundTaskIds, shouldWaitForBackgroundTasks, waitForBackgroundTasks } from "./loop-background.mjs";
+import { runningBackgroundTaskIds, shouldWaitForBackgroundTasks, waitedMs, waitForBackgroundTasks } from "./loop-background.mjs";
 import {
   ensureClaudeBlockCapMetadata,
   getClaudeBlockCapProximityRoute,
@@ -314,6 +314,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       // before Esc are still its own work.
       background_task_baseline: resumesAbortedTurn && Array.isArray(loop.background_task_baseline) ? loop.background_task_baseline : runningBackgroundTaskIds(payload),
       background_wait_iteration: null,
+      background_wait_ms: 0,
       current_role: role,
       iteration,
       last_continuation_at: timestamp,
@@ -500,7 +501,8 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
     return { loop, runtime };
   }
 
-  const durationMs = durationMsBetween(loop.active_turn_started_at, timestamp);
+  const backgroundWaitMs = waitedMs(loop, timestamp);
+  const durationMs = activeDurationMs(loop, timestamp, backgroundWaitMs);
   const engineerReport = loop.current_role === "engineer" ? appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, "engineer") : null;
   const managerReport = loop.current_role === "manager" ? appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, "manager") : null;
   const stoppedLoop = {
@@ -522,6 +524,7 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
   appendLoopLog(projectRoot, {
     action: "turn-stop",
+    ...(backgroundWaitMs > 0 ? { background_wait_ms: backgroundWaitMs } : {}),
     duration_ms: durationMs,
     ended_at: timestamp,
     iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
@@ -540,7 +543,7 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
 }
 
 export function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, reason, sessionId, timestamp, turnId }) {
-  const resolvedDurationMs = durationMs === undefined ? durationMsBetween(loop.active_turn_started_at, timestamp) : durationMs;
+  const resolvedDurationMs = durationMs === undefined ? activeDurationMs(loop, timestamp, waitedMs(loop, timestamp)) : durationMs;
   const stoppedLoop = {
     ...loop,
     active_turn_stopped_at: timestamp,
@@ -575,6 +578,12 @@ export function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durati
   });
 
   return nextRuntime;
+}
+
+// Wall-clock time of the open turn minus the time it spent waiting for background work.
+function activeDurationMs(loop, timestamp, backgroundWaitMs) {
+  const elapsedMs = durationMsBetween(loop.active_turn_started_at, timestamp);
+  return elapsedMs === null || elapsedMs === undefined ? elapsedMs : Math.max(0, elapsedMs - backgroundWaitMs);
 }
 
 function parseInterruptDuration(flags) {

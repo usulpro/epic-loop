@@ -341,11 +341,15 @@ function progressSummary(entry) {
     case "turn-stop":
       return `Turn ${entry.iteration ?? "?"} stopped after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
     case "turn-interrupted":
-      return `Turn ${entry.iteration ?? "?"} was interrupted after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+      return entry.duration_ms === null
+        ? `Turn ${entry.iteration ?? "?"} was interrupted; its active time is unknown.`
+        : `Turn ${entry.iteration ?? "?"} was interrupted after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
     case "turn-waiting-background":
       return `Turn ${entry.iteration ?? "?"} is waiting for its background tasks to finish.`;
     case "turn-aborted":
-      return `Turn ${entry.iteration ?? "?"} was aborted by the user after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+      return entry.duration_ms === null
+        ? `Turn ${entry.iteration ?? "?"} was aborted by the user; its active time is unknown.`
+        : `Turn ${entry.iteration ?? "?"} was aborted by the user after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:

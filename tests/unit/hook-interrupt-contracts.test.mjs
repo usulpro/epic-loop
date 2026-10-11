@@ -196,6 +196,8 @@ test("an aborted turn is closed in the progress artifacts", () => {
       .find((event) => event.action === "turn-aborted");
     assert.equal(typeof aborted.timestamp, "string");
     assert.equal(aborted.timestamp, aborted.ended_at);
+    // Esc fires nothing, so when the role stopped working is unknown; the time until the user wrote is not active time.
+    assert.equal(aborted.duration_ms, null);
 
     assertSuccess(runNodeScript("rebuild-progress.mjs", ["--root", ctx.root, "--slug", ctx.slug]));
     const report = fs.readFileSync(path.join(ctx.epicRuntime, "progress-report.md"), "utf8");
@@ -203,7 +205,7 @@ test("an aborted turn is closed in the progress artifacts", () => {
     assert.match(report, /## Open Turns\n\n- No open turns\./u);
     const markdown = fs.readFileSync(path.join(ctx.epicRuntime, "progress-log.md"), "utf8");
     assert.ok(markdown.includes(`## ${aborted.timestamp} | turn-aborted`));
-    assert.match(markdown, /Turn 2 was aborted by the user after/u);
+    assert.match(markdown, /Turn 2 was aborted by the user; its active time is unknown\./u);
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
@@ -439,6 +441,47 @@ test("set-next-role inside the turn counts even in the second the turn started",
 
     assert.match(ctx.context(ctx.prompt("what were you doing?", "prompt-after-esc")), /the loop continues with the engineer turn the techlead already chose/u);
     assert.equal(ctx.loop().next_role, "engineer");
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("time spent waiting for background work is not counted as active turn time", () => {
+  // The engineer turn started at 00:00 and ended its host turn to wait at 00:10.
+  const ctx = setupDriverLoop("hook-background-wait-duration-", {
+    extra: { background_wait_iteration: 2, background_wait_started_at: "2026-07-01T00:10:00+00:00", background_wait_task_ids: ["bg-check"] },
+  });
+
+  try {
+    ctx.prompt(TASK_NOTIFICATION, "prompt-woken");
+    assert.ok(ctx.loop().background_wait_ms > 0);
+    assert.equal(ctx.hook("Stop", { background_tasks: [], prompt_id: "prompt-woken", stop_hook_active: false }).decision, "block");
+
+    const stopped = ctx
+      .progress()
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line))
+      .find((event) => event.action === "turn-stop");
+    assert.ok(stopped.duration_ms >= 600000 && stopped.duration_ms < 605000, `duration_ms ${stopped.duration_ms}`);
+    assert.ok(stopped.background_wait_ms > 0);
+    assert.equal(ctx.loop().background_wait_ms, 0);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("a user message after a techlead turn that chose no next role does not promise that the loop continues", () => {
+  const ctx = setupDriverLoop("hook-user-awaiting-transition-", {
+    extra: { active_turn_stopped_at: "2026-07-01T00:05:00+00:00", next_role: "awaiting-transition" },
+    role: "techlead",
+  });
+
+  try {
+    const context = ctx.context(ctx.prompt("what's next?", "prompt-later"));
+    assert.match(context, /the last techlead turn ended without choosing the next role, so nothing runs after this reply/u);
+    assert.match(context, /set-next-role\.mjs --slug user-prompt/u);
+    assert.doesNotMatch(context, /the loop continues after this reply/u);
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }

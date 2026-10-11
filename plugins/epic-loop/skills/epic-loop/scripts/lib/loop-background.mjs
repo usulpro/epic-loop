@@ -1,5 +1,5 @@
 import { runtimeStatePath, writeJson } from "./common.mjs";
-import { appendLoopLog } from "./loop-artifacts.mjs";
+import { appendLoopLog, durationMsBetween } from "./loop-artifacts.mjs";
 
 // Claude Code lets a turn end while its background tasks keep running and wakes the session
 // with a `<task-notification>` when they finish; its Stop payload lists them in
@@ -35,6 +35,14 @@ export function shouldWaitForBackgroundTasks(loop, payload) {
 // The open role turn ended its host turn to wait and nothing has woken the session since.
 export function isWaitingForBackgroundTasks(loop) {
   return Number.isFinite(loop.iteration) && loop.background_wait_iteration === loop.iteration;
+}
+
+// Time the open role turn has spent waiting for background work, including a wait still in
+// progress. It is not active time, so turn durations leave it out.
+export function waitedMs(loop, timestamp) {
+  const finished = Number(loop.background_wait_ms) || 0;
+  const current = isWaitingForBackgroundTasks(loop) ? (durationMsBetween(loop.background_wait_started_at, timestamp) ?? 0) : 0;
+  return finished + current;
 }
 
 export function waitForBackgroundTasks(projectRoot, slug, runtime, loop, payload, timestamp) {

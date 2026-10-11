@@ -1,8 +1,8 @@
 import path from "node:path";
 
 import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
-import { appendLoopLog, durationMsBetween } from "./loop-artifacts.mjs";
-import { isWaitingForBackgroundTasks, waitingTurnGuidance } from "./loop-background.mjs";
+import { appendLoopLog } from "./loop-artifacts.mjs";
+import { isWaitingForBackgroundTasks, waitedMs, waitingTurnGuidance } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
 import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
@@ -66,6 +66,11 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   }
 
   if (!hasOpenTurn(loop)) {
+    if (loop.next_role === "awaiting-transition") {
+      return userPromptContext(
+        `[epic-loop] epic=${slug} mode=implementation — loop running, but the last techlead turn ended without choosing the next role, so nothing runs after this reply. Tell the user; only if they want the loop to go on, choose it as the techlead would: node ${path.join(SKILL_DIR, "scripts", "set-next-role.mjs")} --slug ${slug} --role <engineer|manager|idle> (engineer also needs --prompt-file). ${stopHint(slug)}`,
+      );
+    }
     return userPromptContext(`[epic-loop] epic=${slug} mode=implementation — loop running. Answer the user; the loop continues after this reply. ${stopHint(slug)}`);
   }
 
@@ -127,7 +132,7 @@ function continueOpenTurn(projectRoot, slug, runtime, loop, payload, { logBase, 
 function wakeWaitingTurn(projectRoot, slug, runtime, loop, key, timestamp) {
   writeJson(runtimeStatePath(projectRoot, slug), {
     ...runtime,
-    implementation_loop: { ...loop, background_wait_iteration: null, turn_key: key ?? loop.turn_key ?? null },
+    implementation_loop: { ...loop, background_wait_iteration: null, background_wait_ms: waitedMs(loop, timestamp), turn_key: key ?? loop.turn_key ?? null },
     updated_at: timestamp,
   });
 }
@@ -179,7 +184,9 @@ function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp,
 
   appendLoopLog(projectRoot, {
     action: "turn-aborted",
-    duration_ms: durationMsBetween(loop.active_turn_started_at, timestamp),
+    // Esc fires no hook, so when the role stopped working is unknown; the time until the user
+    // wrote is not active time.
+    duration_ms: null,
     ended_at: timestamp,
     iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
     next_role: nextRole,
