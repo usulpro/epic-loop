@@ -8,7 +8,7 @@ REPO=$W/epic-loop
 R=$W/sandbox-logs/2026-10-11-review-pr8-round2
 D=$R/driver
 S=$W/sandbox-review-pr8-r2-$X
-OUT=$R/artifacts/$X
+OUT=$R/artifacts/${TAG:+$TAG-}$X
 TOOLS=$REPO/.claude/skills/sandbox-test/tools
 mkdir -p "$OUT"
 rm -rf "$S"
@@ -27,7 +27,7 @@ PROMPT="$(cat "$D/base-prompt.txt")"
 PROMPT="${PROMPT/\{\{PROTOCOL\}\}/$PROTOCOL}"
 printf '%s\n' "$PROMPT" > "$OUT/03-prompt.txt"
 PROMPT="$PROMPT" PLOG="$S/.epic-loop/epics/stats-helpers/.runtime/progress-log.jsonl" \
-  node "$D/make-steps.mjs" "$X" > "$OUT/04-steps.json"
+  node "$D/make-steps.mjs" "${STEPS:-$X}" > "$OUT/04-steps.json"
 "$(node -p process.execPath)" "$TOOLS/state-history.mjs" "$S/.epic-loop/epics/stats-helpers/.runtime/runtime-state.json" "$OUT/05-state-history" 200 &
 HIST=$!
 trap 'kill $HIST 2>/dev/null || true' EXIT

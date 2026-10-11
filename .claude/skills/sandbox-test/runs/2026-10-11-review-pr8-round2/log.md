@@ -88,12 +88,26 @@ Claude Code 2.1.293, the user's default model, one session per scenario, launche
 
 ### 4. Fixes
 
-- [FEATURE] None in this run. The verdicts go to the user first (D-10); fixes and PR comments wait for the user's decision.
+- [FEATURE] DECISION (user, 2026-10-11): post #1–#3 to PR #8, then fix them together with an explicit completion signal instead of a fourth heuristic. Posted as review `5483728419`, with one inline comment per finding.
+- [FEATURE] FIX (one commit on the branch):
+  - **Completion is explicit and per iteration.** The new `complete-turn.mjs --slug <slug>` sets `turn_completed_iteration`, and `set-next-role` now sets `next_role_set_iteration` when it runs inside an open turn. `isTurnComplete(loop)` checks either one.
+  - **#2.** `shouldWaitForBackgroundTasks` is now `!isTurnComplete && own running tasks`. A role that marked its turn complete chains even while its dev server runs. The engineer prompt (`buildEngineerPrompt`) and the manager template carry the rule. The techlead template says that `set-next-role` completes its turn.
+  - **#3.** The wait-once guard is gone. `background_wait_iteration` now means "waiting right now": it is set by the wait and cleared when the session wakes, so a role waits as often as it needs to.
+  - **#1.** A user message while the role is waiting is `user-message-while-waiting`, not an abort. The loop adopts its `turn_key` and wakes the same turn. A role resumed after a real Esc abort keeps the aborted turn's `background_task_baseline`, so its own task still counts.
+  - **#6.** A notification that arrives while the role is waiting gets the "continue" guidance whichever host turn carries it.
+  - **#7.** `roleChosenDuringTurn` compares `next_role_set_iteration` with the turn's iteration instead of timestamps.
+  - The shared guidance is in `waitingTurnGuidance` (`loop-background.mjs`), and the command string in `completeTurnCommand` (`loop-prompts.mjs`).
+- [FEATURE] Tests: the two old background tests were rewritten, and 4 new contract tests were added in `hook-interrupt-contracts.test.mjs`: waiting twice for two tasks plus the baseline dev server, `complete-turn` with a dev server, a user message while waiting (plus a same-key notification), the resume keeping its baseline, and `set-next-role` in the turn's first second. They were red before the fix and are green after. `pnpm run test:unit` 117/117, `pnpm run validate` OK, `self-update` in sync. Docs updated: `implementation-cycle.md`, `hooks-and-session-routing.md`, `implementation-engineer-role.md`, `SKILL.md`, and the manager and techlead templates.
+- [FEATURE] PASS, re-verified in three fresh sandboxes run in parallel (`TAG=fix`, same fixture and prompts, local-CLI install of the fixed working tree; `artifacts/fix-{A,B,C}/`):
+  - **A (#3):** engineer iter 3 waited for `a` and `b` (`14:58:48`). `a` woke it (`14:58:53`), and it ended again and waited for `b` alone (`14:58:58`, same iteration). `b` woke it (`14:59:43`), and the report quotes both `OK` lines. The role chain was `mtetmtmt` with one engineer turn, committed as `086081c`. Before the fix: 2 engineer turns, "waiting" recorded twice, and the loop stopped as blocked.
+  - **B (#1):** the question during the wait was logged as `user-message-while-waiting` (`14:57:20`). The engineer answered and ended again, and the loop waited again in iter 3 (`14:57:22`). The check woke it (`14:58:42`), and the full report with `slow-check main: OK` was recorded in iter 3. No `turn-aborted`. One engineer turn, committed as `626f58c`. Before the fix: 4 engineer turns.
+  - **C (#2):** the engineer started the dev server, ran `complete-turn` by itself (`14:57:27`), and its report was recorded at `14:57:32` with no `turn-waiting-background`. The loop reached `idle` at `14:58:26` with no user input, committed as `a38e9e9`. Before the fix: a stall with no end until the user wrote.
 
 ### 5. Archive and cleanup
 
 - [SANDBOX] Each scenario was archived by `driver/archive.sh <X>` into `artifacts/<X>/90-archive/`: git bundle (verified and restore-tested by cloning and running `npm test`), `.epic-loop/` including `.runtime`, `.claude/settings.json`, `.sandbox/markers.log`, `uncommitted.diff`, `git-log.txt`, and the host transcript dir. Then the sandbox and `~/.claude/projects/<sandbox>` were removed.
-- [SANDBOX] Inventory: no sandbox dirs, no `slow-check`, `dev-server`, or `state-history` processes. `~/.claude.json` keeps 3 trust entries for the sandbox paths (left alone, as in runs 2–3). The npx cache is kept.
+- [SANDBOX] The fix re-verification was archived the same way into `artifacts/fix-{A,B,C}/90-archive/`, each bundle restore-tested.
+- [SANDBOX] Inventory: no sandbox dirs, no `slow-check`, `dev-server`, or `state-history` processes. `~/.claude.json` keeps 3 trust entries for the sandbox paths (left alone, as in runs 2–3; the fix runs reused the same paths). The npx cache is kept.
 
 ## Summary
 
@@ -112,6 +126,7 @@ Claude Code 2.1.293, the user's default model, one session per scenario, launche
 
 - The `646742b` fix works in the clean case (B iter 8, run 3's bgwait). It breaks in exactly three ways, all of which reproduce with realistic protocols: more than one background task, user input during the wait, and a task that never ends.
 - The three failures share #10's root cause: the loop infers "role finished" from a `Stop` plus payload heuristics. In A and B the techlead caught the bad reports. A techlead that trusts the report would close tasks unverified.
+- **Fixed together** with an explicit, per-iteration completion signal (`complete-turn.mjs`, plus `set-next-role` for the techlead) and repeatable waits that a user message or notification wakes rather than aborts. This also fixes #6 and #7. Re-verified: each scenario now runs one engineer turn, with no aborts and no stall.
 
 ### [SANDBOX]
 
@@ -121,4 +136,5 @@ Claude Code 2.1.293, the user's default model, one session per scenario, launche
   - `state-history.mjs` again gave the decisive evidence (B's baseline in snapshot 0009).
   - Copying `latest-*-report.md` at each turn boundary, because the file is overwritten.
 - **Didn't work:** the `forbid` regex matched the agent's own words (attempt 1 of B lost). Volta's `node` shim broke `kill $!`. `pkill -f` killed the agent's shell. `git bundle` flag order.
+- Running the three fix re-verifications in parallel (one sandbox each, one combined Monitor) took about 6 minutes instead of about 20, and the scenarios did not interfere.
 - **Changes in `LEARNINGS.md`:** run row, confirmations, D-11 (scripted launcher), and new "Needs tuning" items for `forbid` and process cleanup.

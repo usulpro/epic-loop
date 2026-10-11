@@ -11,8 +11,8 @@ if (!sandbox || !slug) {
 
 const files = { progress: `${sandbox}/.epic-loop/epics/${slug}/.runtime/progress-log.jsonl`, marker: `${sandbox}/.sandbox/markers.log` };
 const offsets = { progress: 0, marker: 0 };
-const ACTIONS = new Set(["turn-start", "turn-stop", "turn-waiting-background", "turn-aborted", "turn-interrupted", "synthetic-prompt-ignored", "user-message-in-turn", "skip", "loop-stopped", "set-next-role"]);
-const FIELDS = ["role", "iteration", "next_role", "reason", "status", "background_task_ids", "turn_key_adopted"];
+const ACTIONS = new Set(["turn-start", "turn-stop", "turn-waiting-background", "turn-aborted", "turn-interrupted", "synthetic-prompt-ignored", "user-message-in-turn", "skip", "loop-stopped", "role-command", "user-message-while-waiting"]);
+const FIELDS = ["command", "role", "current_role", "iteration", "next_role", "reason", "status", "background_task_ids", "turn_key_adopted"];
 
 function describe(event) {
   return FIELDS.filter((key) => event[key] !== undefined && event[key] !== null)

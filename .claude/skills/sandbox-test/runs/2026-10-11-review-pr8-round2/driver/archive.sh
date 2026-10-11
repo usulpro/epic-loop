@@ -5,7 +5,7 @@ X="$1"
 W=/projects/my-projects/epic-loop-workspace
 S=$W/sandbox-review-pr8-r2-$X
 T=$HOME/.claude/projects/-projects-my-projects-epic-loop-workspace-sandbox-review-pr8-r2-$X
-OUT=$W/sandbox-logs/2026-10-11-review-pr8-round2/artifacts/$X/90-archive
+OUT=$W/sandbox-logs/2026-10-11-review-pr8-round2/artifacts/${TAG:+$TAG-}$X/90-archive
 mkdir -p "$OUT"
 cd "$S"
 git -C "$S" diff > "$OUT/uncommitted.diff" || true
