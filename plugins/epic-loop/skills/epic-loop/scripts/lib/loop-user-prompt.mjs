@@ -2,9 +2,9 @@ import path from "node:path";
 
 import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { appendLoopLog, durationMsBetween } from "./loop-artifacts.mjs";
-import { isWaitingForBackgroundTasks } from "./loop-background.mjs";
+import { isWaitingForBackgroundTasks, waitingTurnGuidance } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
-import { SKILL_DIR } from "./loop-prompts.mjs";
+import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
 // A user message never stops the implementation loop by itself. The loop stops only on an
 // explicit request: the agent runs `stop-loop.mjs` when the user asks in any wording, and
@@ -71,6 +71,17 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
 
   const role = loop.current_role;
   const key = turnKeyOf(payload);
+
+  // The role ended its host turn to wait for its background work, so this message is not an
+  // abort: it wakes the same role turn, which answers and carries on.
+  if (isWaitingForBackgroundTasks(loop)) {
+    wakeWaitingTurn(projectRoot, slug, runtime, loop, key, timestamp);
+    appendLoopLog(projectRoot, { action: "user-message-while-waiting", ...logBase });
+    return userPromptContext(
+      `[epic-loop] epic=${slug} mode=implementation — the user wrote while the ${role} turn was waiting for its background work. Answer briefly, then continue the ${role} turn. ${waitingTurnGuidance(role, completeTurnCommand(slug))} ${stopHint(slug)}`,
+    );
+  }
+
   if (key && loop.turn_key && key === loop.turn_key) {
     appendLoopLog(projectRoot, { action: "user-message-in-turn", ...logBase });
     return userPromptContext(
@@ -91,22 +102,34 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
 
 // A harness-injected prompt never ends the open role turn. When it wakes an idle session (a
 // background task finished after the role ended its turn to wait, or after Esc), it starts a
-// new host turn that carries the role turn on, so the loop adopts that turn's identity.
+// new host turn that carries the role turn on, so the loop adopts that turn's identity. A
+// waiting role gets the same guidance whichever host turn the notification arrives in.
 function continueOpenTurn(projectRoot, slug, runtime, loop, payload, { logBase, timestamp }) {
   const key = turnKeyOf(payload);
   const adoptKey = Boolean(key) && key !== loop.turn_key;
-  if (adoptKey) {
-    writeJson(runtimeStatePath(projectRoot, slug), { ...runtime, implementation_loop: { ...loop, turn_key: key }, updated_at: timestamp });
+  const waiting = isWaitingForBackgroundTasks(loop);
+  if (adoptKey || waiting) {
+    wakeWaitingTurn(projectRoot, slug, runtime, loop, key, timestamp);
   }
   appendLoopLog(projectRoot, { action: "synthetic-prompt-ignored", reason: "harness-injected-prompt", turn_key_adopted: adoptKey, ...logBase });
 
-  if (!adoptKey || !isWaitingForBackgroundTasks(loop)) {
+  if (!waiting) {
     return null;
   }
   const role = loop.current_role;
   return userPromptContext(
-    `[epic-loop] epic=${slug} mode=implementation — background work finished while the ${role} turn was waiting. Continue the ${role} turn; your final message must be the complete ${role} report, because the loop records it.`,
+    `[epic-loop] epic=${slug} mode=implementation — background work finished while the ${role} turn was waiting. ${waitingTurnGuidance(role, completeTurnCommand(slug))}`,
   );
+}
+
+// The session is awake again inside the open role turn: it carries the host turn `key`, and
+// the next Stop decides afresh whether the role waits again or reports.
+function wakeWaitingTurn(projectRoot, slug, runtime, loop, key, timestamp) {
+  writeJson(runtimeStatePath(projectRoot, slug), {
+    ...runtime,
+    implementation_loop: { ...loop, background_wait_iteration: null, turn_key: key ?? loop.turn_key ?? null },
+    updated_at: timestamp,
+  });
 }
 
 export function stopLoopCommand(flags = {}) {
@@ -175,15 +198,11 @@ function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp,
 }
 
 // The techlead's `set-next-role` inside the aborted turn already decided what comes next;
-// re-running the role would only redo that decision. Strictly after the turn start, so a
-// command from the previous turn in the same second still resumes the aborted role.
+// re-running the role would only redo that decision. Matched by iteration, not by timestamp,
+// so neither a command in the second the turn started nor one from the previous turn is
+// misread.
 function roleChosenDuringTurn(loop) {
-  if (loop.last_transition_by !== "set-next-role" || !loop.next_role) {
-    return false;
-  }
-  const chosenAt = Date.parse(loop.last_transition_at);
-  const startedAt = Date.parse(loop.active_turn_started_at);
-  return Number.isFinite(chosenAt) && Number.isFinite(startedAt) && chosenAt > startedAt;
+  return Boolean(loop.next_role) && Number.isFinite(loop.iteration) && loop.next_role_set_iteration === loop.iteration;
 }
 
 function stopHint(slug) {

@@ -284,13 +284,14 @@ test("Codex routes steer and aborted turns by turn_id the same way", () => {
 });
 
 const runningTask = (id) => ({ command: "node scripts/slow-check.mjs", description: "slow check", id, status: "running", type: "shell" });
+const waitingStop = (ids, key = TURN_KEY) => ({ background_tasks: ids.map(runningTask), prompt_id: key, stop_hook_active: true });
 
 test("a role that ends its turn to wait for its background task is picked up when the task finishes", () => {
   const ctx = setupDriverLoop("hook-background-wait-");
   const reportPath = path.join(ctx.epicRuntime, "latest-engineer-report.md");
 
   try {
-    assert.equal(ctx.hook("Stop", { background_tasks: [runningTask("bg-check")], prompt_id: TURN_KEY, stop_hook_active: true }), null);
+    assert.equal(ctx.hook("Stop", waitingStop(["bg-check"])), null);
     let loop = ctx.loop();
     assert.equal(loop.active_turn_stopped_at, undefined);
     assert.equal(loop.background_wait_iteration, 2);
@@ -299,12 +300,11 @@ test("a role that ends its turn to wait for its background task is picked up whe
     assert.match(ctx.progress(), /"action":"turn-waiting-background"[^\n]*"background_task_ids":\["bg-check"\]/u);
 
     const woken = ctx.prompt(TASK_NOTIFICATION, "prompt-woken");
-    assert.match(
-      ctx.context(woken),
-      /background work finished while the engineer turn was waiting\. Continue the engineer turn; your final message must be the complete engineer report/u,
-    );
+    assert.match(ctx.context(woken), /background work finished while the engineer turn was waiting\. Continue the engineer turn/u);
+    assert.match(ctx.context(woken), /your final message must be the complete engineer report/u);
     loop = ctx.loop();
     assert.equal(loop.turn_key, "prompt-woken");
+    assert.equal(loop.background_wait_iteration, null);
     assert.equal(loop.active_turn_stopped_at, undefined);
     assert.match(ctx.progress(), /"action":"synthetic-prompt-ignored"[^\n]*"turn_key_adopted":true/u);
 
@@ -320,22 +320,126 @@ test("a role that ends its turn to wait for its background task is picked up whe
   }
 });
 
-test("the loop waits for background tasks once per role turn and only for tasks the role started", () => {
-  const once = setupDriverLoop("hook-background-wait-once-");
+test("the loop keeps waiting while the role's own background tasks run, and only for tasks the role started", () => {
+  const ctx = setupDriverLoop("hook-background-wait-again-");
   const preexisting = setupDriverLoop("hook-background-wait-baseline-", { extra: { background_task_baseline: ["dev-server"] } });
 
   try {
-    const stillRunning = { background_tasks: [runningTask("bg-check")], prompt_id: TURN_KEY, stop_hook_active: true };
-    assert.equal(once.hook("Stop", stillRunning), null);
-    assert.equal(once.hook("Stop", stillRunning).decision, "block");
-    assert.equal(once.loop().current_role, "techlead");
-    assert.deepEqual(once.loop().background_task_baseline, ["bg-check"]);
+    // Two checks of different length: the first notification wakes the role, which ends again to wait for the second.
+    assert.equal(ctx.hook("Stop", waitingStop(["bg-a", "bg-b"])), null);
+    assert.match(ctx.context(ctx.prompt(TASK_NOTIFICATION, "prompt-a")), /Continue the engineer turn/u);
+    assert.equal(ctx.hook("Stop", waitingStop(["bg-b"], "prompt-a")), null);
+    assert.equal(fs.existsSync(path.join(ctx.epicRuntime, "latest-engineer-report.md")), false);
+    assert.match(ctx.context(ctx.prompt(TASK_NOTIFICATION, "prompt-b")), /Continue the engineer turn/u);
+    const continuation = ctx.hook("Stop", { background_tasks: [], prompt_id: "prompt-b", stop_hook_active: false });
+    assert.equal(continuation.decision, "block");
+    assert.equal(ctx.loop().current_role, "techlead");
+    assert.equal(ctx.progress().match(/"action":"turn-waiting-background"/gu).length, 2);
 
-    const devServer = preexisting.hook("Stop", { background_tasks: [runningTask("dev-server")], prompt_id: TURN_KEY, stop_hook_active: true });
+    // A dev server left by an earlier role is in the baseline and never makes this role wait.
+    const devServer = preexisting.hook("Stop", waitingStop(["dev-server"]));
     assert.equal(devServer.decision, "block");
     assert.doesNotMatch(preexisting.progress(), /turn-waiting-background/u);
   } finally {
-    fs.rmSync(once.root, { force: true, recursive: true });
+    fs.rmSync(ctx.root, { force: true, recursive: true });
     fs.rmSync(preexisting.root, { force: true, recursive: true });
+  }
+});
+
+test("a role that leaves a background process running completes its turn explicitly", () => {
+  const ctx = setupDriverLoop("hook-complete-turn-");
+
+  try {
+    const completed = runNodeScript("complete-turn.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
+    assertSuccess(completed);
+    assert.match(completed.stdout, /Marked engineer turn 2 of user-prompt complete/u);
+    assert.equal(ctx.loop().turn_completed_iteration, 2);
+    assert.match(ctx.progress(), /"action":"role-command","command":"complete-turn"/u);
+
+    const continuation = ctx.hook("Stop", waitingStop(["dev-server"]));
+    assert.equal(continuation.decision, "block");
+    assert.match(continuation.reason, /techlead/iu);
+    assert.match(fs.readFileSync(path.join(ctx.epicRuntime, "latest-engineer-report.md"), "utf8"), /Assistant reply in this turn/u);
+    assert.doesNotMatch(ctx.progress(), /turn-waiting-background/u);
+
+    // The techlead's set-next-role completes its turn the same way.
+    assertSuccess(runNodeScript("set-next-role.mjs", ["--root", ctx.root, "--slug", ctx.slug, "--role", "idle"]));
+    assert.equal(ctx.loop().next_role_set_iteration, 3);
+
+    const noTurn = runNodeScript("complete-turn.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
+    assertSuccess(noTurn);
+    assert.equal(ctx.hook("Stop", waitingStop(["dev-server", "bg-late"])), null);
+    assert.match(runNodeScript("complete-turn.mjs", ["--root", ctx.root, "--slug", ctx.slug]).stdout, /No open implementation turn for user-prompt\./u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("a user message while the role waits for its background work continues the turn instead of aborting it", () => {
+  const ctx = setupDriverLoop("hook-background-wait-user-");
+
+  try {
+    assert.equal(ctx.hook("Stop", waitingStop(["bg-check"])), null);
+
+    const answer = ctx.prompt("how is it going?", "prompt-user");
+    assert.match(ctx.context(answer), /the user wrote while the engineer turn was waiting for its background work\. Answer briefly, then continue the engineer turn/u);
+    assert.match(ctx.context(answer), /stop-loop\.mjs --slug user-prompt/u);
+    let loop = ctx.loop();
+    assert.equal(loop.active_turn_stopped_at, undefined);
+    assert.equal(loop.resume_after_user_turn, undefined);
+    assert.equal(loop.turn_key, "prompt-user");
+    assert.equal(loop.background_wait_iteration, null);
+    assert.match(ctx.progress(), /"action":"user-message-while-waiting"/u);
+    assert.doesNotMatch(ctx.progress(), /turn-aborted/u);
+
+    // The agent answers and ends the turn again while its check still runs: the loop keeps waiting.
+    assert.equal(ctx.hook("Stop", waitingStop(["bg-check"], "prompt-user")), null);
+    assert.equal(ctx.loop().iteration, 2);
+    assert.equal(fs.existsSync(path.join(ctx.epicRuntime, "latest-engineer-report.md")), false);
+
+    // A notification under the same host turn still wakes the waiting role with guidance.
+    assert.match(ctx.context(ctx.prompt(TASK_NOTIFICATION, "prompt-user")), /background work finished while the engineer turn was waiting/u);
+    const continuation = ctx.hook("Stop", { background_tasks: [], prompt_id: "prompt-user", stop_hook_active: false });
+    assert.equal(continuation.decision, "block");
+    loop = ctx.loop();
+    assert.equal(loop.current_role, "techlead");
+    assert.equal(loop.iteration, 3);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("a resumed role keeps the background baseline of the turn the user aborted", () => {
+  const ctx = setupDriverLoop("hook-background-resume-baseline-", { extra: { background_task_baseline: ["dev-server"] } });
+
+  try {
+    assert.match(ctx.context(ctx.prompt("what is going on?", "prompt-after-esc")), /the user interrupted the engineer turn/u);
+    const resumed = ctx.hook("Stop", { background_tasks: [runningTask("dev-server"), runningTask("bg-check")], prompt_id: "prompt-after-esc", stop_hook_active: false });
+    assert.match(resumed.reason, /^Resuming the engineer turn that the user interrupted\./u);
+    assert.deepEqual(ctx.loop().background_task_baseline, ["dev-server"]);
+
+    // The check the engineer started before Esc is still its own work, so the resumed turn waits for it.
+    assert.equal(ctx.hook("Stop", waitingStop(["dev-server", "bg-check"], "prompt-after-esc")), null);
+    assert.match(ctx.progress(), /"action":"turn-waiting-background"[^\n]*"background_task_ids":\["bg-check"\]/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("set-next-role inside the turn counts even in the second the turn started", () => {
+  // A start stamp in the future stands in for "the same second": no timestamp comparison can see the command.
+  const ctx = setupDriverLoop("hook-user-abort-same-second-", {
+    extra: { active_turn_started_at: "2099-01-01T00:00:00+00:00", next_role: "awaiting-transition" },
+    role: "techlead",
+  });
+
+  try {
+    const promptFile = `.epic-loop/epics/${ctx.slug}/.runtime/current-engineer-prompt.md`;
+    assertSuccess(runNodeScript("set-next-role.mjs", ["--root", ctx.root, "--slug", ctx.slug, "--role", "engineer", "--prompt-file", promptFile]));
+
+    assert.match(ctx.context(ctx.prompt("what were you doing?", "prompt-after-esc")), /the loop continues with the engineer turn the techlead already chose/u);
+    assert.equal(ctx.loop().next_role, "engineer");
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
   }
 });

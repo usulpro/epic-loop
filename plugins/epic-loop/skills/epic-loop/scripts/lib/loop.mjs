@@ -124,6 +124,8 @@ export function setNextRole(flags = {}) {
       last_transition_at: timestamp,
       last_transition_by: "set-next-role",
       next_role: role,
+      // Choosing the next role completes the turn it was chosen in (see isTurnComplete).
+      next_role_set_iteration: hasOpenTurn(loop) ? loop.iteration : (loop.next_role_set_iteration ?? null),
       prompt_file: promptFile,
       status,
     },
@@ -151,6 +153,41 @@ export function setNextRole(flags = {}) {
   }
 }
 
+// A role marks its open turn done, e.g. before ending it with a dev server still running in
+// the background, so the loop records the report and chains instead of waiting.
+export function completeTurn(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+  const timestamp = nowIso();
+  const runtimePath = runtimeStatePath(root, slug);
+  const runtime = normalizeObject(readJson(runtimePath, {}));
+  const loop = normalizeObject(runtime.implementation_loop);
+
+  if (!hasOpenTurn(loop)) {
+    console.log(`No open implementation turn for ${slug}.`);
+    return;
+  }
+
+  writeJson(runtimePath, {
+    ...runtime,
+    implementation_loop: { ...loop, turn_completed_iteration: loop.iteration },
+    updated_at: timestamp,
+  });
+
+  appendLoopLog(root, {
+    action: "role-command",
+    command: "complete-turn",
+    current_iteration: loop.iteration,
+    current_role: loop.current_role,
+    slug,
+    timestamp,
+  });
+
+  console.log(
+    `Marked ${loop.current_role} turn ${loop.iteration} of ${slug} complete. End the turn with your final report; the loop records it and starts the next role, even while background tasks keep running.`,
+  );
+}
+
 export function maybeBuildImplementationContinuation(projectRoot, payload, binding) {
   if (payload.hook_event_name !== "Stop") {
     return null;
@@ -168,8 +205,9 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     return null;
   }
 
-  // The role ended its turn to wait for a background task it started: let the turn end
-  // without a report and pick it up when the task's notification wakes the session.
+  // The role ended its turn while a background task it started still runs and it has not
+  // marked the turn complete: it is waiting. Let the host turn end without a report and pick
+  // the role up when the task's notification (or the user) wakes the session.
   if (platform === "claude-code" && hasOpenTurn(loop) && shouldWaitForBackgroundTasks(loop, payload)) {
     waitForBackgroundTasks(projectRoot, slug, runtime, loop, payload, timestamp);
     return null;
@@ -252,16 +290,17 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   }
 
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
+  const resumesAbortedTurn = loop.resume_after_user_turn && role === loop.current_role;
   const prompt =
     role === "manager"
       ? buildManagerPrompt(slug, iteration, capProximityRoute?.reason ?? loop.last_reason ?? null)
       : role === "techlead"
         ? buildTechleadPrompt(slug, iteration)
-        : buildEngineerPrompt(projectRoot, loop, iteration);
+        : buildEngineerPrompt(projectRoot, slug, loop, iteration);
   // Only the final housekeeping turn before a finite-cap pause needs the manual-continue
   // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
   // so appending it to every prompt would misinform the agent.
-  const resumedPrompt = loop.resume_after_user_turn && role === loop.current_role ? prependResumeNote(prompt, role) : prompt;
+  const resumedPrompt = resumesAbortedTurn ? prependResumeNote(prompt, role) : prompt;
   const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(resumedPrompt) : resumedPrompt;
   const promptFile = role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? (loop.prompt_file ?? null) : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
@@ -271,7 +310,10 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       ...loop,
       active_turn_started_at: timestamp,
       active_turn_stopped_at: null,
-      background_task_baseline: runningBackgroundTaskIds(payload),
+      // A resumed role keeps the baseline of the turn the user aborted: tasks it started
+      // before Esc are still its own work.
+      background_task_baseline: resumesAbortedTurn && Array.isArray(loop.background_task_baseline) ? loop.background_task_baseline : runningBackgroundTaskIds(payload),
+      background_wait_iteration: null,
       current_role: role,
       iteration,
       last_continuation_at: timestamp,

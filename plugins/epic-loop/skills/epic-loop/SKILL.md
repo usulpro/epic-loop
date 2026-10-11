@@ -280,12 +280,12 @@ Manager turns are also role-specific and non-product. They perform housekeeping 
 
 A user message never stops the implementation loop by itself; only an explicit request does. When the user writes in the driver session, the hook adds a one-line `[epic-loop]` note to the prompt:
 
-- During a running role turn: answer briefly, then finish the role turn; the final message is still the full role report.
+- During a running role turn, or while a role waits for its background work: answer briefly, then continue the role turn; the final message is still the full role report.
 - After the user aborted a role turn (Esc / Ctrl+C): answer the message; the loop then resumes the same role, or continues with the next role if the techlead had already set it.
 - If the user asks to stop or pause the loop, in any wording, run `node <skill-dir>/scripts/stop-loop.mjs --slug "<epic-slug>"`. The exact message `stop loop mode` stops it without the agent.
 - After a stop, resume only when the user asks: `node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation` restarts the loop from a manager turn.
 
-Harness-injected prompts that contain only `<task-notification>`/`<system-reminder>` blocks, such as background-task completions, are not user input and are ignored. A role turn that ends while its own background task still runs is not closed: the loop waits once for the task's notification to wake the role, which then ends with its full report. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
+Harness-injected prompts that contain only `<task-notification>`/`<system-reminder>` blocks, such as background-task completions, are not user input and are ignored. A role turn that ends while a background task it started still runs is not closed: the loop waits for the task's notification to wake the role, as often as needed, and the role then ends with its full report. A role that leaves a process running on purpose (a dev server) first runs `node <skill-dir>/scripts/complete-turn.mjs --slug "<epic-slug>"`; the techlead's `set-next-role` does the same for its turn. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
 
 `techlead` owns tactical orchestration:
 

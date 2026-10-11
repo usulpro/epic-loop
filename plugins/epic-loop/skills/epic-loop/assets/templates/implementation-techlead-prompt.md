@@ -83,6 +83,8 @@ node -<<*{{SkillDir}}*>>-/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-
 node -<<*{{SkillDir}}*>>-/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-" --role idle --reason "<why the implementation loop stops>"
 ```
 
+`set-next-role` also completes this turn: when it ends, the loop starts the chosen role even if a background task you started still runs. Run it as your last step.
+
 Report briefly and stop:
 
 - closure verdict
