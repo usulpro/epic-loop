@@ -12,6 +12,7 @@ import {
   rebuildProgressMarkdown,
   rebuildProgressReport,
 } from "./loop-artifacts.mjs";
+import { runningBackgroundTaskIds, shouldWaitForBackgroundTasks, waitedMs, waitForBackgroundTasks } from "./loop-background.mjs";
 import {
   ensureClaudeBlockCapMetadata,
   getClaudeBlockCapProximityRoute,
@@ -28,6 +29,7 @@ import {
   buildManagerPrompt,
   buildTechleadPrompt,
   normalizePromptFile,
+  prependResumeNote,
 } from "./loop-prompts.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
@@ -66,6 +68,7 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
       next_role: "manager",
       prompt_file: null,
       status: "running",
+      stop_report_iteration: null,
     },
     timestamp,
   );
@@ -122,6 +125,8 @@ export function setNextRole(flags = {}) {
       last_transition_at: timestamp,
       last_transition_by: "set-next-role",
       next_role: role,
+      // Choosing the next role completes the turn it was chosen in (see isTurnComplete).
+      next_role_set_iteration: hasOpenTurn(loop) ? loop.iteration : (loop.next_role_set_iteration ?? null),
       prompt_file: promptFile,
       status,
     },
@@ -149,6 +154,41 @@ export function setNextRole(flags = {}) {
   }
 }
 
+// A role marks its open turn done, e.g. before ending it with a dev server still running in
+// the background, so the loop records the report and chains instead of waiting.
+export function completeTurn(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+  const timestamp = nowIso();
+  const runtimePath = runtimeStatePath(root, slug);
+  const runtime = normalizeObject(readJson(runtimePath, {}));
+  const loop = normalizeObject(runtime.implementation_loop);
+
+  if (!hasOpenTurn(loop)) {
+    console.log(`No open implementation turn for ${slug}.`);
+    return;
+  }
+
+  writeJson(runtimePath, {
+    ...runtime,
+    implementation_loop: { ...loop, turn_completed_iteration: loop.iteration },
+    updated_at: timestamp,
+  });
+
+  appendLoopLog(root, {
+    action: "role-command",
+    command: "complete-turn",
+    current_iteration: loop.iteration,
+    current_role: loop.current_role,
+    slug,
+    timestamp,
+  });
+
+  console.log(
+    `Marked ${loop.current_role} turn ${loop.iteration} of ${slug} complete. End the turn with your final report; the loop records it and starts the next role, even while background tasks keep running.`,
+  );
+}
+
 export function maybeBuildImplementationContinuation(projectRoot, payload, binding) {
   if (payload.hook_event_name !== "Stop") {
     return null;
@@ -166,7 +206,16 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     return null;
   }
 
+  // The role ended its turn while a background task it started still runs and it has not
+  // marked the turn complete: it is waiting. Let the host turn end without a report and pick
+  // the role up when the task's notification (or the user) wakes the session.
+  if (platform === "claude-code" && hasOpenTurn(loop) && shouldWaitForBackgroundTasks(loop, payload)) {
+    waitForBackgroundTasks(projectRoot, slug, runtime, loop, payload, timestamp);
+    return null;
+  }
+
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
+  ({ loop, runtime } = recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
 
   // A fresh user turn (first Stop, stop_hook_active === false) resets Claude Code's own
@@ -243,16 +292,18 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   }
 
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
+  const resumesAbortedTurn = loop.resume_after_user_turn && role === loop.current_role;
   const prompt =
     role === "manager"
       ? buildManagerPrompt(slug, iteration, capProximityRoute?.reason ?? loop.last_reason ?? null)
       : role === "techlead"
         ? buildTechleadPrompt(slug, iteration)
-        : buildEngineerPrompt(projectRoot, loop, iteration);
+        : buildEngineerPrompt(projectRoot, slug, loop, iteration);
   // Only the final housekeeping turn before a finite-cap pause needs the manual-continue
   // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
   // so appending it to every prompt would misinform the agent.
-  const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(prompt) : prompt;
+  const resumedPrompt = resumesAbortedTurn ? prependResumeNote(prompt, role) : prompt;
+  const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(resumedPrompt) : resumedPrompt;
   const promptFile = role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? (loop.prompt_file ?? null) : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
 
@@ -261,13 +312,20 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       ...loop,
       active_turn_started_at: timestamp,
       active_turn_stopped_at: null,
+      // A resumed role keeps the baseline of the turn the user aborted: tasks it started
+      // before Esc are still its own work.
+      background_task_baseline: resumesAbortedTurn && Array.isArray(loop.background_task_baseline) ? loop.background_task_baseline : runningBackgroundTaskIds(payload),
+      background_wait_iteration: null,
+      background_wait_ms: 0,
       current_role: role,
       iteration,
       last_continuation_at: timestamp,
       last_reason: capProximityRoute?.reason ?? loop.last_reason ?? null,
       last_session_id: payload.session_id ?? null,
       next_role: followingRole,
+      resume_after_user_turn: false,
       status: "running",
+      turn_key: turnKeyOf(payload) ?? loop.turn_key ?? null,
     },
     platform,
     timestamp,
@@ -312,35 +370,6 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     decision: "block",
     reason: platformPrompt,
   };
-}
-
-export function markInterruptedTurnIfNeeded(projectRoot, payload, binding) {
-  if (payload.hook_event_name !== "UserPromptSubmit") {
-    return false;
-  }
-
-  const slug = binding.epic_slug;
-  const timestamp = nowIso();
-  const runtimePath = runtimeStatePath(projectRoot, slug);
-  const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
-  const loop = normalizeObject(runtime.implementation_loop);
-
-  if (runtime.mode !== "implementation" || loop.driver_session_id !== payload.session_id) {
-    return false;
-  }
-
-  if (!hasOpenTurn(loop)) {
-    return false;
-  }
-
-  recordTurnInterrupted(projectRoot, slug, runtime, loop, {
-    reason: "user-prompt-interrupted-open-turn",
-    sessionId: payload.session_id ?? null,
-    timestamp,
-    turnId: payload.turn_id ?? null,
-  });
-
-  return true;
 }
 
 export function interruptOpenTurn(flags = {}) {
@@ -409,7 +438,7 @@ export function rebuildProgressArtifacts(flags = {}) {
   console.log(`Rebuilt implementation progress artifacts for ${slug}.`);
 }
 
-function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
+export function mergeEpicStateIntoRuntime(projectRoot, slug, runtime) {
   const summary = readRoadmapStateSummary(projectRoot, slug) ?? readEpicStateSummary(projectRoot, slug);
 
   return {
@@ -455,11 +484,17 @@ function readStateLine(text, label) {
   return value;
 }
 
-function normalizeObject(value) {
+export function normalizeObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function hasOpenTurn(loop) {
+// Identity of the host turn that carries the loop. Claude Code keeps one `prompt_id`
+// for a user turn and all its Stop-hook continuations; Codex reports `turn_id`.
+export function turnKeyOf(payload) {
+  return payload.prompt_id ?? payload.turn_id ?? null;
+}
+
+export function hasOpenTurn(loop) {
   return Boolean(loop.current_role && loop.active_turn_started_at && !loop.active_turn_stopped_at && loop.status === "running");
 }
 
@@ -468,7 +503,8 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
     return { loop, runtime };
   }
 
-  const durationMs = durationMsBetween(loop.active_turn_started_at, timestamp);
+  const backgroundWaitMs = waitedMs(loop, timestamp);
+  const durationMs = activeDurationMs(loop, timestamp, backgroundWaitMs);
   const engineerReport = loop.current_role === "engineer" ? appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, "engineer") : null;
   const managerReport = loop.current_role === "manager" ? appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, "manager") : null;
   const stoppedLoop = {
@@ -490,6 +526,7 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
   appendLoopLog(projectRoot, {
     action: "turn-stop",
+    ...(backgroundWaitMs > 0 ? { background_wait_ms: backgroundWaitMs } : {}),
     duration_ms: durationMs,
     ended_at: timestamp,
     iteration: Number.isFinite(loop.iteration) ? loop.iteration : null,
@@ -507,8 +544,39 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   return { loop: stoppedLoop, runtime: nextRuntime };
 }
 
-function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, reason, sessionId, timestamp, turnId }) {
-  const resolvedDurationMs = durationMs === undefined ? durationMsBetween(loop.active_turn_started_at, timestamp) : durationMs;
+// stop-loop closed an engineer or manager turn before the role finished it. The role's next
+// final message is its report of that turn (what landed, what is left), so record it the way a
+// completed turn's report is recorded; the loop stays stopped.
+function recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp) {
+  if (loop.status !== "interrupted" || !Number.isFinite(loop.stop_report_iteration) || loop.stop_report_iteration !== loop.iteration) {
+    return { loop, runtime };
+  }
+
+  const role = loop.current_role;
+  const report = appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, role);
+  const nextLoop = {
+    ...loop,
+    ...(report ? { [`last_${role}_report_at`]: report.timestamp, [`last_${role}_report_path`]: report.latest_report_path } : {}),
+    stop_report_iteration: null,
+  };
+  const nextRuntime = { ...runtime, implementation_loop: nextLoop, updated_at: timestamp };
+
+  writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
+  appendLoopLog(projectRoot, {
+    action: "stopped-turn-report",
+    iteration: loop.iteration,
+    recorded: Boolean(report),
+    role,
+    session_id: payload.session_id ?? null,
+    slug,
+    timestamp,
+  });
+
+  return { loop: nextLoop, runtime: nextRuntime };
+}
+
+export function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, reason, sessionId, timestamp, turnId }) {
+  const resolvedDurationMs = durationMs === undefined ? activeDurationMs(loop, timestamp, waitedMs(loop, timestamp)) : durationMs;
   const stoppedLoop = {
     ...loop,
     active_turn_stopped_at: timestamp,
@@ -543,6 +611,12 @@ function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, r
   });
 
   return nextRuntime;
+}
+
+// Wall-clock time of the open turn minus the time it spent waiting for background work.
+function activeDurationMs(loop, timestamp, backgroundWaitMs) {
+  const elapsedMs = durationMsBetween(loop.active_turn_started_at, timestamp);
+  return elapsedMs === null || elapsedMs === undefined ? elapsedMs : Math.max(0, elapsedMs - backgroundWaitMs);
 }
 
 function parseInterruptDuration(flags) {

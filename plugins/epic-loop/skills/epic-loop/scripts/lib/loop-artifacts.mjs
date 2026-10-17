@@ -3,6 +3,9 @@ import path from "node:path";
 
 import { ensureDir, epicRuntimeRoot, nowIso, readRuntimePlatform } from "./common.mjs";
 
+// Progress events that close a turn opened by `turn-start`.
+const ENDED_TURN_ACTIONS = ["turn-stop", "turn-interrupted", "turn-aborted"];
+
 const PROGRESS_FIELD_LABELS = {
   current_iteration: "Current iteration",
   current_role: "Current role",
@@ -214,7 +217,8 @@ export function rebuildProgressReport(projectRoot, slug) {
   const lastTimestamp = lastEventTimestamp(events);
   const completedTurns = events.filter((event) => event.action === "turn-stop");
   const interruptedTurns = events.filter((event) => event.action === "turn-interrupted");
-  const endedTurns = [...completedTurns, ...interruptedTurns].sort((a, b) => String(a.timestamp ?? "").localeCompare(String(b.timestamp ?? "")));
+  const abortedTurns = events.filter((event) => event.action === "turn-aborted");
+  const endedTurns = [...completedTurns, ...interruptedTurns, ...abortedTurns].sort((a, b) => String(a.timestamp ?? "").localeCompare(String(b.timestamp ?? "")));
   const roleCommands = events.filter((event) => event.action === "role-command");
   const activeMs = sum(endedTurns.map((event) => Number(event.duration_ms) || 0));
   const elapsedMs = firstTimestamp && lastTimestamp ? Math.max(0, Date.parse(lastTimestamp) - Date.parse(firstTimestamp)) : 0;
@@ -240,6 +244,7 @@ export function rebuildProgressReport(projectRoot, slug) {
       `- Observed idle or paused time: ${formatDuration(idleMs)}`,
       `- Completed turns: ${completedTurns.length}`,
       `- Interrupted turns: ${interruptedTurns.length}`,
+      `- Aborted turns: ${abortedTurns.length}`,
       `- Prompt entries: ${promptEvents.length}`,
       "",
       "## Time By Role",
@@ -293,7 +298,7 @@ function formatPhaseDurations(byPhase) {
       lines.push(`- Turns: ${taskData.turns}`);
       for (const turn of taskData.turnsList) {
         lines.push(
-          `- Turn ${turn.iteration ?? "?"} | ${turn.role ?? "unknown"} | ${turn.session_id ?? "unknown"} | ${turn.started_at ?? "?"} -> ${turn.ended_at ?? "?"} | ${formatDuration(Number(turn.duration_ms) || 0)}`,
+          `- Turn ${turn.iteration ?? "?"} | ${turn.role ?? "unknown"} | ${turn.session_id ?? "unknown"} | ${turn.started_at ?? "?"} -> ${turn.ended_at ?? "?"} | ${turn.duration_ms === null ? "unknown" : formatDuration(Number(turn.duration_ms) || 0)}`,
         );
       }
       lines.push("");
@@ -336,7 +341,19 @@ function progressSummary(entry) {
     case "turn-stop":
       return `Turn ${entry.iteration ?? "?"} stopped after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
     case "turn-interrupted":
-      return `Turn ${entry.iteration ?? "?"} was interrupted after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+      return entry.duration_ms === null
+        ? `Turn ${entry.iteration ?? "?"} was interrupted; its active time is unknown.`
+        : `Turn ${entry.iteration ?? "?"} was interrupted after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+    case "turn-waiting-background":
+      return `Turn ${entry.iteration ?? "?"} is waiting for its background tasks to finish.`;
+    case "turn-aborted":
+      return entry.duration_ms === null
+        ? `Turn ${entry.iteration ?? "?"} was aborted by the user; its active time is unknown.`
+        : `Turn ${entry.iteration ?? "?"} was aborted by the user after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+    case "stopped-turn-report":
+      return entry.recorded
+        ? `Report of stopped turn ${entry.iteration ?? "?"} recorded for \`${entry.role ?? "unknown"}\`.`
+        : `Stopped turn ${entry.iteration ?? "?"} ended without a final message; no report recorded.`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:
@@ -380,7 +397,7 @@ function formatFieldValue(key, value) {
 
 function collectOpenTurns(events) {
   const starts = events.filter((event) => event.action === "turn-start");
-  const endedKeys = new Set(events.filter((event) => event.action === "turn-stop" || event.action === "turn-interrupted").map(turnKey));
+  const endedKeys = new Set(events.filter((event) => ENDED_TURN_ACTIONS.includes(event.action)).map(turnKey));
   return starts.filter((event) => !endedKeys.has(turnKey(event)));
 }
 

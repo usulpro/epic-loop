@@ -118,7 +118,7 @@ test("no reminder leaks into Stop events for a bound shaping session", () => {
   }
 });
 
-test("implementation driver gets no reminder and non-driver member gets the lock marker", () => {
+test("implementation driver gets the loop guidance and non-driver member gets the lock marker", () => {
   const { root, slug } = scaffoldEpicRoot("reminder-implementation-");
 
   try {
@@ -135,7 +135,10 @@ test("implementation driver gets no reminder and non-driver member gets the lock
     };
     fs.writeFileSync(bindingsPath(root), `${JSON.stringify(bindings, null, 2)}\n`, "utf8");
 
-    assert.equal(runHook(root, promptPayload(root, "driver-session")).stdout, "");
+    assert.match(
+      readAdditionalContext(runHook(root, promptPayload(root, "driver-session"))),
+      new RegExp(`^\\[epic-loop\\] epic=${slug} mode=implementation — loop running\\. .*stop-loop\\.mjs --slug ${slug}$`, "u"),
+    );
     assert.equal(
       readAdditionalContext(runHook(root, promptPayload(root, "observer-session"))),
       `[epic-loop] epic=${slug} mode=implementation — loop running in another session; read-only, do not edit epic artifacts`,

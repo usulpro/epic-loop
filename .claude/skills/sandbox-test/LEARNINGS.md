@@ -24,6 +24,9 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 | Run | Target | Outcome |
 | --- | --- | --- |
 | [2026-10-09-npx-0.2.0](runs/2026-10-09-npx-0.2.0/log.md) | `feature/distribution-foundation` + published `epic-loop@0.2.0`: npm path, full epic, legacy upgrade | Feature verified; 1 bug fixed (`d8c2485`); method worked after 1 workaround |
+| [2026-10-09-bg-task-interrupt](runs/2026-10-09-bg-task-interrupt/log.md) | Issue #4 on published `epic-loop@0.2.1` (headless repro), then the new user-prompt contract on Claude Code and Codex (interactive) | Bug reproduced and fixed; contract changed and verified on both hosts; 1 incident (Codex self-update via blind typing), several workarounds |
+| [2026-10-10-review-pr8](runs/2026-10-10-review-pr8/log.md) | PR #8 review findings on the branch (local-CLI install, interactive Claude) | 2 findings confirmed (1 new) and fixed; 1 more bug found and fixed during re-verification (background wait); 1 confirmed without harm, 1 dismissed; 3 sandboxes, no workaround needed |
+| [2026-10-11-review-pr8-round2](runs/2026-10-11-review-pr8-round2/log.md) | PR #8 second review (background-wait fix `646742b`), local-CLI install, interactive Claude, one sandbox per scenario | 3 findings confirmed with harm (#1, #2, #3), 1 not reproduced (#6), 3 dismissed by triage; all fixed together (explicit turn completion) and re-verified in 3 parallel sandboxes; 1 scenario rerun after a driver `forbid` false positive |
 
 ## Decisions
 
@@ -33,25 +36,48 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 - **D-4 (2026-10-09, run 1). Fix in the source repo, verify in the sandbox.** Bugs found in the sandbox get fixed in this repo with a regression test, then re-checked in a fresh sandbox scenario. Use the local CLI if the fix isn't published yet. Fixes are committed locally; push and release need the user.
 - **D-5 (2026-10-09, run 1). Archive before cleanup.** Make a git bundle (restore-tested) and copy the epic state and host transcript before deleting. Cleanup covers the sandbox dir and `~/.claude/projects/<sandbox-path>`. The npx cache is kept on purpose because it is shared with real use.
 
+- **D-6 (2026-10-09, run 2). Interactive runs go through a pty driver with gates.** Behavior that needs a real TUI (Esc, typing while the agent works) is driven with `tools/ptydrive.py`. Every run starts with a `forbid` step (updater, trust, and hook-review dialogs), never types before an `expect` sees the input composer, and gates each scenario step on the product's own trace (`expect_file` on `progress-log.jsonl`), not on sleeps. Claude runs use `--permission-mode dontAsk` with the allowlist (a permission dialog would hang the pty) and `CLAUDE_CODE_FORCE_SESSION_PERSISTENCE=1` (nested sessions otherwise keep no transcript). Why: run 2's blind typing chose "Update now" in Codex's updater and modified the user's global install.
+- **D-7 (2026-10-09, run 2). Codex sandbox flags.** Pre-trust hooks and the project for one run with inline `-c` tables from `tools/codex-trust-args.mjs` (never edit `~/.codex/config.toml`). Add `[features] hooks = true` to the sandbox's `.codex/config.toml` for doctor. Use `-c check_for_update_on_startup=false`, the user's default model (`gpt-5.6-sol`), and, with the user's explicit approval per run, `-s danger-full-access -a never`, because `workspace-write` keeps `.git` read-only and loop commits fail. Why: run 2 attempts 1–2.
+- **D-8 (2026-10-09, run 2). Reusable tooling lives in the skill.** Drivers and helper scripts go in `tools/` and are committed; the scratchpad and `sandbox-logs` are not durable (a host restart cleared part of the scratchpad mid-run).
+
+- **D-9 (2026-10-10, run 3). Make overwritten state and hidden timing observable.** Run `tools/state-history.mjs` on `runtime-state.json` for the whole session, and have fixture scripts append `started` / `finished` lines to a gitignored `.sandbox/markers.log`. Gate the driver on those markers when the product's own trace has no event for the moment (e.g. "background task started"). Why: run 3's bug B evidence existed only in an intermediate `runtime-state.json`, and the markers proved that a background task survives Esc.
+- **D-11 (2026-10-11, run 4). Script the launch, one sandbox per scenario.** A launcher (`run-scenario.sh`: clone fixture, install, doctor, state history, `ptydrive.py` with the full `claude` command line), a step generator, and an archiver live with the run (`runs/<run>/driver/`). Scenarios whose bugs disturb each other (a stall, an abort) each get a fresh sandbox from one fixture commit. Why: runs 2–3 did not record the launch command, and run 4 needed the same setup three times.
+- **D-10 (2026-10-10, run 3). Review findings get a sandbox repro before they become PR comments.** Triage first (dismiss what analysis refutes, set pre-existing issues aside), reproduce the rest, and post only what reproduces, with the evidence. A mechanism that reproduces without harm is reported to the user, not posted. Why: user decision on PR #8.
+
 ## Working
 
 | Practice | Confirmed | Runs |
 | --- | --- | --- |
-| Tiny fixture (one module plus one `node --test` test) keeps the epic about mechanics; a full epic ran in about 4 min / $2.66 | 1 | run 1 |
-| Pre-answered prompt with explicit approvals lets a headless session go through shaping, binding, and the whole loop without questions | 1 | run 1 |
-| `progress-log.jsonl` plus the host transcript are enough to reconstruct the role chain and every hook continuation | 1 | run 1 |
+| Tiny fixture (one module plus one `node --test` test) keeps the epic about mechanics; a full epic ran in about 4 min / $2.66; a one-task epic reaches the first engineer turn in about 1 min | 4 | run 1, run 2, run 3, run 4 |
+| Pre-answered prompt with explicit approvals lets a session go through shaping, binding, and the whole loop without questions (headless and interactive, Claude and Codex); a role protocol in the prompt ("put it verbatim in every engineer brief") reliably forces the behavior under test | 4 | run 1, run 2, run 3, run 4 |
+| `progress-log.jsonl` plus the host transcript are enough to reconstruct the role chain and every hook continuation; hook captures (`.epic-loop/.runtime/hook-events`, with `prompt` / `last_assistant_message`) cover what the agent said when no transcript exists. `tools/transcript-timeline.mjs` prints the transcript compactly | 4 | run 1, run 2, run 3, run 4 |
 | Copying a real old install (e.g. from another local project) into the sandbox is a cheap, realistic migration test | 1 | run 1 |
-| Git bundle plus a restore test (clone, run tests) proves the archive is usable before deleting | 1 | run 1 |
+| Git bundle plus a restore test (clone, run tests) proves the archive is usable before deleting | 4 | run 1, run 2, run 3, run 4 |
+| Re-verifying a fix in a fresh sandbox with the same scenario also surfaces new bugs (run 3 found the background-wait bug this way); independent scenarios re-verify in parallel sandboxes with one combined Monitor (run 4: ~6 min for 3) | 2 | run 3, run 4 |
+| A minimal probe sandbox with payload-logging hooks answers harness questions (what fires on Esc, steer, notifications) before designing a fix | 1 | run 2 |
+| Interactive pty driving gated on `progress-log.jsonl` / marker files (D-6), several scenario steps in one session | 3 | run 2, run 3, run 4 |
+| `runtime-state.json` history via `tools/state-history.mjs` (D-9) | 2 | run 3, run 4 |
+| A Monitor on `tools/loop-watch.mjs` (loop events plus markers) instead of polling; copy `latest-*-report.md` at each turn boundary, since it is overwritten | 1 | run 4 |
+| Triage by analysis and archived payloads before any agent run (3 of 10 findings dismissed without a sandbox) | 2 | run 3, run 4 |
+| A parallel research subagent for the other host (source + real rollouts + tiny exec runs) gives facts the run then confirms | 1 | run 2 |
 
 ## Needs tuning
 
-- **Permission allowlist friction (run 1).** 5 denials, all from compound shell commands (`cmd; echo $?`, `| head`, `cd … && git …`). The agent recovered by splitting them. Options: add `Bash(head:*)`, `Bash(wc:*)`, `Bash(cat:*)`, or accept the friction as a signal. Decide after another run.
-- **Host leakage (run 1).** The sandbox session loaded the user's global Stop hook (`gk ai hook run`, GitKraken) and every user-level skill and plugin. Harmless here, but the run is not hermetic. Try `--setting-sources project` or a throwaway `CLAUDE_CONFIG_DIR` next run, and check that auth still works.
+- **Permission allowlist friction (run 1, run 2).** Run 1 had 5 denials, all from compound shell commands (`cmd; echo $?`, `| head`, `cd … && git …`). The agent recovered by splitting them. Run 2 added `Bash(cat:*)`, `Bash(head:*)`, `Bash(wc:*)` and still got 5 compound-command denials, plus a `Monitor` denial. Widening single-command prefixes does not help. Lean towards accepting the friction as a signal; add `Monitor` to the allowlist.
+- **Host leakage (run 1; partly solved run 2).** Run 1's sandbox session loaded the user's global Stop hook (`gk ai hook run`, GitKraken) and every user-level skill and plugin. In run 2, `--setting-sources project` kept user hooks out and auth worked. Codex still loads user MCP servers (Sanity login warnings). Make `--setting-sources project` the default once confirmed again. (Confirmed in runs 3 and 4: no user hooks loaded.)
 - **stream-json is misleading for hooks (run 1).** Stop-hook continuations show up only as a "Stop hook error occurred" notification. That is how Claude Code represents `decision: block`. Procedure step 4 already redirects to the right sources; a small transcript-summary script may be worth adding.
 - **Host env leaking into tests (run 1).** Unit tests inherited `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` from the shell. Fixed for `cli-package.test.mjs`; check other test files when a sandbox fix touches them.
 
+- **Global side effects of driven TUIs (run 2).** Interactive host CLIs can act on the machine outside the sandbox (Codex self-update via its updater dialog; `~/.claude.json` trust entries per sandbox path). `forbid` and update-off flags reduce this; trust entries are still left behind (not removed while Claude Code is running).
+- **Host limits and restarts (run 2).** A Codex run hit the user's ChatGPT usage limit mid-scenario (API-error turns fire no `Stop`), and the host Claude Code restarted and killed a background driver. Check quota before long Codex runs, and record partial results instead of retrying blindly.
+- **Driver gate markers (run 2; confirmed run 3).** A loop the techlead ends logs `skip … "status":"idle"`, not `no-continuation-role`. Gate on `"status":"idle"` (worked in run 3).
+- **Claude composer marker (run 3; solved run 3 re-verification, confirmed run 4).** Claude Code 2.1.293 shows no "? for shortcuts". Gate on `shift\+tab\s*to\s*cycle` (`❯` also appears in the trust dialog).
+- **Monitor filters on progress events (run 3; solved run 4).** `turn-start` lines carry a long `prompt_file` before `role`, so a regex with a short gap between `action` and `role` misses them. Run 4's `tools/loop-watch.mjs` parses the JSON instead.
+- **`forbid` false positives (run 4).** `update available|auto-update` matched the agent's own "no update available" (doctor summary) and killed a session mid-scenario. Run 4 used `(?<!no )update available|auto-update`. A forbid pattern that can occur in model output needs to target the dialog's exact wording, or `forbid` should be dropped after the startup gate.
+- **Process cleanup (run 4).** `node` can be a version-manager shim (Volta), so `kill $!` misses the real process; start helpers through `$(node -p process.execPath)`. Never use `pkill -f <pattern>` from the agent's shell: it matches the shell's own command line and kills it. Use `pgrep`, filter, then `kill`.
+
 ## Open questions
 
-- Should the sandbox fixture and prompt templates live in this skill (`templates/`) once a second run reuses them?
-- Codex as the driving host: is there an equivalent headless mode with Stop-hook continuation? Untested.
+- Run 2 reused run 1's fixture and prompt nearly verbatim. Move them into `templates/` (fixture files + base prompt with platform/slug placeholders) on the next run that needs them.
+- Codex as the driving host: answered in run 2. `codex exec` runs project hooks and continues on Stop `block` (same `turn_id`, no block cap); the interactive TUI is driven through `ptydrive.py`.
 - How should autoupdate be tested through real npm? It needs an older wrapper-capable version than `latest` (possible from 0.2.1 on).

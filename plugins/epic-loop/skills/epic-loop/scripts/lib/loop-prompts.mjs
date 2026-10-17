@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
+export const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 export const MANAGER_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-manager-prompt.md");
 export const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-techlead-prompt.md");
 const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md";
@@ -41,7 +41,7 @@ export function buildManagerPrompt(slug, iteration, housekeepingReason) {
   });
 }
 
-export function buildEngineerPrompt(projectRoot, loop, iteration) {
+export function buildEngineerPrompt(projectRoot, slug, loop, iteration) {
   const promptFile = loop.prompt_file;
   const absolutePromptPath = promptFile ? path.resolve(projectRoot, promptFile) : null;
   const promptText = absolutePromptPath && fs.existsSync(absolutePromptPath) ? fs.readFileSync(absolutePromptPath, "utf8").trim() : "";
@@ -63,7 +63,16 @@ export function buildEngineerPrompt(projectRoot, loop, iteration) {
     "- implemented behavior",
     "- verification run and results",
     "- blockers, gaps, or follow-up notes",
+    "",
+    "The loop records your final message as the report. If you end the turn to wait for a background task you started, the loop waits for its notification and you continue this turn.",
+    `If you leave a background process running on purpose (e.g. a dev server), run ${completeTurnCommand(slug)} before your final message.`,
   ].join("\n");
+}
+
+// Marks the open role turn done, so the loop chains to the next role even while background
+// tasks the role started keep running.
+export function completeTurnCommand(slug) {
+  return `node ${path.join(SKILL_DIR, "scripts", "complete-turn.mjs")} --slug ${slug}`;
 }
 
 export function normalizePromptFile(root, slug, value) {
@@ -93,4 +102,15 @@ function renderTemplate(template, values) {
   return Object.entries(values)
     .reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template)
     .trim();
+}
+
+// The user aborted this role's previous turn (Esc / Ctrl+C) and was answered in a plain
+// user turn; the role runs again from the top, so it must re-check what already landed.
+export function prependResumeNote(prompt, role) {
+  return [
+    `Resuming the ${role} turn that the user interrupted.`,
+    "Re-check the current state first (changed files, git status, epic artifacts) and do not redo steps that already landed.",
+    "",
+    prompt.trim(),
+  ].join("\n");
 }

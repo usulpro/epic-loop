@@ -58,7 +58,7 @@ If the prompt appears to combine multiple unrelated turn types, the engineer sho
 
 7. Stop after the report.
 
-   Routing returns to techlead automatically through the `Stop` hook. The engineer prompt should not contain routing commands.
+   Routing returns to techlead automatically through the `Stop` hook. The engineer brief should not contain routing commands; the loop appends the two background-task rules to every engineer prompt. Ending the turn to wait for a background task the engineer started keeps the same engineer turn open until its notification arrives. An engineer that leaves a process running on purpose (a dev server) runs `complete-turn.mjs` before the final report, so the loop does not wait for it.
 
 ## Verification Standard
 

@@ -39,7 +39,7 @@ Your job in this turn:
 4. Do not compact active layers or any `docs/**` files.
 5. Preserve a clear audit trail for any archive files you create.
 6. Do not create standalone housekeeping commits only for epic artifacts; classify task-related cleanup for techlead instead.
-7. Stop after the report. Routing returns automatically to techlead.
+7. Stop after the report. Routing returns automatically to techlead. If you end the turn to wait for a background task you started, the loop waits for it; if you leave a process running on purpose, first run `node -<<*{{SkillDir}}*>>-/scripts/complete-turn.mjs --slug "-<<*{{EpicSlug}}*>>-"`.
 
 Report briefly and stop:
 

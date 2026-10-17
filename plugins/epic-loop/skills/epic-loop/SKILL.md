@@ -278,7 +278,7 @@ Engineer turns are skill-agnostic. The engineer receives only a normal task brie
 
 Manager turns are also role-specific and non-product. They perform housekeeping only. When a manager turn stops, the `Stop` hook captures the final assistant message into `.runtime/latest-manager-report.md` and returns control to `techlead`.
 
-If a bound implementation session receives a new `UserPromptSubmit` while a turn is still open, treat the open turn as interrupted. Record `turn-interrupted`, set the loop status to `interrupted`, and do not auto-continue until a new implementation start/resume explicitly rebinds or restarts the loop. If implementation is restarted while an older open turn exists, close the old turn as interrupted without inventing active duration.
+A user message never stops the implementation loop; the hook adds a one-line `[epic-loop]` note to each driver prompt that says how to answer and how the loop continues. Stop the loop only when the user asks, in any wording: `node <skill-dir>/scripts/stop-loop.mjs --slug "<epic-slug>"` (the exact message `stop loop mode` stops it without the agent). Resume only on request: `node <skill-dir>/scripts/bind-session.mjs --current --slug "<epic-slug>" --mode implementation`. A role that leaves a process running on purpose (e.g. a dev server) runs `node <skill-dir>/scripts/complete-turn.mjs --slug "<epic-slug>"` before its final report. User-prompt classification, background waits, aborted turns, and restarts are specified in `references/implementation-cycle.md`.
 
 `techlead` owns tactical orchestration:
 
