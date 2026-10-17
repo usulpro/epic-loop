@@ -59,9 +59,9 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   }
 
   if (isStopLoopCommand(payload.prompt)) {
-    stopLoop(projectRoot, slug, { reason: "user-stop-command", sessionId: payload.session_id ?? null, timestamp, turnId: turnKeyOf(payload) });
+    const { reportRole } = stopLoop(projectRoot, slug, { reason: "user-stop-command", sessionId: payload.session_id ?? null, timestamp, turnId: turnKeyOf(payload) });
     return userPromptContext(
-      `[epic-loop] epic=${slug} mode=implementation — the user stopped the loop. Do not continue any loop role; confirm the loop is stopped and that it resumes with: ${resumeCommand(slug)}`,
+      `[epic-loop] epic=${slug} mode=implementation — the user stopped the loop. Do not continue any loop role.${stoppedTurnReportNote(reportRole)} Confirm the loop is stopped and that it resumes with: ${resumeCommand(slug)}`,
     );
   }
 
@@ -143,19 +143,38 @@ export function stopLoopCommand(flags = {}) {
   const reason = typeof flags.reason === "string" && flags.reason.trim() ? flags.reason.trim() : "user-requested-stop";
   const stopped = stopLoop(root, slug, { reason, sessionId: flags["session-id"] ?? null, timestamp: nowIso(), turnId: null });
 
-  console.log(stopped ? `Stopped the implementation loop for ${slug}. Resume with: ${resumeCommand(slug)}` : `Implementation loop for ${slug} is not running.`);
+  if (!stopped) {
+    console.log(`Implementation loop for ${slug} is not running.`);
+    return;
+  }
+  console.log(`Stopped the implementation loop for ${slug}.${stoppedTurnReportNote(stopped.reportRole)} Resume with: ${resumeCommand(slug)}`);
 }
 
+// Roles whose final message the loop keeps as a report; the techlead hands over through
+// briefs and set-next-role instead.
+const REPORTING_ROLES = ["engineer", "manager"];
+
+// Stops the loop. An open engineer or manager turn is closed at once, and the role's next final
+// message is recorded as the report of that stopped turn (see recordStoppedTurnReportIfPending),
+// so the work it did is not lost to the next session. Returns { reportRole } or false.
 function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
-  const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimeStatePath(projectRoot, slug), {})));
+  const runtimePath = runtimeStatePath(projectRoot, slug);
+  const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
 
   if (loop.status !== "running") {
     return false;
   }
 
+  // stop-loop.mjs runs inside the driver session but cannot see its id.
+  const stoppingSessionId = sessionId ?? loop.driver_session_id ?? null;
+  const reportRole = hasOpenTurn(loop) && REPORTING_ROLES.includes(loop.current_role) ? loop.current_role : null;
+
   if (hasOpenTurn(loop)) {
-    recordTurnInterrupted(projectRoot, slug, runtime, loop, { reason, sessionId, timestamp, turnId });
+    const interrupted = recordTurnInterrupted(projectRoot, slug, runtime, loop, { reason, sessionId: stoppingSessionId, timestamp, turnId });
+    if (reportRole) {
+      writeJson(runtimePath, { ...interrupted, implementation_loop: { ...interrupted.implementation_loop, stop_report_iteration: loop.iteration } });
+    }
   } else {
     writeJson(runtimeStatePath(projectRoot, slug), {
       ...runtime,
@@ -164,8 +183,14 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
     });
   }
 
-  appendLoopLog(projectRoot, { action: "loop-stopped", reason, role: loop.current_role ?? null, session_id: sessionId, slug, timestamp });
-  return true;
+  appendLoopLog(projectRoot, { action: "loop-stopped", reason, role: loop.current_role ?? null, session_id: stoppingSessionId, slug, timestamp });
+  return { reportRole };
+}
+
+function stoppedTurnReportNote(role) {
+  return role
+    ? ` End this turn with your ${role} report of the stopped turn: what it changed, what it verified, and what is left unfinished. The loop records it for the next session.`
+    : "";
 }
 
 function abortOpenTurn(projectRoot, slug, runtime, loop, { sessionId, timestamp, turnId }) {

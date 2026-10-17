@@ -298,7 +298,7 @@ function formatPhaseDurations(byPhase) {
       lines.push(`- Turns: ${taskData.turns}`);
       for (const turn of taskData.turnsList) {
         lines.push(
-          `- Turn ${turn.iteration ?? "?"} | ${turn.role ?? "unknown"} | ${turn.session_id ?? "unknown"} | ${turn.started_at ?? "?"} -> ${turn.ended_at ?? "?"} | ${formatDuration(Number(turn.duration_ms) || 0)}`,
+          `- Turn ${turn.iteration ?? "?"} | ${turn.role ?? "unknown"} | ${turn.session_id ?? "unknown"} | ${turn.started_at ?? "?"} -> ${turn.ended_at ?? "?"} | ${turn.duration_ms === null ? "unknown" : formatDuration(Number(turn.duration_ms) || 0)}`,
         );
       }
       lines.push("");
@@ -350,6 +350,10 @@ function progressSummary(entry) {
       return entry.duration_ms === null
         ? `Turn ${entry.iteration ?? "?"} was aborted by the user; its active time is unknown.`
         : `Turn ${entry.iteration ?? "?"} was aborted by the user after ${formatDuration(Number(entry.duration_ms) || 0)}.`;
+    case "stopped-turn-report":
+      return entry.recorded
+        ? `Report of stopped turn ${entry.iteration ?? "?"} recorded for \`${entry.role ?? "unknown"}\`.`
+        : `Stopped turn ${entry.iteration ?? "?"} ended without a final message; no report recorded.`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:

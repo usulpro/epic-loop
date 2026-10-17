@@ -202,6 +202,7 @@ test("an aborted turn is closed in the progress artifacts", () => {
     assertSuccess(runNodeScript("rebuild-progress.mjs", ["--root", ctx.root, "--slug", ctx.slug]));
     const report = fs.readFileSync(path.join(ctx.epicRuntime, "progress-report.md"), "utf8");
     assert.match(report, /- Aborted turns: 1/u);
+    assert.match(report, /- Turn 2 \| engineer \| .* \| unknown\n/u);
     assert.match(report, /## Open Turns\n\n- No open turns\./u);
     const markdown = fs.readFileSync(path.join(ctx.epicRuntime, "progress-log.md"), "utf8");
     assert.ok(markdown.includes(`## ${aborted.timestamp} | turn-aborted`));
@@ -226,15 +227,22 @@ test("stop loop mode stops the loop deterministically and the agent is told how 
   const ctx = setupDriverLoop("hook-user-stop-command-");
 
   try {
-    assert.match(ctx.context(ctx.prompt("Stop loop mode.")), /the user stopped the loop\. Do not continue any loop role/u);
+    assert.match(
+      ctx.context(ctx.prompt("Stop loop mode.")),
+      /the user stopped the loop\. Do not continue any loop role\. End this turn with your engineer report of the stopped turn/u,
+    );
     let loop = ctx.loop();
     assert.equal(loop.status, "interrupted");
     assert.equal(loop.next_role, "idle");
     assert.equal(loop.last_reason, "user-stop-command");
     assert.match(ctx.progress(), /"action":"loop-stopped"/u);
 
+    // The final message of the stopped turn is its report; the loop stays stopped.
     assert.equal(ctx.stop(), null);
-    assert.equal(fs.existsSync(path.join(ctx.epicRuntime, "latest-engineer-report.md")), false);
+    assert.match(fs.readFileSync(path.join(ctx.epicRuntime, "latest-engineer-report.md"), "utf8"), /Assistant reply in this turn/u);
+    assert.match(ctx.progress(), /"action":"stopped-turn-report"[^\n]*"recorded":true/u);
+    assert.equal(ctx.loop().stop_report_iteration, null);
+    assert.equal(ctx.loop().status, "interrupted");
     assert.match(
       ctx.context(ctx.prompt("hello again")),
       /loop stopped\. If the user asks to resume it, run: node .*bind-session\.mjs --current --slug user-prompt --mode implementation/u,
@@ -255,14 +263,44 @@ test("stop-loop.mjs stops a running loop from inside a turn", () => {
   try {
     const stopped = runNodeScript("stop-loop.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
     assertSuccess(stopped);
-    assert.match(stopped.stdout, /Stopped the implementation loop for user-prompt\. Resume with: node .*bind-session\.mjs/u);
+    assert.match(
+      stopped.stdout,
+      /Stopped the implementation loop for user-prompt\. End this turn with your engineer report of the stopped turn.* Resume with: node .*bind-session\.mjs/u,
+    );
     assert.equal(ctx.loop().status, "interrupted");
     assert.equal(ctx.loop().last_reason, "user-requested-stop");
+    // The script cannot see the session id; the events name the driver session.
+    for (const action of ["turn-interrupted", "loop-stopped"]) {
+      assert.match(ctx.progress(), new RegExp(`"action":"${action}"[^\\n]*"session_id":"${ctx.sessionId}"`, "u"));
+    }
+
     assert.equal(ctx.stop(), null);
+    assert.match(fs.readFileSync(path.join(ctx.epicRuntime, "latest-engineer-report.md"), "utf8"), /Assistant reply in this turn/u);
+    // Only the first Stop after the stop carries the report.
+    fs.rmSync(path.join(ctx.epicRuntime, "latest-engineer-report.md"));
+    assert.equal(ctx.stop(), null);
+    assert.equal(fs.existsSync(path.join(ctx.epicRuntime, "latest-engineer-report.md")), false);
 
     const again = runNodeScript("stop-loop.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
     assertSuccess(again);
     assert.match(again.stdout, /Implementation loop for user-prompt is not running\./u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("stopping a techlead turn asks for no report and records none", () => {
+  const ctx = setupDriverLoop("hook-stop-techlead-", { role: "techlead" });
+
+  try {
+    const stopped = runNodeScript("stop-loop.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
+    assertSuccess(stopped);
+    assert.doesNotMatch(stopped.stdout, /report/u);
+    assert.equal(ctx.loop().stop_report_iteration, undefined);
+
+    assert.equal(ctx.stop(), null);
+    assert.doesNotMatch(ctx.progress(), /stopped-turn-report/u);
+    assert.equal(fs.existsSync(path.join(ctx.epicRuntime, "latest-engineer-report.md")), false);
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }

@@ -68,6 +68,7 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
       next_role: "manager",
       prompt_file: null,
       status: "running",
+      stop_report_iteration: null,
     },
     timestamp,
   );
@@ -214,6 +215,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   }
 
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
+  ({ loop, runtime } = recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
 
   // A fresh user turn (first Stop, stop_hook_active === false) resets Claude Code's own
@@ -540,6 +542,37 @@ function recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, times
   });
 
   return { loop: stoppedLoop, runtime: nextRuntime };
+}
+
+// stop-loop closed an engineer or manager turn before the role finished it. The role's next
+// final message is its report of that turn (what landed, what is left), so record it the way a
+// completed turn's report is recorded; the loop stays stopped.
+function recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp) {
+  if (loop.status !== "interrupted" || !Number.isFinite(loop.stop_report_iteration) || loop.stop_report_iteration !== loop.iteration) {
+    return { loop, runtime };
+  }
+
+  const role = loop.current_role;
+  const report = appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, role);
+  const nextLoop = {
+    ...loop,
+    ...(report ? { [`last_${role}_report_at`]: report.timestamp, [`last_${role}_report_path`]: report.latest_report_path } : {}),
+    stop_report_iteration: null,
+  };
+  const nextRuntime = { ...runtime, implementation_loop: nextLoop, updated_at: timestamp };
+
+  writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
+  appendLoopLog(projectRoot, {
+    action: "stopped-turn-report",
+    iteration: loop.iteration,
+    recorded: Boolean(report),
+    role,
+    session_id: payload.session_id ?? null,
+    slug,
+    timestamp,
+  });
+
+  return { loop: nextLoop, runtime: nextRuntime };
 }
 
 export function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durationMs, reason, sessionId, timestamp, turnId }) {
