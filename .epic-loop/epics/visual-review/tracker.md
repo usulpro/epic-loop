@@ -110,8 +110,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: a contract test shows the rule in the techlead prompt; the next Codex sandbox run lists its agent-made decisions through `agent-decision.mjs list`.
   - Docs: `decision-log.md` (D17), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-codex/log.md`.
 
-- [ ] Kind: verification | Status: on-hold | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
-  - Hold: external-wait (H2)
+- [x] Kind: verification | Status: done | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
   - Method: use `.claude/skills/sandbox-test`. Build a fixture epic whose tasks trigger each stop class:
     - A, the last task;
     - B, a step that needs a manual publish, plus an independent task;
@@ -130,7 +129,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the final report satisfies the stop-report checklist.
   - Cleanup: archive the sandbox runs under the sandbox-test `runs/` log; kill the foreign port holder.
   - Docs: `docs/stop-gate.md`.
-  - Progress: Claude Code passed in runs 5 and 6. Codex run 7 is partial (usage limit): B and D challenges and Stop-hook chaining pass. The Codex half is finished by a minimal mechanics run (run 8, D33); if that fails, Phase 1 merges and Codex is recorded as tech debt.
+  - Result: Claude Code passed the full scenario in runs 5 and 6 (after the fixes in `f752633`); Codex passed the role mechanics in runs 7 (partial: B and D challenges, Stop-hook chaining) and 8 (minimal: B challenge, on-hold, accepted stop with a committed report). Logs: `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-*/log.md`.
 
 - [ ] Kind: review | Status: todo | Open the Phase 1 pull request and stop for the human's merge
   - Outcome: a pull request from `feature/manager-stop-gate` to `main` with a summary of the stop gate, the human queue, the hold kinds and the stop report, plus links to the verification runs. Unit tests and `validate` pass on the branch. The loop stops so the human can review and merge.

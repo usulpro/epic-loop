@@ -180,3 +180,13 @@
   - engineer showed HEAD vs new output on a temp progress log, including a line appended mid-run
   - validate passes. Previous task commit: 401f6ea
 - Residual risk: Loop paused: nothing independent left in Phase 1; the Codex verification rerun waits on H2 (usage-limit reset), the PR on the verification.
+
+## 2026-10-18T14:56:07+00:00 - done
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- Verdict: done
+- Verification:
+  - Claude Code: runs 5 and 6, all checks pass after f752633. Codex: run 7 (partial, usage limit) and run 8 (minimal, D33): Stop-hook chaining, B challenged with the on-hold command, task on-hold with Hold: human-action (H1), independent work completed, final B accepted with a six-heading report committed by the manager (fd99a2b in the sandbox)
+  - 11 turns, 3.9 M tokens. Previous task commit: 0f283bb
+- Residual risk: Not covered on Codex: F stop, rebind, class A, German chat (covered on Claude Code). Minor: the techlead's closure notes written after the last task commit stay uncommitted at a stop (D32 covers report, queue and decision log only). The agent-decision prompt fix (401f6ea) was not exercised on Codex (no class C default came up).
