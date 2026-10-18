@@ -197,6 +197,7 @@ Saving contract:
 
 - `review-stop.mjs --outcome accepted --stdin` takes the **English** report, refuses an empty one or one missing a heading (nothing changes then), and saves it as `stop-reports/<NN>-<YYYY-MM-DD>-class-<X>.md` with a short header (date, class, the techlead's reason).
 - The saved copy becomes the manager report (`.runtime/latest-manager-report.md`); the `stop-gate` event and `implementation_loop.last_stop_report_path` record its path.
+- The manager then commits the report with that review's `human-queue.md` and `decision-log.md` changes, in one commit (`docs(epic): stop report NN (class X)`), using the command `review-stop.mjs` prints; only those files, never `git add -A` (decision D32). It is the one commit a manager makes, an exception to "no standalone housekeeping commits": the report is the loop's message to the human, not housekeeping.
 - The final chat message is the same report in the user's language (D9: artifacts on disk stay English).
 
 ## Handoff Constraint

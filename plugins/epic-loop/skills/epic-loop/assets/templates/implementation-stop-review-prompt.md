@@ -60,6 +60,8 @@ When you accept, write a report for the human, measured against the epic's inten
 
 Take the human-queue items and agent-made decisions from `role-summary.mjs`. The copy you pass on stdin is always English; `review-stop.mjs` saves it under `stop-reports/` and refuses a report that misses a heading.
 
+Then commit the saved report together with this review's `human-queue.md` and `decision-log.md` changes, in one commit, with the exact `git add …` / `git commit -m "docs(epic): stop report NN (class X)"` command that `review-stop.mjs` prints. Add only those files, never `git add -A`. This is the one commit a manager makes.
+
 Do not use `set-next-role.mjs` in this turn. Run `review-stop.mjs` as your last command, then stop after your final message:
 
 - accepted: your final chat message is the same report in the user's language (the language the user writes in this session);

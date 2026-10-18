@@ -51,6 +51,8 @@ export const STOP_CLASS_RULES = {
     "- Independent work left: queue the item, then challenge with the H id, the task to put on-hold, and the independent task to continue with.",
     "- Queue it with kind `human-action`, or `security-hold` when a guard stopped a dangerous operation:",
     '  `<HumanQueueAdd> --kind human-action --ask "<what the human must do>" --why "<why>" --blocks "<needed before task ...>"`',
+    "- In the challenge, give the techlead the exact on-hold command, with the task's position id from `tracker.md` (`phase-N-task-k`) when you can tell it:",
+    "  `<SetTaskStatus> --task-id <phase-N-task-k> --status on-hold --hold-kind human-action --hold-item H<n>`",
     "- Nothing independent left: accept.",
   ],
   C: [
@@ -70,6 +72,8 @@ export const STOP_CLASS_RULES = {
     "- Never override the need itself; only check whether independent work is left.",
     "- Independent work left: queue the decision, then challenge with the H id, the task to put on-hold, and the independent task to continue with:",
     '  `<HumanQueueAdd> --kind product-decision --ask "<the decision>" --why "<why it has no default>" --blocks "<needed before task ...>"`',
+    "- In the challenge, give the techlead the exact on-hold command, with the task's position id from `tracker.md` (`phase-N-task-k`) when you can tell it:",
+    "  `<SetTaskStatus> --task-id <phase-N-task-k> --status on-hold --hold-kind product-decision --hold-item H<n>`",
     "- Nothing independent left: accept.",
   ],
 };
@@ -94,7 +98,8 @@ export function buildStopReviewPrompt(projectRoot, slug, iteration, stopRequest)
 
 function formatStopClassRule(slug, stopRequest) {
   const humanQueueAdd = `node ${path.join(SKILL_DIR, "scripts", "human-queue.mjs")} add --slug "${slug}"`;
-  const rule = (STOP_CLASS_RULES[stopRequest.class] ?? []).map((line) => line.replace("<HumanQueueAdd>", humanQueueAdd));
+  const setTaskStatus = `node ${path.join(SKILL_DIR, "scripts", "set-task-status.mjs")} --slug "${slug}"`;
+  const rule = (STOP_CLASS_RULES[stopRequest.class] ?? []).map((line) => line.replace("<HumanQueueAdd>", humanQueueAdd).replace("<SetTaskStatus>", setTaskStatus));
   return (stopRequest.round ?? 1) >= 2 ? [REPEATED_STOP_RULE, "", ...rule].join("\n") : rule.join("\n");
 }
 

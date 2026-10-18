@@ -117,3 +117,18 @@
   - restore test 8/8
   - cost $6.15
 - Residual risk: Findings: (1) C/D/E never filed, so the challenge path has no real-run evidence; (2) a human wait mid-loop was marked blocked, no H item, on-hold never used; (3) accepted stops leave stop reports uncommitted; (4) one request covered B/F/D under one class. 2 and 3 are fixed in a new Phase 1 task before the verification closes (D32 agent-made for 3); the rerun should also exercise the challenge path for B. Codex half still waits on H1.
+
+## 2026-10-18T12:19:25+00:00 - done (prompt contracts); real-run evidence moves to the verification rerun
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Close the stop-gate gaps found in the Claude Code sandbox run
+- Verdict: done (prompt contracts); real-run evidence moves to the verification rerun
+- Changed:
+  - techlead prompt and role: B/F always via request-stop even with independent work, never blocked, on-hold after challenge
+  - B/F stop-review rules name the exact on-hold command
+  - review-stop accepted prints the one D32 commit
+  - stop-review prompt and manager role carry the commit rule
+- Verification:
+  - Techlead reran pnpm run test:unit 149/149 and validate
+  - reviewed the loop-stop-gate diff (only existing files listed, shell-quoted)
+- Residual risk: The acceptance's sandbox part (mid-loop B challenged, on-hold with H id, every stop report committed) is checked by the Claude Code rerun in the verification task.

@@ -92,6 +92,8 @@ node -<<*{{SkillDir}}*>>-/scripts/request-stop.mjs --slug "-<<*{{EpicSlug}}*>>-"
    - E: ordering or bookkeeping
    - F: a product decision with no default
 
+   When a task needs the human's hands, authority or a product decision (B or F), file a stop request for it even if other work is independent: the manager queues the item and sends you on with the independent work. Never mark such a task `blocked` (that is for technical blockers you cannot remove); after the challenge, set it `on-hold` with the H id the manager names.
+
    After a challenge, follow "After A Challenge" in the techlead role reference.
 
 `set-next-role` and `request-stop` also complete this turn: when it ends, the loop starts the chosen role even if a background task you started still runs. Run one of them as your last step.

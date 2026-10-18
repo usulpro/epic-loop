@@ -1,6 +1,7 @@
 import fs from "node:fs";
+import path from "node:path";
 
-import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { epicRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject } from "./loop.mjs";
 import { missingStopReportHeadings, saveStopReport } from "./stop-reports.mjs";
@@ -137,11 +138,29 @@ export function reviewStop(flags = {}) {
     timestamp,
   });
 
-  console.log(
-    accepted
-      ? `Stop accepted for ${slug} (class ${request.class}). Report saved: ${reportPath}. The loop goes idle; end the turn with the same report in the user's language.`
-      : `Stop challenged for ${slug} (class ${request.class}). The techlead resumes with your instruction.`,
-  );
+  if (!accepted) {
+    console.log(`Stop challenged for ${slug} (class ${request.class}). The techlead resumes with your instruction.`);
+    return;
+  }
+
+  console.log(`Stop accepted for ${slug} (class ${request.class}). Report saved: ${reportPath}`);
+  console.log("Commit the report with this review's queue and decision changes (only these files):");
+  for (const line of stopReportCommitCommand(root, slug, reportPath, request.class)) {
+    console.log(`  ${line}`);
+  }
+  console.log("The loop goes idle; end the turn with the same report in the user's language.");
+}
+
+// D32: the manager commits each accepted stop's report with that review's artifact changes.
+function stopReportCommitCommand(root, slug, reportPath, stopClass) {
+  const epicDir = path.relative(root, epicRoot(root, slug));
+  const files = [reportPath, ...["human-queue.md", "decision-log.md"].map((name) => path.join(epicDir, name)).filter((file) => fs.existsSync(path.join(root, file)))];
+  const number = path.basename(reportPath).split("-")[0];
+  return [`git add ${files.map(shellQuote).join(" ")}`, `git commit -m "docs(epic): stop report ${number} (class ${stopClass})"`];
+}
+
+function shellQuote(value) {
+  return /^[\w./-]+$/u.test(value) ? value : `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function readStopReport(flags) {

@@ -95,7 +95,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: in the phase verification runs, each accepted stop produces such a report. A checklist review of the saved copies against `docs/stop-gate.md` "Stop Report" passes.
   - Docs: `docs/stop-gate.md`, `docs/problem-framing.md`.
 
-- [ ] Kind: implementation | Status: doing | Close the stop-gate gaps found in the Claude Code sandbox run
+- [x] Kind: implementation | Status: done | Close the stop-gate gaps found in the Claude Code sandbox run
   - Outcome:
     - A task that needs the human's hands, authority or a product decision always goes through a stop request, even when independent work is left; it is never marked `blocked`, and after the review it is `on-hold` with the H item the manager queued.
     - The manager commits each accepted stop's report and the queue changes of that review (D32).
@@ -103,7 +103,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: prompt contract tests show both rules; a fresh Claude Code sandbox run shows a mid-loop B request challenged with independent work left, the task `on-hold` with its H id, and every stop report committed.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16, D23, D26, D32), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-claude/log.md`.
 
-- [ ] Kind: verification | Status: todo | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- [ ] Kind: verification | Status: doing | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
   - Method: use `.claude/skills/sandbox-test`. Build a fixture epic whose tasks trigger each stop class:
     - A, the last task;
     - B, a step that needs a manual publish, plus an independent task;

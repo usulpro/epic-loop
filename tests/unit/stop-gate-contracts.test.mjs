@@ -418,3 +418,43 @@ for (const platform of STOP_GATE_PLATFORMS) {
     }
   });
 }
+
+test("human waits always go through the gate and B/F challenges name the on-hold command", () => {
+  const ctx = setupStopGateLoop("stop-gate-human-wait-", "codex", "techlead");
+
+  try {
+    assertSuccess(ctx.requestStop("B", "npm publish needs the owner's login", "the publish task"));
+    const review = ctx.stop().reason;
+    assert.match(review, /set-task-status\.mjs --slug "stop-gate" --task-id <phase-N-task-k> --status on-hold --hold-kind human-action --hold-item H<n>/u);
+    assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "challenged", "--instruction", "Queued H1; set phase-1-task-5 on-hold; continue with phase-1-task-6."]));
+    // The techlead prompt carries the rule on every turn, including the one after a challenge.
+    const techlead = ctx.stop().reason;
+    assert.match(techlead, /file a stop request for it even if other work is independent/u);
+    assert.match(techlead, /Never mark such a task `blocked`/u);
+
+    assertSuccess(ctx.requestStop("F", "tier names have no default", "the footer task"));
+    assert.match(ctx.stop().reason, /--status on-hold --hold-kind product-decision --hold-item H<n>/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("an accepted stop prints the one commit for its report and the review's epic changes", () => {
+  const ctx = setupStopGateLoop("stop-gate-report-commit-", "codex", "techlead");
+
+  try {
+    assertSuccess(ctx.script("human-queue.mjs", ["add", "--kind", "human-action", "--ask", "publish", "--why", "login", "--blocks", "release"]));
+    assertSuccess(ctx.requestStop("A", "epic done", "nothing left"));
+    const review = ctx.stop().reason;
+    assert.match(review, /git commit -m "docs\(epic\): stop report NN \(class X\)"/u);
+    assert.match(review, /never `git add -A`/u);
+
+    const accepted = ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], STOP_REPORT_FIXTURE);
+    assertSuccess(accepted);
+    const reportPath = ctx.loop().last_stop_report_path;
+    assert.ok(accepted.stdout.includes(`git add ${reportPath} .epic-loop/epics/stop-gate/human-queue.md .epic-loop/epics/stop-gate/decision-log.md`), accepted.stdout);
+    assert.match(accepted.stdout, /git commit -m "docs\(epic\): stop report 01 \(class A\)"/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
