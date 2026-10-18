@@ -132,3 +132,13 @@
   - Techlead reran pnpm run test:unit 149/149 and validate
   - reviewed the loop-stop-gate diff (only existing files listed, shell-quoted)
 - Residual risk: The acceptance's sandbox part (mid-loop B challenged, on-hold with H id, every stop report committed) is checked by the Claude Code rerun in the verification task.
+
+## 2026-10-18T12:34:53+00:00 - on-hold (H1): Claude Code half passed
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- Verdict: on-hold (H1): Claude Code half passed
+- Verification:
+  - Techlead checked the run 6 archive: 3 stop-gate events (B challenged with the exact on-hold command, F accepted, A accepted), stop reports 01 and 02 committed by the manager (b175aa5, 5770c16), clean tree after both sessions, task on-hold with Hold: human-action (H1) instead of blocked
+  - cost $5.78. Gap-fix commit f752633 verified.
+- Residual risk: Codex half not run: waits on H1 (explicit approval for -s danger-full-access -a never). C/D/E challenge branches have unit-test evidence only. Follow-up added for loop-watch stop-gate events. Loop paused: nothing independent is left in Phase 1 (the PR task needs the verification).

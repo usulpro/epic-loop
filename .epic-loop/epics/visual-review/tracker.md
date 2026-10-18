@@ -8,6 +8,7 @@ Epic: Visual Human Interface For Epic-loop
 - doing
 - need-review
 - blocked
+- on-hold
 - partially-satisfied
 - deferred
 - reset-required
@@ -103,7 +104,8 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: prompt contract tests show both rules; a fresh Claude Code sandbox run shows a mid-loop B request challenged with independent work left, the task `on-hold` with its H id, and every stop report committed.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16, D23, D26, D32), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-claude/log.md`.
 
-- [ ] Kind: verification | Status: doing | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- [ ] Kind: verification | Status: on-hold | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+  - Hold: human-action (H1)
   - Method: use `.claude/skills/sandbox-test`. Build a fixture epic whose tasks trigger each stop class:
     - A, the last task;
     - B, a step that needs a manual publish, plus an independent task;
@@ -444,3 +446,10 @@ Order (agreed 2026-10-18, revised the same day, D18):
 - Phase status: todo
 - Intent: quote any doc fragment and iterate on it next to the doc; a more template-based shaping interface (Q8). May move to a separate epic.
 - Tasks: to be shaped.
+
+## Follow-Up Tasks
+
+- [ ] Kind: follow-up | Status: todo | Show stop-gate events in the sandbox-test loop-watch tool
+  - Outcome: tools/loop-watch.mjs prints stop-gate events (class, outcome, round, report path) like other loop events.
+  - Surface: .claude/skills/sandbox-test/tools/loop-watch.mjs
+  - Acceptance: A sandbox Monitor on loop-watch shows each stop review outcome without reading progress-log.jsonl by hand.

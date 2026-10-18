@@ -29,10 +29,11 @@ Active task: Phase 1 Task 6 - Prove the stop gate end to end in sandbox runs on 
 
 ## Blockers
 
-- None recorded.
+- H1 (human-action): approve the Codex sandbox run of the stop-gate verification with `-s danger-full-access -a never` (sandbox-test D-7) and confirm Codex quota. The verification task is `on-hold` on it; the Phase 1 pull request comes after it.
 
 ## Next Action
 
-- Shaping of Phases 1–5 is complete; the epic is ready for implementation of Phase 1.
-- Start Phase 1 in the main checkout per `docs/delivery.md`: create branch `feature/manager-stop-gate`, commit the shaping artifacts, install hooks, then bind a session with `--mode implementation`.
-- Shape Phase 6 when Phase 5 is near; Phase 7 is decided after Phase 5.
+- Implementation paused on 2026-10-18 (techlead, old runtime: no stop gate in the live loop yet). Phase 1 tasks 1-5 are done; the Claude Code verification passed in sandbox runs 5 and 6.
+- On H1 approval: run the Codex sandbox scenario, close the verification task, then open the Phase 1 pull request (last Phase 1 task) and stop for the human's merge.
+- Agent-made decisions to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
+- Resume: `node .claude/skills/epic-loop/scripts/bind-session.mjs --current --slug visual-review --mode implementation`.
