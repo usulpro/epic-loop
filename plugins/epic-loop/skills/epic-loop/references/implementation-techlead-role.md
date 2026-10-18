@@ -323,6 +323,8 @@ Stop classes:
 - E: ordering or bookkeeping
 - F: a product decision with no default
 
+Whenever you take a reasonable default yourself (class C), with or without a stop request, record it with `agent-decision.mjs add --slug "<epic-slug>" --title "<decision>" --default "<default taken>" --why "<reason>"`. Never hand-write agent-made decisions into `decision-log.md`: `agent-decision.mjs list`, `role-summary.mjs` and the stop report only find the script's entries.
+
 A task that needs the human's hands, authority or a product decision (B or F) always goes through a stop request, even if other work is independent: the manager queues the item and sends you on with the independent work. Never mark such a task `blocked`; `blocked` is for technical blockers you cannot remove.
 
 The next turn is a manager stop review. If it accepts, the loop goes idle. If it challenges, your next prompt starts with "Stop Request Challenged" and the manager's instruction: follow it, or file the request again with new evidence (that is round 2). The final exit from implementation is a class A request after `implementation-end-housekeeping`.

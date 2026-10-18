@@ -104,7 +104,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: prompt contract tests show both rules; a fresh Claude Code sandbox run shows a mid-loop B request challenged with independent work left, the task `on-hold` with its H id, and every stop report committed.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16, D23, D26, D32), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-claude/log.md`.
 
-- [ ] Kind: implementation | Status: doing | Make the techlead record its own defaults with the agent-decision script
+- [x] Kind: implementation | Status: done | Make the techlead record its own defaults with the agent-decision script
   - Outcome: whenever the techlead takes a reasonable default itself (class C, with or without a stop request), it records it with `agent-decision.mjs add`, never by hand-editing `decision-log.md`, so `role-summary` and the stop report list it for confirmation.
   - Surface: the techlead prompt template and role reference, prompt contract tests.
   - Acceptance: a contract test shows the rule in the techlead prompt; the next Codex sandbox run lists its agent-made decisions through `agent-decision.mjs list`.

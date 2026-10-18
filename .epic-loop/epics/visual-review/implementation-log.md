@@ -153,3 +153,16 @@
   - usage limit error in the session output
   - 11.3 M tokens
 - Residual risk: Checks 2-4 on Codex not reached. Finding: the Codex techlead hand-wrote agent-made decisions instead of agent-decision.mjs; fixed next in a new Phase 1 task while the limit resets. H1 (approval) is resolved; H2 tracks the reset.
+
+## 2026-10-18T13:47:46+00:00 - done (prompt contract); Codex behaviour is checked in the rerun
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Make the techlead record its own defaults with the agent-decision script
+- Verdict: done (prompt contract); Codex behaviour is checked in the rerun
+- Changed:
+  - techlead prompt and role reference: class C defaults taken by the techlead itself go through agent-decision.mjs add, never hand-written into decision-log.md
+  - contract test
+- Verification:
+  - Techlead reran pnpm run test:unit 150/150 and validate
+  - reviewed the 22-line diff. Previous checkpoint: 4719d68
+- Residual risk: The Codex rerun (after the usage-limit reset, H2) must show its agent-made decisions through agent-decision.mjs list.

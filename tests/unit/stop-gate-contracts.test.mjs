@@ -458,3 +458,21 @@ test("an accepted stop prints the one commit for its report and the review's epi
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
 });
+
+test("the techlead prompt tells it to record its own defaults with agent-decision.mjs", () => {
+  const ctx = setupStopGateLoop("stop-gate-own-default-", "codex", "engineer");
+
+  try {
+    // The engineer turn ends, so the next Stop renders a techlead prompt.
+    const techlead = ctx.stop().reason;
+    assert.match(techlead, /techlead turn/u);
+    assert.match(techlead, /Whenever you take a reasonable default yourself \(class C\), with or without a stop request/u);
+    assert.match(
+      techlead,
+      /plugins\/epic-loop\/skills\/epic-loop\/scripts\/agent-decision\.mjs add --slug "stop-gate" --title "<decision>" --default "<default taken>" --why "<reason>"/u,
+    );
+    assert.match(techlead, /Never hand-write agent-made decisions into `decision-log\.md`/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
