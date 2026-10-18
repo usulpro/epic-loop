@@ -26,6 +26,8 @@ Human-facing epic artifacts live under `.epic-loop/epics/{epic-slug}/`. Runtime 
     implementation-log.md
     decision-log.md
     risk-register.md
+    human-queue.md
+    stop-reports/
     docs/
     .runtime/
       runtime-state.json
@@ -66,7 +68,8 @@ Track:
 
 - phases and tasks
 - task kind: `implementation`, `verification`, `review`, `follow-up`, `architecture-reset`, `documentation-only`
-- status: `todo`, `doing`, `need-review`, `blocked`, `partially-satisfied`, `deferred`, `reset-required`, `done`
+- status: `todo`, `doing`, `need-review`, `blocked`, `on-hold`, `partially-satisfied`, `deferred`, `reset-required`, `done`
+  - `blocked` is a technical blocker the agent cannot remove; `on-hold` waits on the human and carries `Hold: <kind> (H<n>)`
 - expected system outcome
 - implementation surface
 - acceptance criteria
@@ -100,7 +103,12 @@ Reliable verification patterns to prefer:
 
 Temporary instrumentation is allowed when needed to make hidden behavior observable, for example adding short-lived console logs, file-based traces, or debug output. The verification task must say what temporary instrumentation will be added, what artifact it should reveal, and that the instrumentation must be removed or disabled again after the verification evidence is captured.
 
-`tracker.md` is rendered from `.runtime/roadmap-state.json`. Use task and phase scripts for mechanical status changes.
+`tracker.md` is the source of truth for phases and tasks, and it may be shaped by hand: prose, extra phase lines (`Delivery:`, `Intent:`), nested bullets and extra task labels (`Method:`, `Evidence:`) are kept. Use task and phase scripts for mechanical status changes:
+
+- Every script re-reads `tracker.md`. Phase ids come from `### Phase N:` headings (`phase-N`), task ids from the order within the phase (`phase-N-task-k`), follow-up ids from their order and title (`follow-up-01-<slug>`). An explicit `- Phase status:` line wins over the status derived from the tasks.
+- Scripts patch only the lines they change: the task line (checkbox and `Status:`), the phase's `- Phase status:` line, and the task's `Hold:` line. `add-follow-up-task.mjs` appends to `## Follow-Up Tasks`, creating the section at the end of the file.
+- `set-task-status.mjs --status on-hold --hold-kind <kind> --hold-item H<n>` needs an open `human-queue.md` item. It writes `  - Hold: <kind> (H<n>)` as the task's first sub-bullet, adds `on-hold` to the `## Task Statuses` list, and does not start the task or its phase. Any other status removes the `Hold:` line.
+- `render-tracker.mjs` is the exception: it re-renders the whole file from the model and discards hand-written detail. Use it only for script-generated trackers.
 
 ### `implementation-log.md`
 
@@ -127,6 +135,41 @@ Record:
 - tradeoffs
 - unresolved design questions
 - whether the decision is active or historical
+
+Agent-made decisions (a stop-gate class C decision taken on a reasonable default) are written only through `agent-decision.mjs`:
+
+```bash
+node <skill-dir>/scripts/agent-decision.mjs add --slug "<epic-slug>" --title "<decision>" --default "<default taken>" --why "<reason>" [--stop-class C]
+node <skill-dir>/scripts/agent-decision.mjs list --slug "<epic-slug>" [--unconfirmed] [--json]
+node <skill-dir>/scripts/agent-decision.mjs confirm --slug "<epic-slug>" --id D<n> [--note "<text>"] [--reversed "<what replaces it>"]
+```
+
+- `add` appends one entry as the last item of `## Active Decisions` (replacing the `- None recorded yet.` placeholder if it is the only content) and changes no other byte of the hand-written log. Format: `- **D31 — <title>** (<date>; agent-made, stop class C; unconfirmed).` with `Default taken:` and `Why:` sub-bullets.
+- `confirm` turns `unconfirmed` into `confirmed <date>` or `reversed <date>` (with a `Reversed:` sub-bullet) in that entry only.
+- The loop builds on unconfirmed decisions; `role-summary.mjs` lists them until the human confirms or reverses them.
+
+### `human-queue.md`
+
+Purpose: what the loop needs from the human without stopping for it (stop-gate classes B and F while independent work remains).
+
+Written only by `human-queue.mjs`; the markdown file is the source of truth and is re-rendered deterministically:
+
+```bash
+node <skill-dir>/scripts/human-queue.mjs add --slug "<epic-slug>" --kind <kind> --ask "<question or action>" --why "<why>" --blocks "<needed before ...>" [--default "<default>"]
+node <skill-dir>/scripts/human-queue.mjs list --slug "<epic-slug>" [--all] [--json]
+node <skill-dir>/scripts/human-queue.mjs resolve --slug "<epic-slug>" --id H<n> --resolution "<text>"
+```
+
+- Kinds: `checkpoint`, `costly-decision`, `security-hold`, `human-action`, `product-decision`, `external-wait`.
+- Sections `## Open` and `## Resolved` (`- None.` when empty). Each item is `- **H<n>**` with `Kind`, `Ask`, `Why`, `Default` (`none` if absent), `Blocks`, `Raised`, plus `Resolved` and `Resolution` once resolved.
+- `init-epic.mjs` creates the file; older epics get it on the first `add`. Reads never create it.
+- `role-summary.mjs` lists the open items.
+
+Stable ids: `D<n>` decisions, `H<n>` human-queue items, `R<n>` risks, `Q<n>` open questions. The canonical form has no hyphen. A new id is the highest existing number plus one; ids are never reused or renumbered.
+
+### `stop-reports/`
+
+Purpose: the English copies of the manager's stop reports, one file per accepted stop: `<NN>-<YYYY-MM-DD>-class-<X>.md`, numbered in order. Written only by `review-stop.mjs --outcome accepted --stdin`, which refuses a report missing one of the required headings (see the manager role reference, "Stop Report"). Committed with the epic; created on the first accepted stop.
 
 ### `risk-register.md`
 
@@ -194,7 +237,7 @@ Useful keys:
 
 ### `.runtime/roadmap-state.json`
 
-Purpose: best-effort structured bookkeeping for deterministic phase/task scripts.
+Purpose: cache for deterministic phase/task scripts. They re-import the model from `tracker.md` on every call and keep only the explicitly chosen active phase and task from this file while those ids still exist.
 
 During implementation, `tracker.md` is the human-visible source of truth for task order and task intent. If this file disagrees with `tracker.md`, prefer `tracker.md`, record the drift if useful, and continue with the next visible task rather than stopping the loop solely for bookkeeping repair.
 
@@ -204,7 +247,7 @@ Track:
 - task status
 - active phase and active task
 - follow-up tasks
-- rendered tracker projection state
+- the last imported tracker model
 
 ## Runtime Files
 

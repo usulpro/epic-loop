@@ -76,7 +76,10 @@ Codex and Claude Code share the same loop core and Stop continuation shape. Plat
 9. The engineer executes that prompt, verifies the slice, reports the factual outcome, and stops.
 10. The `Stop` hook captures the engineer final message and stores it as the latest engineer report. Both Codex and Claude Code immediately start the next techlead turn; a Claude Code run only pauses for `continue loop mode` when a finite Stop-hook block cap is reached.
 11. When techlead explicitly requests housekeeping, the hook starts one manager turn and immediately pre-sets the following role to `techlead`.
-12. The cycle repeats until techlead exits to review, shaping, reset, blocker handling, or idle.
+12. When techlead wants the loop to stop, it files `request-stop.mjs --class A-F --reason ... --blocks ...`; it can no longer set `idle` (`set-next-role --role idle` is refused inside techlead and manager turns). The hook starts a manager **stop-review** turn (`assets/templates/implementation-stop-review-prompt.md`) carrying the class, reason, blocks and round.
+13. The manager resolves it with `review-stop.mjs`: `--outcome accepted` sets the loop `idle` and its final message is recorded as the manager report (the stop report); `--outcome challenged --instruction "<text>"` returns to techlead, whose next prompt carries the instruction once under "Stop Request Challenged". Both log a `stop-gate` progress event (`class`, `outcome`, `instruction`, `reason`, `blocks`, `round`, `iteration`).
+14. `round` counts consecutive stop requests with no engineer turn in between; handing off to an engineer resets it. Implementation end is manager end housekeeping → techlead → `request-stop --class A` → accepted review.
+15. The cycle repeats until a stop review accepts a stop or the user stops the loop.
 
 User messages in the driver session do not stop the loop. The loop records the host turn that carries it as `turn_key` (Claude Code `prompt_id`, Codex `turn_id`; both stay the same across Stop-hook continuations) and classifies each `UserPromptSubmit`:
 
@@ -139,7 +142,7 @@ The techlead must:
    - tactical detour
    - review
    - reset
-   - idle/stop
+   - stop request (classes A–F; a manager stop review decides)
 10. Write exactly one high-quality engineer brief when implementation continues.
 
 Housekeeping is mandatory at these moments:
@@ -172,7 +175,7 @@ The engineer must:
 
 ## Manager Turn Expectations
 
-The manager owns housekeeping only. It does not implement product code and does not hand control to engineer or idle.
+The manager owns housekeeping and stop reviews. It does not implement product code and never hands control to engineer. It ends the loop only by accepting a stop request in a stop-review turn.
 
 The manager must:
 

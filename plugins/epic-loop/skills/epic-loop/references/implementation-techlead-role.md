@@ -56,7 +56,7 @@ The techlead also performs the technical loop duties:
 - make the required commits for task closure and intermediate checkpoints
 - fold task-related epic artifact cleanup into the task commit instead of creating standalone housekeeping commits
 - write the next engineer brief
-- hand the loop to `engineer`, trigger `manager` housekeeping, or set it `idle`
+- hand the loop to `engineer`, trigger `manager` housekeeping, or file a stop request (it never sets `idle` itself)
 
 Useful control scripts:
 
@@ -308,8 +308,32 @@ Valid reasons include:
 
 Manager always returns to techlead automatically. Techlead must not expect manager to hand control directly to engineer or idle.
 
-When implementation should pause or stop, set the loop idle:
+When implementation should pause or stop, file a stop request. `set-next-role --role idle` is refused inside a techlead turn:
 
 ```bash
-node <skill-dir>/scripts/set-next-role.mjs --slug "<epic-slug>" --role idle --reason "<why the implementation loop stops>"
+node <skill-dir>/scripts/request-stop.mjs --slug "<epic-slug>" --class "<A-F>" --reason "<why the loop should stop>" --blocks "<what the stop blocks>"
 ```
+
+Stop classes:
+
+- A: the phase or the epic is done
+- B: needs the human's hands or authority (publish, release, sign-in, explicit authorization)
+- C: a decision with a reasonable default
+- D: environment friction (busy port, foreign resources, flaky tool)
+- E: ordering or bookkeeping
+- F: a product decision with no default
+
+Whenever you take a reasonable default yourself (class C), with or without a stop request, record it with `agent-decision.mjs add --slug "<epic-slug>" --title "<decision>" --default "<default taken>" --why "<reason>"`. Never hand-write agent-made decisions into `decision-log.md`: `agent-decision.mjs list`, `role-summary.mjs` and the stop report only find the script's entries.
+
+A task that needs the human's hands, authority or a product decision (B or F) always goes through a stop request, even if other work is independent: the manager queues the item and sends you on with the independent work. Never mark such a task `blocked`; `blocked` is for technical blockers you cannot remove.
+
+The next turn is a manager stop review. If it accepts, the loop goes idle. If it challenges, your next prompt starts with "Stop Request Challenged" and the manager's instruction: follow it, or file the request again with new evidence (that is round 2). The final exit from implementation is a class A request after `implementation-end-housekeeping`.
+
+### After A Challenge
+
+- **B / F:** the manager queued the item. Put the waiting task on hold (never `blocked`) with `set-task-status.mjs --task-id <id> --status on-hold --hold-kind <kind> --hold-item H<n>`, then brief the independent task it named.
+- **C:** record the default with `agent-decision.mjs add --slug "<epic-slug>" --title "<decision>" --default "<X>" --why "<reason>"`, then continue on it. A costly C is handled like B.
+- **D:** apply the workaround, or defer the affected verification to the phase verification task, and continue.
+- **E:** fix the order or the bookkeeping in `tracker.md`, then continue with the named task.
+
+Re-file the same stop only with new evidence that the instruction cannot be followed; the manager accepts a repeated request.

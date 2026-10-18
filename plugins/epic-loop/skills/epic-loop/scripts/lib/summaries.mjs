@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { epicRoot, epicRuntimeRoot, readJson, requireFlag, resolveRoot, runtimeStatePath } from "./common.mjs";
+import { readAgentDecisions } from "./agent-decisions.mjs";
+import { readHumanQueue } from "./human-queue.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 export function roleSummary(flags = {}) {
@@ -25,6 +27,12 @@ export function roleSummary(flags = {}) {
     latest_engineer_report: fs.existsSync(latestReportPath) ? fs.readFileSync(latestReportPath, "utf8").trim() : null,
     latest_manager_report_path: fs.existsSync(latestManagerReportPath) ? path.relative(root, latestManagerReportPath) : null,
     latest_manager_report: fs.existsSync(latestManagerReportPath) ? fs.readFileSync(latestManagerReportPath, "utf8").trim() : null,
+    open_human_queue: readHumanQueue(root, slug)
+      .filter((item) => item.status === "open")
+      .map(({ ask, blocks, id, kind }) => ({ ask, blocks, id, kind })),
+    unconfirmed_agent_decisions: readAgentDecisions(root, slug)
+      .filter((decision) => decision.state === "unconfirmed")
+      .map(({ id, title }) => ({ id, title })),
   };
 
   if (flags.json) {
@@ -38,6 +46,20 @@ export function roleSummary(flags = {}) {
   console.log(`Active task: ${summary.active_task ?? "none"}`);
   console.log(`State: ${summary.state_path}`);
   console.log(`Tracker: ${summary.tracker_path}`);
+  if (summary.open_human_queue.length > 0) {
+    console.log("");
+    console.log(`Open human-queue items (.epic-loop/epics/${slug}/human-queue.md):`);
+    for (const item of summary.open_human_queue) {
+      console.log(`- ${item.id} ${item.kind}: ${item.ask} (blocks: ${item.blocks})`);
+    }
+  }
+  if (summary.unconfirmed_agent_decisions.length > 0) {
+    console.log("");
+    console.log("Unconfirmed agent-made decisions (decision-log.md):");
+    for (const decision of summary.unconfirmed_agent_decisions) {
+      console.log(`- ${decision.id} ${decision.title}`);
+    }
+  }
   if (summary.latest_manager_report_path) {
     console.log(`Latest manager report: ${summary.latest_manager_report_path}`);
     console.log("");

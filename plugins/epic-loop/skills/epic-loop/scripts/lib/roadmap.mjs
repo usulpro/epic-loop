@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { ensureDir, epicRoot, nowIso, readJson, requireFlag, resolveRoot, roadmapStatePath, runtimeStatePath, slugify, writeJson } from "./common.mjs";
+import { ensureDir, epicRoot, nowIso, readJson, requireFlag, resolveRoot, roadmapStatePath, runtimeStatePath, writeJson } from "./common.mjs";
+import { HOLD_KINDS, readHumanQueue } from "./human-queue.mjs";
+import { followUpId, patchTrackerText, scanTracker } from "./tracker-file.mjs";
 
-export const TASK_STATUSES = ["todo", "doing", "need-review", "blocked", "partially-satisfied", "deferred", "reset-required", "done"];
+export const TASK_STATUSES = ["todo", "doing", "need-review", "blocked", "on-hold", "partially-satisfied", "deferred", "reset-required", "done"];
 export const TASK_KINDS = ["implementation", "verification", "review", "follow-up", "architecture-reset", "documentation-only"];
 
 export function createInitialRoadmapState({ slug, title }) {
@@ -39,15 +41,32 @@ export function createInitialRoadmapState({ slug, title }) {
   };
 }
 
+// tracker.md is the source of truth: when it exists, the model is re-read from it on every call
+// and roadmap-state.json is only a cache that keeps the explicitly chosen active ids.
 export function ensureRoadmapState(projectRoot, slug, { title } = {}) {
   const filePath = roadmapStatePath(projectRoot, slug);
-  const existing = normalizeRoadmap(readJson(filePath, null));
-  if (existing) {
-    return existing;
+  const cached = normalizeRoadmap(readJson(filePath, null));
+  const imported = importRoadmapFromTracker(projectRoot, slug, { title: title || cached?.title });
+
+  if (!imported) {
+    if (cached) {
+      return cached;
+    }
+    const initial = createInitialRoadmapState({ slug, title: title || slug });
+    writeRoadmapState(projectRoot, slug, initial);
+    return initial;
   }
 
-  const imported = importRoadmapFromTracker(projectRoot, slug, { title });
-  writeRoadmapState(projectRoot, slug, imported);
+  for (const key of ["active_phase_id", "active_task_id"]) {
+    const cachedId = cached?.[key];
+    const exists = key === "active_phase_id" ? findPhase(imported, cachedId) : findTask(imported, cachedId);
+    if (cachedId && exists) {
+      imported[key] = cachedId;
+    }
+  }
+  if (!cached) {
+    writeRoadmapState(projectRoot, slug, imported);
+  }
   return imported;
 }
 
@@ -72,10 +91,12 @@ export function setTaskStatus(flags = {}) {
   const slug = requireFlag(flags, "slug");
   const taskId = requireFlag(flags, "task-id");
   const status = requireFlag(flags, "status");
-  const roadmap = ensureRoadmapState(root, slug);
   assertStatus(status);
+  const hold = readHoldFlags(root, slug, status, flags);
+  const roadmap = ensureRoadmapState(root, slug);
   const task = requireTask(roadmap, taskId);
   task.status = status;
+  task.hold = hold;
   if (status === "doing") {
     roadmap.active_task_id = task.id;
     const phase = findTaskPhase(roadmap, task.id);
@@ -85,7 +106,34 @@ export function setTaskStatus(flags = {}) {
     }
   }
   finalizeRoadmapMutation(root, slug, roadmap);
-  console.log(`Task ${task.id} status: ${status}`);
+  console.log(`Task ${task.id} status: ${status}${hold ? ` (Hold: ${hold.kind} ${hold.item})` : ""}`);
+}
+
+// on-hold requires a hold kind and an open human-queue item; every other status clears the hold.
+function readHoldFlags(root, slug, status, flags) {
+  const kind = typeof flags["hold-kind"] === "string" ? flags["hold-kind"].trim() : null;
+  const item = typeof flags["hold-item"] === "string" ? flags["hold-item"].trim().toUpperCase() : null;
+
+  if (status !== "on-hold") {
+    if (kind || item) {
+      throw new Error("--hold-kind and --hold-item are only valid with --status on-hold.");
+    }
+    return null;
+  }
+  if (!kind || !item) {
+    throw new Error("--status on-hold requires both --hold-kind <kind> and --hold-item H<n>.");
+  }
+  if (!HOLD_KINDS.includes(kind)) {
+    throw new Error(`Invalid --hold-kind "${kind}". Expected one of: ${HOLD_KINDS.join(", ")}.`);
+  }
+  const queued = readHumanQueue(root, slug).find((entry) => entry.id === item);
+  if (!queued) {
+    throw new Error(`Human-queue item not found: ${item}. Add it with human-queue.mjs add first.`);
+  }
+  if (queued.status !== "open") {
+    throw new Error(`Human-queue item ${item} is resolved; a task can only be held on an open item.`);
+  }
+  return { item, kind };
 }
 
 export function startTask(flags = {}) {
@@ -96,6 +144,7 @@ export function startTask(flags = {}) {
   const task = requireTask(roadmap, taskId);
   const phase = findTaskPhase(roadmap, task.id);
   task.status = "doing";
+  task.hold = null;
   if (phase) {
     phase.status = "doing";
   }
@@ -112,6 +161,7 @@ export function closeTask(flags = {}) {
   const roadmap = ensureRoadmapState(root, slug);
   const task = requireTask(roadmap, taskId);
   task.status = "done";
+  task.hold = null;
   if (roadmap.active_task_id === task.id) {
     roadmap.active_task_id = null;
   }
@@ -175,7 +225,7 @@ export function addFollowUpTask(flags = {}) {
   const title = requireFlag(flags, "title");
   const roadmap = ensureRoadmapState(root, slug);
   const followUps = Array.isArray(roadmap.follow_ups) ? roadmap.follow_ups : [];
-  const id = `follow-up-${String(followUps.length + 1).padStart(2, "0")}-${slugify(title).slice(0, 40)}`;
+  const id = followUpId(followUps.length + 1, title);
   followUps.push({
     id,
     title,
@@ -197,10 +247,18 @@ export function renderTrackerMarkdown(projectRoot, slug, roadmap = ensureRoadmap
   fs.writeFileSync(trackerPath, trackerMarkdown(roadmap), "utf8");
 }
 
+// Patches tracker.md in place (task lines, phase status lines, Hold lines, appended follow-ups).
+// A missing or unparseable tracker is rendered from the model instead.
 function finalizeRoadmapMutation(projectRoot, slug, roadmap) {
   roadmap.updated_at = nowIso();
   writeRoadmapState(projectRoot, slug, roadmap);
-  renderTrackerMarkdown(projectRoot, slug, roadmap);
+  const trackerPath = path.join(epicRoot(projectRoot, slug), "tracker.md");
+  const scan = fs.existsSync(trackerPath) ? scanTracker(fs.readFileSync(trackerPath, "utf8")) : null;
+  if (scan && scan.phases.length > 0) {
+    fs.writeFileSync(trackerPath, patchTrackerText(scan, roadmap, formatTask), "utf8");
+  } else {
+    renderTrackerMarkdown(projectRoot, slug, roadmap);
+  }
   syncActiveState(projectRoot, slug, roadmap);
 }
 
@@ -239,76 +297,32 @@ function replaceStateLine(text, label, value) {
   return `${text.trimEnd()}\n${label}: ${value}\n`;
 }
 
+// Returns null when there is no tracker or it has no phases; callers fall back to cached state.
 function importRoadmapFromTracker(projectRoot, slug, { title } = {}) {
   const trackerPath = path.join(epicRoot(projectRoot, slug), "tracker.md");
   if (!fs.existsSync(trackerPath)) {
-    return createInitialRoadmapState({ slug, title: title || slug });
+    return null;
   }
 
-  const text = fs.readFileSync(trackerPath, "utf8");
-  const roadmap = {
+  const scan = scanTracker(fs.readFileSync(trackerPath, "utf8"));
+  if (scan.phases.length === 0) {
+    return null;
+  }
+
+  const allTasks = scan.phases.flatMap((phase) => phase.tasks.map((task) => ({ phase, task })));
+  const activeTask = allTasks.find(({ task }) => task.status === "doing");
+  return {
     schema_version: 1,
     slug,
-    title: title || readTrackerTitle(text) || slug,
-    active_phase_id: null,
-    active_task_id: null,
+    title: title || scan.title || slug,
+    active_phase_id: activeTask?.phase.id ?? scan.phases.find((phase) => phase.status === "doing")?.id ?? scan.phases[0].id,
+    active_task_id: activeTask?.task.id ?? null,
     statuses: TASK_STATUSES,
     kinds: TASK_KINDS,
-    phases: [],
-    follow_ups: [],
+    phases: scan.phases,
+    follow_ups: scan.follow_ups,
     updated_at: nowIso(),
   };
-  let currentPhase = null;
-  let currentTask = null;
-  let taskNumber = 0;
-
-  for (const rawLine of text.split(/\r?\n/u)) {
-    const phaseMatch = rawLine.match(/^###\s+(.+)$/u);
-    if (phaseMatch) {
-      currentPhase = createPhaseFromHeading(phaseMatch[1] ?? "", roadmap.phases.length + 1);
-      roadmap.phases.push(currentPhase);
-      currentTask = null;
-      taskNumber = 0;
-      continue;
-    }
-
-    const taskMatch = rawLine.match(/^- \[([ xX])\]\s+Kind:\s*([^|]+)\|\s*Status:\s*([^|]+)\|\s*(.+)$/u);
-    if (taskMatch && currentPhase) {
-      taskNumber += 1;
-      currentTask = {
-        id: `${currentPhase.id}-task-${taskNumber}`,
-        title: (taskMatch[4] ?? "").trim(),
-        kind: (taskMatch[2] ?? "implementation").trim(),
-        status: (taskMatch[3] ?? (taskMatch[1].toLowerCase() === "x" ? "done" : "todo")).trim(),
-        outcome: null,
-        surface: null,
-        acceptance: null,
-        docs: null,
-      };
-      currentPhase.tasks.push(currentTask);
-      if (currentTask.status === "doing") {
-        roadmap.active_phase_id = currentPhase.id;
-        roadmap.active_task_id = currentTask.id;
-      }
-      continue;
-    }
-
-    if (!currentTask) {
-      continue;
-    }
-
-    const detailMatch = rawLine.match(/^\s+-\s+(Outcome|Surface|Acceptance|Docs):\s*(.*)$/u);
-    if (detailMatch) {
-      currentTask[detailMatch[1].toLowerCase()] = detailMatch[2].trim();
-    }
-  }
-
-  for (const phase of roadmap.phases) {
-    phase.status = derivePhaseStatus(phase);
-  }
-
-  roadmap.active_phase_id ??= roadmap.phases.find((phase) => phase.status === "doing")?.id ?? roadmap.phases[0]?.id ?? null;
-  return roadmap.phases.length > 0 ? roadmap : createInitialRoadmapState({ slug, title: title || slug });
 }
 
 function trackerMarkdown(roadmap) {
@@ -340,24 +354,13 @@ function formatPhase(phase) {
 function formatTask(task) {
   const checked = task.status === "done" ? "x" : " ";
   const lines = [`- [${checked}] Kind: ${task.kind} | Status: ${task.status} | ${task.title}`];
+  if (task.hold) lines.push(`  - Hold: ${task.hold.kind} (${task.hold.item})`);
   if (task.outcome) lines.push(`  - Outcome: ${task.outcome}`);
   if (task.surface) lines.push(`  - Surface: ${task.surface}`);
   if (task.acceptance) lines.push(`  - Acceptance: ${task.acceptance}`);
   if (task.docs) lines.push(`  - Docs: ${task.docs}`);
   lines.push("");
   return lines;
-}
-
-function createPhaseFromHeading(heading, fallbackNumber) {
-  const match = heading.match(/^Phase\s+(\d+)\s*[:-]\s*(.+)$/iu);
-  const number = match ? Number(match[1]) : fallbackNumber;
-  const title = match ? match[2].trim() : heading.trim();
-  return {
-    id: `phase-${number}`,
-    title,
-    status: "todo",
-    tasks: [],
-  };
 }
 
 function phaseHeading(phase) {
@@ -377,6 +380,9 @@ function displayTask(roadmap, task) {
     return null;
   }
   const phase = findTaskPhase(roadmap, task.id);
+  if (!phase) {
+    return `Follow-up - ${stripFinalPeriod(task.title)}`;
+  }
   const taskNumber = taskNumberInPhase(phase, task.id);
   return `Phase ${phaseNumber(phase)} Task ${taskNumber} - ${stripFinalPeriod(task.title)}`;
 }
@@ -396,10 +402,6 @@ function stripFinalPeriod(value) {
   return String(value ?? "").replace(/\.$/u, "");
 }
 
-function readTrackerTitle(text) {
-  return text.match(/^Epic:\s*(.+)$/mu)?.[1]?.trim() ?? null;
-}
-
 function findPhase(roadmap, phaseId) {
   return roadmap.phases.find((phase) => phase.id === phaseId) ?? null;
 }
@@ -414,7 +416,7 @@ function findTask(roadmap, taskId) {
       return task;
     }
   }
-  return null;
+  return (roadmap.follow_ups ?? []).find((item) => item.id === taskId) ?? null;
 }
 
 function findTaskPhase(roadmap, taskId) {
@@ -435,16 +437,6 @@ function requireTask(roadmap, taskId) {
     throw new Error(`Task not found: ${taskId}`);
   }
   return task;
-}
-
-function derivePhaseStatus(phase) {
-  if (phase.tasks.some((task) => task.status === "doing")) {
-    return "doing";
-  }
-  if (phase.tasks.length > 0 && phase.tasks.every((task) => task.status === "done")) {
-    return "done";
-  }
-  return phase.status ?? "todo";
 }
 
 function assertStatus(status) {

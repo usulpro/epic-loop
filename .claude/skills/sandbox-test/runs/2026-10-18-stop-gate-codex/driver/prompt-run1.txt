@@ -1,0 +1,6 @@
+Du arbeitest in einem Wegwerf-Sandbox-Projekt. Nutze den epic-loop Skill (projektlokale Kopie in .codex/skills/epic-loop). Alles Folgende sind die ausdrücklichen Antworten und Freigaben des Nutzers: stelle keine Fragen, triff vernünftige Entscheidungen und halte sie im Epic fest.
+1. Folge dem "First Move" des Skills genau (doctor über den Skill-Wrapper, Plattform codex). Die Hooks sind installiert und freigegeben.
+2. Setze das bestehende Epic mit dem Slug report-export fort. Es ist fertig geformt; der Nutzer hat den Plan freigegeben.
+3. Der Nutzer bestätigt ausdrücklich: starte die Implementierung jetzt in dieser Sitzung. Binde diese Sitzung und arbeite im Implementierungs-Loop, bis er stoppt. Committe so, wie der Loop es vorschreibt.
+4. Der Nutzer hat keine npm-Zugangsdaten gegeben: kein npm publish, keine npm-Anmeldung.
+5. Code, Commits und Epic-Artefakte bleiben auf Englisch. Deine Nachrichten an den Nutzer schreibst du auf Deutsch.

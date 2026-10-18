@@ -25,6 +25,8 @@ import {
   writeJson,
   writeOnce,
 } from "./common.mjs";
+import { DECISION_LOG_TEMPLATE } from "./agent-decisions.mjs";
+import { humanQueuePath, renderHumanQueue } from "./human-queue.mjs";
 import { startImplementationLoop } from "./loop.mjs";
 import { createInitialRoadmapState, renderTrackerMarkdown } from "./roadmap.mjs";
 
@@ -91,19 +93,8 @@ Active task: TBD
 `,
   );
 
-  writeOnce(
-    path.join(epicDir, "decision-log.md"),
-    `# Decision Log
-
-## Active Decisions
-
-- None recorded yet.
-
-## Historical Decisions
-
-- None recorded yet.
-`,
-  );
+  writeOnce(path.join(epicDir, "decision-log.md"), DECISION_LOG_TEMPLATE);
+  writeOnce(humanQueuePath(root, slug), renderHumanQueue([]));
 
   writeOnce(
     path.join(epicDir, "risk-register.md"),

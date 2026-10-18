@@ -1,0 +1,90 @@
+# Review Engine (Phase 3)
+
+The engine that serves review pages. Decisions: D4–D6, D9, D11, D13, D20, D21.
+
+## Layout On Disk
+
+```
+.epic-loop/epics/<slug>/reviews/<review-id>/
+  page.html            agent-written, English only
+  assets/              screenshots and other evidence (or paths elsewhere in the project)
+  review.json          id, title, kind, created, schema (derived by check), status
+  i18n/<lang>.json     translations of the extracted text segments
+  answers.json         written by the engine: control values, savedAt, submittedAt
+  problems.jsonl       reports from the "something is wrong" button
+```
+
+Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
+
+## App And Routes (D24)
+
+- One app per project with routes:
+  - `/` lists the epics;
+  - `/<slug>` is the epic home: pending reviews as notifications with a count; Phase 5 grows it into the full overview;
+  - `/<slug>/reviews/<id>` is a review page.
+- The manager gives deep links to review routes.
+
+## Server (npm CLI)
+
+- `epic-loop serve`:
+  - one server per project, serving every epic's reviews (and later the viewer);
+  - `--detach` / `--status` / `--stop`;
+  - pidfile and chosen port in `.epic-loop/.runtime/server.json`;
+  - a dynamic port by default.
+- **API:**
+  - static files of a review;
+  - `GET`/`PATCH` answers, a per-control merge so two tabs do not overwrite each other;
+  - `POST submit` sets `submittedAt`;
+  - `POST problem` appends to `problems.jsonl`.
+
+  All writes are atomic.
+- Submit and problem reports are the doorbell events of Phase 4. Phase 3 only writes them to disk.
+- Host is `127.0.0.1`; local machine only (D12).
+
+## Runtime And Components
+
+- **The runtime** (one script and stylesheet served by the engine, injected into every page) owns:
+  - answer state, autosave and the save status;
+  - the submit bar with progress ("N of M answered");
+  - theme (light/dark);
+  - language switch (English first, second language from `i18n/`);
+  - navigation;
+  - the lightbox.
+- **Components v1** (custom elements):
+  - answer controls: choice (with the recommended option marked), checkbox, comment, select;
+  - `shot`: an image that opens in the lightbox with its group. The card's caption and controls move into the popup's side panel, prior-art trick;
+  - `iframe` (a URL or inline content);
+  - `table`;
+  - `diagram` (Mermaid, bundled, no network);
+  - `compare`: two or more renders side by side, overlay with opacity, flip one at a time, width presets;
+  - `links`;
+  - `card`/`section` helpers for the one-decision-per-card pattern.
+- **Custom blocks:** page JS may read and write answers only through the runtime API, so the derived schema and autosave still hold.
+- **"Something is wrong with this page"** (D21): injected by the server outside the page's DOM tree, with no dependency on page code. It works when the page is broken.
+
+## Check (static, D21)
+
+`epic-loop review check <review>`:
+- control names unique and non-empty;
+- every referenced local file exists;
+- no network script sources, no forms posting elsewhere;
+- writes the derived answer schema into `review.json`;
+- extracts text segments into `i18n/source.json`;
+- reports missing or stale translations for the chosen second language.
+
+## Subagents (D4)
+
+- **Page builder** (same model as the main session).
+  - Input: a review request from the manager: what to ask, why, the evidence, the proportionality level (D6).
+  - Output: `page.html` passing the check, plus a gate summary (id, URL, two lines).
+- **Translator** (cheap model).
+  - Input: `i18n/source.json` and the target language.
+  - Output: `i18n/<lang>.json`.
+- Both are instructed from a skill reference (component catalog plus content rules). The main thread receives only the result.
+- Content rules carried over from prior art:
+  - one decision per card;
+  - the consequence of each answer;
+  - evidence on the card;
+  - a recommendation that names the rule it follows;
+  - ask only what can be answered from the screen;
+  - a choice with no visible or cost difference is not asked.

@@ -67,7 +67,7 @@ function appendPromptMarkdown(filePath, entry) {
 }
 
 export function appendRoleReportIfPresent(projectRoot, slug, loop, payload, timestamp, reportRole) {
-  const message = readAssistantReportMessage(projectRoot, payload);
+  const message = savedStopReportMessage(projectRoot, loop, reportRole) ?? readAssistantReportMessage(projectRoot, payload);
   if (!message) {
     return null;
   }
@@ -92,6 +92,16 @@ export function appendRoleReportIfPresent(projectRoot, slug, loop, payload, time
     latest_report_path: path.relative(projectRoot, latestReportPath),
     timestamp,
   };
+}
+
+// A manager turn that accepted a stop saved an English stop report: that copy is the manager
+// report, whatever language the chat message is in.
+function savedStopReportMessage(projectRoot, loop, reportRole) {
+  if (reportRole !== "manager" || !loop.last_stop_report_path || loop.stop_report_copy_iteration !== loop.iteration) {
+    return null;
+  }
+  const reportPath = path.resolve(projectRoot, loop.last_stop_report_path);
+  return fs.existsSync(reportPath) ? fs.readFileSync(reportPath, "utf8").trim() : null;
 }
 
 function readAssistantReportMessage(projectRoot, payload) {
@@ -354,6 +364,8 @@ function progressSummary(entry) {
       return entry.recorded
         ? `Report of stopped turn ${entry.iteration ?? "?"} recorded for \`${entry.role ?? "unknown"}\`.`
         : `Stopped turn ${entry.iteration ?? "?"} ended without a final message; no report recorded.`;
+    case "stop-gate":
+      return `Stop review ${entry.outcome ?? "unknown"} a class ${entry.class ?? "?"} stop request (round ${entry.round ?? "?"}).`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:

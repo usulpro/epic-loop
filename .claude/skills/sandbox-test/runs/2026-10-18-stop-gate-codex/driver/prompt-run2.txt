@@ -1,0 +1,6 @@
+Du arbeitest in einem Wegwerf-Sandbox-Projekt. Nutze den epic-loop Skill (projektlokale Kopie in .codex/skills/epic-loop). Alles Folgende sind die ausdrücklichen Antworten und Freigaben des Nutzers: stelle keine Fragen.
+1. Folge dem "First Move" des Skills (doctor über den Skill-Wrapper, Plattform codex). Die Hooks sind installiert und freigegeben.
+2. Setze das Epic report-export fort. Ich habe deinen Stop-Bericht gelesen und alle drei Punkte in human-queue.md beantwortet (H1–H3 sind erledigt, die Antworten stehen dort). D1 lasse ich vorerst offen.
+3. Ich bestätige ausdrücklich: setze die Implementierung jetzt in dieser Sitzung fort. Binde diese Sitzung erneut mit bind-session.mjs --current --slug report-export --mode implementation und arbeite im Loop weiter, bis er stoppt. Committe so, wie der Loop es vorschreibt.
+4. Weiterhin kein npm publish und keine npm-Anmeldung.
+5. Code, Commits und Epic-Artefakte bleiben auf Englisch. Deine Nachrichten an mich schreibst du auf Deutsch.

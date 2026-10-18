@@ -77,13 +77,28 @@ node -<<*{{SkillDir}}*>>-/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-
 node -<<*{{SkillDir}}*>>-/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-" --role manager --reason "<housekeeping reason>"
 ```
 
-11. If the loop should stop or pause because of a real product, design, verification, dependency, ambiguous branch state, or user-decision blocker, run:
+11. You cannot set the loop idle. If you believe the loop should stop or pause, file a stop request; a manager stop review accepts it or sends you back with an instruction:
 
 ```bash
-node -<<*{{SkillDir}}*>>-/scripts/set-next-role.mjs --slug "-<<*{{EpicSlug}}*>>-" --role idle --reason "<why the implementation loop stops>"
+node -<<*{{SkillDir}}*>>-/scripts/request-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" --class "<A-F>" --reason "<why the loop should stop>" --blocks "<what the stop blocks>"
 ```
 
-`set-next-role` also completes this turn: when it ends, the loop starts the chosen role even if a background task you started still runs. Run it as your last step.
+   Stop classes:
+
+   - A: the phase or the epic is done
+   - B: needs the human's hands or authority (publish, release, sign-in, explicit authorization)
+   - C: a decision with a reasonable default
+   - D: environment friction (busy port, foreign resources, flaky tool)
+   - E: ordering or bookkeeping
+   - F: a product decision with no default
+
+   Whenever you take a reasonable default yourself (class C), with or without a stop request, record it with `node -<<*{{SkillDir}}*>>-/scripts/agent-decision.mjs add --slug "-<<*{{EpicSlug}}*>>-" --title "<decision>" --default "<default taken>" --why "<reason>"`. Never hand-write agent-made decisions into `decision-log.md`: only the script's entries reach the human for confirmation.
+
+   When a task needs the human's hands, authority or a product decision (B or F), file a stop request for it even if other work is independent: the manager queues the item and sends you on with the independent work. Never mark such a task `blocked` (that is for technical blockers you cannot remove); after the challenge, set it `on-hold` with the H id the manager names.
+
+   After a challenge, follow "After A Challenge" in the techlead role reference.
+
+`set-next-role` and `request-stop` also complete this turn: when it ends, the loop starts the chosen role even if a background task you started still runs. Run one of them as your last step.
 
 Report briefly and stop:
 
