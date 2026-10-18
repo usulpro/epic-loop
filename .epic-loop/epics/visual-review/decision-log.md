@@ -142,6 +142,11 @@
   - Default taken: After review-stop accepts, the manager commits the saved stop report together with the human-queue and decision-log changes of that review, as 'docs(epic): stop report NN (class X)'; it is the loop's message to the human, not housekeeping
   - Why: Sandbox run 5: an accepted stop left stop-reports/NN and queue changes uncommitted; the final report of an epic stayed uncommitted for good
 
+- **D33 — Phase 1 merges even if the Codex check fails; Codex becomes tech debt** (2026-10-18; Oleg).
+  - The Codex half of the Phase 1 verification is one minimal mechanics run (run 8: 3 tasks, one session, low reasoning effort, no user config, a 14-turn watchdog), not the full Claude scenario.
+  - If it cannot be completed, Phase 1 is merged anyway and the Codex verification is recorded as tech debt.
+  - Why: run 7 used the whole Codex quota (11.3 M tokens) on the full 9-task scenario; Codex only needs the role mechanics checked.
+
 ## Open Questions
 
 - **Q1 — Stop-gate boundary.** Resolved by D16 and D17.

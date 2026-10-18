@@ -130,7 +130,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the final report satisfies the stop-report checklist.
   - Cleanup: archive the sandbox runs under the sandbox-test `runs/` log; kill the foreign port holder.
   - Docs: `docs/stop-gate.md`.
-  - Progress: Claude Code passed in runs 5 and 6. Codex run 7 is partial (usage limit): B and D challenges and Stop-hook chaining pass; the F stop, report commits and rebind are not reached yet. Rerun after the limit resets (H2).
+  - Progress: Claude Code passed in runs 5 and 6. Codex run 7 is partial (usage limit): B and D challenges and Stop-hook chaining pass. The Codex half is finished by a minimal mechanics run (run 8, D33); if that fails, Phase 1 merges and Codex is recorded as tech debt.
 
 - [ ] Kind: review | Status: todo | Open the Phase 1 pull request and stop for the human's merge
   - Outcome: a pull request from `feature/manager-stop-gate` to `main` with a summary of the stop gate, the human queue, the hold kinds and the stop report, plus links to the verification runs. Unit tests and `validate` pass on the branch. The loop stops so the human can review and merge.

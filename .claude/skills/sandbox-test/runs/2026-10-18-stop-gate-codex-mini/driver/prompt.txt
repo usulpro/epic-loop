@@ -1,0 +1,5 @@
+You are working in a disposable sandbox project. Use the epic-loop skill (project-local copy in .codex/skills/epic-loop). Everything below is the user's explicit answer and approval: do not ask questions.
+1. Follow the skill's First Move (doctor through the skill wrapper, platform codex). Hooks are installed and approved.
+2. Continue the existing epic with the slug mini. It is shaped and approved.
+3. The user explicitly confirms: start implementation now in this session. Bind this session and work in the implementation loop until it stops. Commit as the loop prescribes.
+4. The user gave no npm credentials: no npm publish, no npm login.
