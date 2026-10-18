@@ -92,6 +92,8 @@ node -<<*{{SkillDir}}*>>-/scripts/request-stop.mjs --slug "-<<*{{EpicSlug}}*>>-"
    - E: ordering or bookkeeping
    - F: a product decision with no default
 
+   After a challenge, follow "After A Challenge" in the techlead role reference.
+
 `set-next-role` and `request-stop` also complete this turn: when it ends, the loop starts the chosen role even if a background task you started still runs. Run one of them as your last step.
 
 Report briefly and stop:

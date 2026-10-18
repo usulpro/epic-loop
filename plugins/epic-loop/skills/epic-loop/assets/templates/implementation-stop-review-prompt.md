@@ -23,10 +23,18 @@ node -<<*{{SkillDir}}*>>-/scripts/role-summary.mjs --slug "-<<*{{EpicSlug}}*>>-"
 
 Then read only the human-facing epic artifacts and repository state needed to judge the request. Do not read `.epic-loop/epics/-<<*{{EpicSlug}}*>>-/.runtime/**`.
 
-Apply the stop-review rules in the manager role reference, then resolve the request with exactly one command:
+Rule for this request (full table: "Rules By Class" in the manager role reference):
+
+-<<*{{StopClassRule}}*>>-
+
+Independent work: read `tracker.md` and pick a not-done task that does not need the item, preferring the active phase, then later phases when the roadmap order allows.
+
+The challenge instruction must be concrete: the task to continue with, any H id you created, and the command the techlead should run. You queue human items; the techlead records agent-made decisions, sets `on-hold` and reorders.
+
+Then resolve the request with exactly one command:
 
 ```bash
-# accept: the loop goes idle; your final message is the stop report
+# accept: the loop goes idle; your final message is the report
 node -<<*{{SkillDir}}*>>-/scripts/review-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" --outcome accepted
 
 # challenge: the techlead resumes with your instruction in its prompt
@@ -35,5 +43,5 @@ node -<<*{{SkillDir}}*>>-/scripts/review-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" 
 
 Do not use `set-next-role.mjs` in this turn. Run `review-stop.mjs` as your last command, then stop after your final message:
 
-- accepted: the stop report for the human;
+- accepted: end with a short report: why the loop stopped and what the human must do;
 - challenged: one or two lines on why the stop was challenged and what the techlead should do.

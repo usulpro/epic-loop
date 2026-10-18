@@ -262,3 +262,58 @@ for (const platform of STOP_GATE_PLATFORMS) {
     }
   });
 }
+
+const CLASS_RULE_EXPECTATIONS = {
+  A: [/Accept\. Never challenge a class A stop\./u],
+  B: [
+    /independent work left: queue the item, then challenge/iu,
+    /human-queue\.mjs add --slug "stop-gate" --kind human-action/u,
+    /`security-hold`/u,
+    /Nothing independent left: accept\./u,
+  ],
+  C: [/Challenge with: "take the default <X>, record it with `agent-decision\.mjs add`/u, /--kind costly-decision/u],
+  D: [/Challenge with a concrete workaround/u, /Accept only when nothing else is left\./u],
+  E: [/Never a stop\. Challenge with: "reorder/u],
+  F: [/human-queue\.mjs add --slug "stop-gate" --kind product-decision/u, /Nothing independent left: accept\./u],
+};
+
+test("the stop-review prompt carries the rule of the requested class only", () => {
+  for (const [stopClass, patterns] of Object.entries(CLASS_RULE_EXPECTATIONS)) {
+    const ctx = setupStopGateLoop(`stop-gate-rule-${stopClass}-`, "codex", "techlead");
+    try {
+      assertSuccess(ctx.requestStop(stopClass, `reason for ${stopClass}`, "the next task"));
+      const review = ctx.stop().reason;
+      assert.match(review, new RegExp(`^Class ${stopClass}, `, "mu"), stopClass);
+      for (const other of Object.keys(CLASS_RULE_EXPECTATIONS).filter((key) => key !== stopClass)) {
+        assert.doesNotMatch(review, new RegExp(`^Class ${other}, `, "mu"), `${stopClass} prompt has the ${other} rule`);
+      }
+      for (const pattern of patterns) {
+        assert.match(review, pattern, stopClass);
+      }
+      assert.doesNotMatch(review, /repeated request after a challenge: accept it/u);
+      assert.doesNotMatch(review, /<HumanQueueAdd>|-<<\*\{\{/u);
+    } finally {
+      fs.rmSync(ctx.root, { force: true, recursive: true });
+    }
+  }
+});
+
+test("a repeated stop request is reviewed with the accept rule and the challenge points to the techlead guidance", () => {
+  const ctx = setupStopGateLoop("stop-gate-rule-round-2-", "codex", "techlead");
+
+  try {
+    assertSuccess(ctx.requestStop("E", "task 3 must wait for task 4", "task 3"));
+    assert.equal(ctx.stop().decision, "block");
+    assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "challenged", "--instruction", "Reorder: start task 4 first."]));
+
+    const techlead = ctx.stop().reason;
+    assert.match(techlead, /What to do for each class: see "After A Challenge" in .*implementation-techlead-role\.md\./u);
+
+    assertSuccess(ctx.requestStop("E", "task 4 needs task 3 too", "tasks 3 and 4"));
+    const review = ctx.stop().reason;
+    assert.match(review, /This is a repeated request after a challenge: accept it\./u);
+    assert.match(review, /^Class E, /mu);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});

@@ -12,6 +12,7 @@ Counterpart role: [implementation-techlead-role.md](implementation-techlead-role
 - [Compaction Rules](#compaction-rules)
 - [Archive And Stub Format](#archive-and-stub-format)
 - [Stop Review](#stop-review)
+- [Rules By Class](#rules-by-class)
 - [Handoff Constraint](#handoff-constraint)
 
 ## Identity
@@ -160,6 +161,25 @@ node <skill-dir>/scripts/review-stop.mjs --slug "<epic-slug>" --outcome challeng
 - `set-next-role.mjs` is refused in a stop-review turn.
 
 Do not use `set-next-role --role idle` in a housekeeping turn; it is refused there too. A user stop (`stop-loop.mjs`, `stop loop mode`) is final and is not reviewed.
+
+## Rules By Class
+
+The stop-review prompt carries the rule for the request's class (source: `STOP_CLASS_RULES` in `scripts/lib/loop-prompts.mjs`). Summary:
+
+| Class | Meaning | Review |
+|---|---|---|
+| A | phase or epic done | accept, never challenge |
+| B | needs the human's hands or authority | independent work left: queue it (`human-action`, or `security-hold`), challenge to continue; else accept |
+| C | decision with a reasonable default | challenge: take the default, record it as agent-made, continue; expensive to reverse: treat as B with `costly-decision` |
+| D | environment friction | challenge with a workaround or a deferred verification; accept only when nothing else is left |
+| E | ordering or bookkeeping | never a stop: challenge to reorder or fix the bookkeeping |
+| F | product decision with no default | as B with `product-decision` |
+
+- **Independent work:** a not-done task in `tracker.md` that does not need the item, preferring the active phase, then later phases when the roadmap order allows.
+- **One challenge round:** at round 2 or later, accept.
+- **Never override A, B or F:** for B and F only check whether independent work is left.
+- **Who records what:** the manager queues B, F and costly-C items with `human-queue.mjs add`. The techlead records agent-made decisions (`agent-decision.mjs add`), sets `on-hold` and reorders.
+- **A challenge instruction is concrete:** the task to continue with, any H id created, and the command the techlead should run.
 
 ## Handoff Constraint
 

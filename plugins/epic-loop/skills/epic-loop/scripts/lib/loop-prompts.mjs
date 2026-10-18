@@ -38,17 +38,59 @@ export function buildTechleadPrompt(slug, iteration, stopChallenge = null) {
   return [header, "", formatStopChallenge(stopChallenge), ...rest].join("\n");
 }
 
+// Stop-review rules by class (D16): what the manager does with each kind of stop request.
+// The manager queues what needs the human; the techlead records agent-made decisions, sets
+// on-hold and reorders (D23). The manager role reference restates these rules.
+export const STOP_CLASS_RULES = {
+  A: ["Class A, done: a phase or the epic is complete.", "- Accept. Never challenge a class A stop."],
+  B: [
+    "Class B, needs the human's hands or authority (publish, release, an upgrade outside the repo, sign-in, an attended session, explicit authorization).",
+    "- Never override the need itself; only check whether independent work is left.",
+    "- Independent work left: queue the item, then challenge with the H id, the task to put on-hold, and the independent task to continue with.",
+    "- Queue it with kind `human-action`, or `security-hold` when a guard stopped a dangerous operation:",
+    '  `<HumanQueueAdd> --kind human-action --ask "<what the human must do>" --why "<why>" --blocks "<needed before task ...>"`',
+    "- Nothing independent left: accept.",
+  ],
+  C: [
+    "Class C, a decision with a reasonable default.",
+    '- Challenge with: "take the default <X>, record it with `agent-decision.mjs add` (agent-made), continue with <task>."',
+    "- If the default is expensive to reverse, treat it like class B with kind `costly-decision`:",
+    '  `<HumanQueueAdd> --kind costly-decision --ask "<the decision>" --why "<why it is costly>" --blocks "<needed before task ...>" --default "<X>"`',
+  ],
+  D: [
+    "Class D, environment friction (a busy port, foreign resources, a flaky tool).",
+    "- Challenge with a concrete workaround (another port, a disposable resource, a retry), or with deferring the affected verification to the phase verification task and continuing.",
+    "- Accept only when nothing else is left.",
+  ],
+  E: ["Class E, ordering or bookkeeping.", '- Never a stop. Challenge with: "reorder / fix the bookkeeping, then continue with <task>."'],
+  F: [
+    "Class F, a product decision with no default.",
+    "- Never override the need itself; only check whether independent work is left.",
+    "- Independent work left: queue the decision, then challenge with the H id, the task to put on-hold, and the independent task to continue with:",
+    '  `<HumanQueueAdd> --kind product-decision --ask "<the decision>" --why "<why it has no default>" --blocks "<needed before task ...>"`',
+    "- Nothing independent left: accept.",
+  ],
+};
+export const REPEATED_STOP_RULE = "This is a repeated request after a challenge: accept it. There is only one challenge round.";
+
 // The manager is reviewing a stop the techlead requested, instead of doing housekeeping.
 export function buildStopReviewPrompt(slug, iteration, stopRequest) {
   return renderTemplate(fs.readFileSync(STOP_REVIEW_PROMPT_TEMPLATE_PATH, "utf8"), {
     EpicSlug: slug,
     Iteration: String(iteration),
     SkillDir: SKILL_DIR,
+    StopClassRule: formatStopClassRule(slug, stopRequest),
     StopBlocks: stopRequest.blocks ?? "",
     StopClass: stopRequest.class ?? "",
     StopReason: stopRequest.reason ?? "",
     StopRound: String(stopRequest.round ?? 1),
   });
+}
+
+function formatStopClassRule(slug, stopRequest) {
+  const humanQueueAdd = `node ${path.join(SKILL_DIR, "scripts", "human-queue.mjs")} add --slug "${slug}"`;
+  const rule = (STOP_CLASS_RULES[stopRequest.class] ?? []).map((line) => line.replace("<HumanQueueAdd>", humanQueueAdd));
+  return (stopRequest.round ?? 1) >= 2 ? [REPEATED_STOP_RULE, "", ...rule].join("\n") : rule.join("\n");
 }
 
 function formatStopChallenge(challenge) {
@@ -65,6 +107,7 @@ function formatStopChallenge(challenge) {
     challenge.instruction,
     "",
     "Follow the instruction. If the stop is still required, file the stop request again with new evidence; the manager accepts a repeated request.",
+    `What to do for each class: see "After A Challenge" in ${path.join(SKILL_DIR, "references", "implementation-techlead-role.md")}.`,
   ].join("\n");
 }
 

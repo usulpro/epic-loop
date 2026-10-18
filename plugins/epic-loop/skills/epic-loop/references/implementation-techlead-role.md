@@ -324,3 +324,12 @@ Stop classes:
 - F: a product decision with no default
 
 The next turn is a manager stop review. If it accepts, the loop goes idle. If it challenges, your next prompt starts with "Stop Request Challenged" and the manager's instruction: follow it, or file the request again with new evidence (that is round 2). The final exit from implementation is a class A request after `implementation-end-housekeeping`.
+
+### After A Challenge
+
+- **B / F:** the manager queued the item. Put the blocked task on hold with `set-task-status.mjs --task-id <id> --status on-hold --hold-kind <kind> --hold-item H<n>`, then brief the independent task it named.
+- **C:** record the default with `agent-decision.mjs add --slug "<epic-slug>" --title "<decision>" --default "<X>" --why "<reason>"`, then continue on it. A costly C is handled like B.
+- **D:** apply the workaround, or defer the affected verification to the phase verification task, and continue.
+- **E:** fix the order or the bookkeeping in `tracker.md`, then continue with the named task.
+
+Re-file the same stop only with new evidence that the instruction cannot be followed; the manager accepts a repeated request.

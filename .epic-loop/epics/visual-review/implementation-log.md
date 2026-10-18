@@ -48,3 +48,37 @@
   - pnpm run validate passes
 - Residual risk: Engineer stopped on the on-hold part: every task/phase script fully re-renders tracker.md from a stale .runtime/roadmap-state.json and drops hand-written detail (reproduced in a temp root; confirmed in roadmap.mjs finalizeRoadmapMutation/ensureRoadmapState). Techlead took class C default D31 (agent-made): scripts re-import from tracker.md and patch it in place. Remaining scope: in-place tracker edits plus on-hold status.
 - Commit: fdc38ec
+
+## 2026-10-18T11:45:05+00:00 - done
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Agent-made decisions and the human queue as scripted epic artifacts
+- Verdict: done
+- Changed:
+  - lib/tracker-file.mjs (scan + in-place patch)
+  - lib/roadmap.mjs (fresh import, on-hold, follow-up lookup)
+  - artifact-model and SKILL.md
+  - tests/unit/tracker-in-place.test.mjs
+- Verification:
+  - Techlead reran pnpm run test:unit 141/141 and pnpm run validate
+  - read the roadmap.mjs diff
+  - closed this task and started the next one with the new source scripts on this epic: the tracker diff is exactly the two task lines, state-of-epic synced, the stale 'Phase 1 - Shape The Epic' bookkeeping is gone
+- Residual risk: D31 is agent-made and unconfirmed. The live loop still runs the old runtime copy; do not use its roadmap scripts on this epic until self-update after merge (use the source scripts with --root . instead).
+- Commit: fdc38ec, 08844f1
+
+## 2026-10-18T11:48:10+00:00 - done
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Manager stop-review rules for classes A–F
+- Verdict: done
+- Changed:
+  - lib/loop-prompts.mjs (STOP_CLASS_RULES, REPEATED_STOP_RULE, class rule block, challenge pointer)
+  - stop-review and techlead prompt templates
+  - manager role 'Rules By Class'
+  - techlead role 'After A Challenge'
+  - 2 tests in stop-gate-contracts
+- Verification:
+  - Techlead reran pnpm run test:unit 143/143 and validate
+  - reviewed the rule data against D16/D23
+  - prompt-level contracts cover all six classes and round 2
+- Residual risk: Behavioural acceptance (a real manager applying the rules per class in fixture runs) is owned by the Phase 1 verification task, as the tracker states.

@@ -77,7 +77,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - existing epics without the new file keep working.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D17).
 
-- [ ] Kind: implementation | Status: doing | Manager stop-review rules for classes A–F
+- [x] Kind: implementation | Status: done | Manager stop-review rules for classes A–F
   - Outcome: in a stop-review turn the manager applies D16:
     - A is accepted;
     - B and F continue on independent work and queue the item, or are accepted when nothing independent is left;
@@ -87,7 +87,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: each class has one scripted fixture case in which a stop request reaches a stop-review turn; the manager's outcome and instruction match D16 in each case (run as part of the phase verification task).
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16).
 
-- [ ] Kind: implementation | Status: todo | Human-readable stop report from the manager
+- [ ] Kind: implementation | Status: doing | Human-readable stop report from the manager
   - Outcome:
     - When the manager accepts a stop, its final message is a report measured against the epic's intent: goals vs. state, outcomes since the last report, why it stopped, what the human must do or decide (human queue, with defaults), agent-made decisions to confirm, and how to resume.
     - The chat message is in the user's language. An English copy is saved in the epic and recorded as the manager report.
