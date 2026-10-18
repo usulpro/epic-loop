@@ -6,6 +6,7 @@ const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 export const MANAGER_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-manager-prompt.md");
 export const TECHLEAD_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-techlead-prompt.md");
+export const STOP_REVIEW_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-stop-review-prompt.md");
 const LATEST_ENGINEER_REPORT_RELATIVE_PATH = ".runtime/latest-engineer-report.md";
 const LATEST_MANAGER_REPORT_RELATIVE_PATH = ".runtime/latest-manager-report.md";
 const CLAUDE_MANUAL_CONTINUE_NOTE = [
@@ -16,17 +17,55 @@ const CLAUDE_MANUAL_CONTINUE_NOTE = [
   "Tell the user that when they are ready to resume they should send: `continue loop mode`.",
 ].join("\n");
 
-export function buildTechleadPrompt(slug, iteration) {
+export function buildTechleadPrompt(slug, iteration, stopChallenge = null) {
   const promptPath = `.epic-loop/epics/${slug}/.runtime/current-engineer-prompt.md`;
   const latestEngineerReportPath = `.epic-loop/epics/${slug}/${LATEST_ENGINEER_REPORT_RELATIVE_PATH}`;
 
-  return renderTemplate(fs.readFileSync(TECHLEAD_PROMPT_TEMPLATE_PATH, "utf8"), {
+  const prompt = renderTemplate(fs.readFileSync(TECHLEAD_PROMPT_TEMPLATE_PATH, "utf8"), {
     EngineerPromptPath: promptPath,
     EpicSlug: slug,
     Iteration: String(iteration),
     LatestEngineerReportPath: latestEngineerReportPath,
     SkillDir: SKILL_DIR,
   });
+
+  if (!stopChallenge) {
+    return prompt;
+  }
+
+  // Right under the header line, so the challenge frames the whole turn.
+  const [header, ...rest] = prompt.split("\n");
+  return [header, "", formatStopChallenge(stopChallenge), ...rest].join("\n");
+}
+
+// The manager is reviewing a stop the techlead requested, instead of doing housekeeping.
+export function buildStopReviewPrompt(slug, iteration, stopRequest) {
+  return renderTemplate(fs.readFileSync(STOP_REVIEW_PROMPT_TEMPLATE_PATH, "utf8"), {
+    EpicSlug: slug,
+    Iteration: String(iteration),
+    SkillDir: SKILL_DIR,
+    StopBlocks: stopRequest.blocks ?? "",
+    StopClass: stopRequest.class ?? "",
+    StopReason: stopRequest.reason ?? "",
+    StopRound: String(stopRequest.round ?? 1),
+  });
+}
+
+function formatStopChallenge(challenge) {
+  return [
+    "## Stop Request Challenged",
+    "",
+    `The manager stop review did not accept your stop request (class ${challenge.class}, round ${challenge.round}).`,
+    "",
+    `- Your reason: ${challenge.reason}`,
+    `- What it blocks: ${challenge.blocks}`,
+    "",
+    "Manager instruction:",
+    "",
+    challenge.instruction,
+    "",
+    "Follow the instruction. If the stop is still required, file the stop request again with new evidence; the manager accepts a repeated request.",
+  ].join("\n");
 }
 
 export function buildManagerPrompt(slug, iteration, housekeepingReason) {

@@ -23,11 +23,14 @@ import {
 } from "./loop-claude-cap.mjs";
 import {
   MANAGER_PROMPT_TEMPLATE_PATH,
+  STOP_REVIEW_PROMPT_TEMPLATE_PATH,
   TECHLEAD_PROMPT_TEMPLATE_PATH,
   appendClaudeManualContinueNote,
   buildEngineerPrompt,
   buildManagerPrompt,
+  buildStopReviewPrompt,
   buildTechleadPrompt,
+  SKILL_DIR,
   normalizePromptFile,
   prependResumeNote,
 } from "./loop-prompts.mjs";
@@ -68,7 +71,11 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
       next_role: "manager",
       prompt_file: null,
       status: "running",
+      stop_challenge: null,
       stop_report_iteration: null,
+      stop_request: null,
+      stop_review_iteration: null,
+      stop_rounds: 0,
     },
     timestamp,
   );
@@ -117,6 +124,22 @@ export function setNextRole(flags = {}) {
   const loop = normalizeObject(runtime.implementation_loop);
   const status = role === "idle" ? "idle" : "running";
 
+  if (hasOpenTurn(loop) && loop.current_role === "manager" && loop.stop_request && loop.stop_review_iteration === loop.iteration) {
+    throw new Error(`This is a stop-review turn: resolve the stop request with ${skillScript("review-stop.mjs")} instead of set-next-role.`);
+  }
+
+  // Only a manager stop review ends the loop from inside a role turn (see request-stop.mjs).
+  // Outside a turn, idle stays available to tooling.
+  if (role === "idle" && hasOpenTurn(loop) && loop.current_role === "techlead") {
+    throw new Error(`The techlead cannot set the loop idle. File a stop request with ${skillScript("request-stop.mjs")} --class A|B|C|D|E|F; a manager stop review decides.`);
+  }
+
+  if (role === "idle" && hasOpenTurn(loop) && loop.current_role === "manager") {
+    throw new Error(
+      `A manager housekeeping turn cannot set the loop idle. Only a stop review (${skillScript("review-stop.mjs")}) ends the loop; the techlead files one with request-stop.mjs.`,
+    );
+  }
+
   writeJson(runtimePath, {
     ...runtime,
     implementation_loop: {
@@ -129,6 +152,10 @@ export function setNextRole(flags = {}) {
       next_role_set_iteration: hasOpenTurn(loop) ? loop.iteration : (loop.next_role_set_iteration ?? null),
       prompt_file: promptFile,
       status,
+      // A role choice replaces any stop request filed earlier in the turn; an engineer turn
+      // ends the run of consecutive stop requests.
+      stop_request: null,
+      ...(role === "engineer" ? { stop_rounds: 0 } : {}),
     },
     implementation_submode: role === "idle" ? (runtime.implementation_submode ?? "techlead") : role,
     updated_at: timestamp,
@@ -293,18 +320,12 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
 
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
   const resumesAbortedTurn = loop.resume_after_user_turn && role === loop.current_role;
-  const prompt =
-    role === "manager"
-      ? buildManagerPrompt(slug, iteration, capProximityRoute?.reason ?? loop.last_reason ?? null)
-      : role === "techlead"
-        ? buildTechleadPrompt(slug, iteration)
-        : buildEngineerPrompt(projectRoot, slug, loop, iteration);
+  const { prompt, promptFile, stopChallenge, stopReview } = buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute);
   // Only the final housekeeping turn before a finite-cap pause needs the manual-continue
   // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
   // so appending it to every prompt would misinform the agent.
   const resumedPrompt = resumesAbortedTurn ? prependResumeNote(prompt, role) : prompt;
   const platformPrompt = platform === "claude-code" && capProximityRoute ? appendClaudeManualContinueNote(resumedPrompt) : resumedPrompt;
-  const promptFile = role === "manager" ? MANAGER_PROMPT_TEMPLATE_PATH : role === "engineer" ? (loop.prompt_file ?? null) : TECHLEAD_PROMPT_TEMPLATE_PATH;
   const followingRole = role === "engineer" ? "techlead" : role === "manager" ? "techlead" : WAITING_FOR_TURN_TRANSITION;
 
   const nextLoop = incrementClaudeBlockCount(
@@ -325,6 +346,8 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       next_role: followingRole,
       resume_after_user_turn: false,
       status: "running",
+      stop_challenge: stopChallenge ? null : (loop.stop_challenge ?? null),
+      stop_review_iteration: stopReview ? iteration : null,
       turn_key: turnKeyOf(payload) ?? loop.turn_key ?? null,
     },
     platform,
@@ -349,6 +372,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     role,
     session_id: payload.session_id ?? null,
     slug,
+    ...(stopReview ? { stop_review: true, stop_class: stopReview.class } : {}),
     stop_hook_active: payload.stop_hook_active === true,
     task: runtime.active_task ?? null,
     timestamp,
@@ -370,6 +394,28 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     decision: "block",
     reason: platformPrompt,
   };
+}
+
+function buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute) {
+  // A manager turn routed by request-stop reviews that stop instead of doing housekeeping.
+  const stopReview = role === "manager" && loop.stop_request ? loop.stop_request : null;
+  // A challenged stop is delivered to the next techlead turn once.
+  const stopChallenge = role === "techlead" && loop.stop_challenge ? loop.stop_challenge : null;
+
+  if (stopReview) {
+    return { prompt: buildStopReviewPrompt(slug, iteration, stopReview), promptFile: STOP_REVIEW_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
+  }
+
+  if (role === "manager") {
+    const prompt = buildManagerPrompt(slug, iteration, capProximityRoute?.reason ?? loop.last_reason ?? null);
+    return { prompt, promptFile: MANAGER_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
+  }
+
+  if (role === "techlead") {
+    return { prompt: buildTechleadPrompt(slug, iteration, stopChallenge), promptFile: TECHLEAD_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
+  }
+
+  return { prompt: buildEngineerPrompt(projectRoot, slug, loop, iteration), promptFile: loop.prompt_file ?? null, stopChallenge, stopReview };
 }
 
 export function interruptOpenTurn(flags = {}) {
@@ -617,6 +663,10 @@ export function recordTurnInterrupted(projectRoot, slug, runtime, loop, { durati
 function activeDurationMs(loop, timestamp, backgroundWaitMs) {
   const elapsedMs = durationMsBetween(loop.active_turn_started_at, timestamp);
   return elapsedMs === null || elapsedMs === undefined ? elapsedMs : Math.max(0, elapsedMs - backgroundWaitMs);
+}
+
+function skillScript(name) {
+  return path.join(SKILL_DIR, "scripts", name);
 }
 
 function parseInterruptDuration(flags) {

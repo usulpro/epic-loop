@@ -11,13 +11,14 @@ Counterpart role: [implementation-techlead-role.md](implementation-techlead-role
 - [Implementation-Start Housekeeping](#implementation-start-housekeeping)
 - [Compaction Rules](#compaction-rules)
 - [Archive And Stub Format](#archive-and-stub-format)
+- [Stop Review](#stop-review)
 - [Handoff Constraint](#handoff-constraint)
 
 ## Identity
 
 The manager owns housekeeping inside implementation mode.
 
-It does not implement product code. It does not choose product direction. It does not hand control to engineer or idle. It performs housekeeping, reports the result, and always returns control to techlead.
+It does not implement product code. It does not choose product direction. It never hands control to engineer. It performs housekeeping, reports the result, and returns control to techlead. It also runs the stop review: the only path by which the loop goes idle from inside the loop.
 
 ## When Manager Runs
 
@@ -142,6 +143,24 @@ Archived to `tracker.phase-1.previous-layer-01.md`.
 Read only if you need historical closure context for this phase.
 ```
 
+## Stop Review
+
+The techlead cannot set the loop idle; it files `request-stop.mjs` with a class (A–F), a reason and what the stop blocks. The next manager turn is then a stop review instead of housekeeping. Its prompt carries the class, reason, blocks and round (round 2 or later is a repeated request after a challenge).
+
+Resolve the request with exactly one command, as the last step of the turn:
+
+```bash
+node <skill-dir>/scripts/review-stop.mjs --slug "<epic-slug>" --outcome accepted
+node <skill-dir>/scripts/review-stop.mjs --slug "<epic-slug>" --outcome challenged --instruction "<concrete instruction for the techlead>"
+```
+
+- `accepted`: the loop goes idle; the final message is the stop report and is recorded as the manager report.
+- `challenged`: the techlead resumes, with the instruction shown once at the top of its prompt.
+- Each review logs a `stop-gate` progress event.
+- `set-next-role.mjs` is refused in a stop-review turn.
+
+Do not use `set-next-role --role idle` in a housekeeping turn; it is refused there too. A user stop (`stop-loop.mjs`, `stop loop mode`) is final and is not reviewed.
+
 ## Handoff Constraint
 
-Manager never hands control to engineer or idle. It always returns to techlead, which then decides whether implementation continues, pauses, or stops.
+Manager never hands control to engineer. After housekeeping it always returns to techlead. After a stop review it either returns to techlead (challenged) or leaves the loop idle (accepted).

@@ -4,7 +4,7 @@ Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
 Active phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
-Active task: TBD
+Active task: Agent-made decisions and the human queue as scripted epic artifacts
 
 ## Read First
 

@@ -56,7 +56,7 @@ The techlead also performs the technical loop duties:
 - make the required commits for task closure and intermediate checkpoints
 - fold task-related epic artifact cleanup into the task commit instead of creating standalone housekeeping commits
 - write the next engineer brief
-- hand the loop to `engineer`, trigger `manager` housekeeping, or set it `idle`
+- hand the loop to `engineer`, trigger `manager` housekeeping, or file a stop request (it never sets `idle` itself)
 
 Useful control scripts:
 
@@ -308,8 +308,19 @@ Valid reasons include:
 
 Manager always returns to techlead automatically. Techlead must not expect manager to hand control directly to engineer or idle.
 
-When implementation should pause or stop, set the loop idle:
+When implementation should pause or stop, file a stop request. `set-next-role --role idle` is refused inside a techlead turn:
 
 ```bash
-node <skill-dir>/scripts/set-next-role.mjs --slug "<epic-slug>" --role idle --reason "<why the implementation loop stops>"
+node <skill-dir>/scripts/request-stop.mjs --slug "<epic-slug>" --class "<A-F>" --reason "<why the loop should stop>" --blocks "<what the stop blocks>"
 ```
+
+Stop classes:
+
+- A: the phase or the epic is done
+- B: needs the human's hands or authority (publish, release, sign-in, explicit authorization)
+- C: a decision with a reasonable default
+- D: environment friction (busy port, foreign resources, flaky tool)
+- E: ordering or bookkeeping
+- F: a product decision with no default
+
+The next turn is a manager stop review. If it accepts, the loop goes idle. If it challenges, your next prompt starts with "Stop Request Challenged" and the manager's instruction: follow it, or file the request again with new evidence (that is round 2). The final exit from implementation is a class A request after `implementation-end-housekeeping`.

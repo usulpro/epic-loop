@@ -354,6 +354,8 @@ function progressSummary(entry) {
       return entry.recorded
         ? `Report of stopped turn ${entry.iteration ?? "?"} recorded for \`${entry.role ?? "unknown"}\`.`
         : `Stopped turn ${entry.iteration ?? "?"} ended without a final message; no report recorded.`;
+    case "stop-gate":
+      return `Stop review ${entry.outcome ?? "unknown"} a class ${entry.class ?? "?"} stop request (round ${entry.round ?? "?"}).`;
     case "skip":
       return `Continuation skipped: ${entry.reason ?? "no reason recorded"}.`;
     default:

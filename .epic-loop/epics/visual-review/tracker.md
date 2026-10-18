@@ -43,11 +43,11 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 1: Manager Stop Gate And Human-Readable Stop Reports
 
-- Phase status: todo
+- Phase status: doing
 - Delivery: main checkout, branch `feature/manager-stop-gate` from `main`, merged into `main` before the other phases (D18, `docs/delivery.md`).
 - Intent: the techlead no longer stops the loop directly. Every stop passes a manager stop gate that challenges false blockers, queues deferrable questions and reorganizes work. A justified stop ends with a human-readable report against the epic's intent. Plain text first, no engine needed (D1–D3, D16, D17).
 
-- [ ] Kind: implementation | Status: todo | Route every techlead stop through a manager stop review
+- [x] Kind: implementation | Status: done | Route every techlead stop through a manager stop review
   - Outcome:
     - The techlead can no longer set `idle`. It runs a stop request with a class (A–F), a reason and what the stop blocks, and the next role becomes the manager in stop-review mode.
     - The manager may set `idle` only after accepting a stop; otherwise it returns control to the techlead with an instruction.
@@ -61,17 +61,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - every review writes a `stop-gate` progress event.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D1, D16).
 
-- [ ] Kind: implementation | Status: todo | Manager stop-review rules for classes A–F
-  - Outcome: in a stop-review turn the manager applies D16:
-    - A is accepted;
-    - B and F continue on independent work and queue the item, or are accepted when nothing independent is left;
-    - C, D and E are challenged with a concrete instruction;
-    - there is one challenge round, and A, B and F are never overridden.
-  - Surface: the manager role reference and prompt template (stop-review section), the techlead role reference (stop-request classes, what to do after a challenge).
-  - Acceptance: each class has one scripted fixture case in which a stop request reaches a stop-review turn; the manager's outcome and instruction match D16 in each case (run as part of the phase verification task).
-  - Docs: `docs/stop-gate.md`, `decision-log.md` (D16).
-
-- [ ] Kind: implementation | Status: todo | Agent-made decisions and the human queue as scripted epic artifacts
+- [ ] Kind: implementation | Status: doing | Agent-made decisions and the human queue as scripted epic artifacts
   - Outcome:
     - A script records a class C decision in `decision-log.md` with a stable `D<n>` id and an "agent-made" marker (D17).
     - A script adds, lists and resolves human-queue items in one human-facing file, with stable `H<n>` ids, a hold kind (D26), the question or action, the default, and what each item blocks.
@@ -85,6 +75,16 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - `role-summary` lists open items and unconfirmed agent decisions;
     - existing epics without the new file keep working.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D17).
+
+- [ ] Kind: implementation | Status: todo | Manager stop-review rules for classes A–F
+  - Outcome: in a stop-review turn the manager applies D16:
+    - A is accepted;
+    - B and F continue on independent work and queue the item, or are accepted when nothing independent is left;
+    - C, D and E are challenged with a concrete instruction;
+    - there is one challenge round, and A, B and F are never overridden.
+  - Surface: the manager role reference and prompt template (stop-review section), the techlead role reference (stop-request classes, what to do after a challenge).
+  - Acceptance: each class has one scripted fixture case in which a stop request reaches a stop-review turn; the manager's outcome and instruction match D16 in each case (run as part of the phase verification task).
+  - Docs: `docs/stop-gate.md`, `decision-log.md` (D16).
 
 - [ ] Kind: implementation | Status: todo | Human-readable stop report from the manager
   - Outcome:

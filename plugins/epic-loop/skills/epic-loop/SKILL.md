@@ -268,8 +268,8 @@ When implementation starts, the first hook-driven continuation must be `manager`
 
 Inside implementation mode, role transfer rules are strict:
 
-- `manager` only performs housekeeping and always hands control back to `techlead`
-- `techlead` may hand control to `engineer`, hand control to `manager` for housekeeping, or stop the loop
+- `manager` performs housekeeping and hands control back to `techlead`; in a stop-review turn it either accepts the stop (the loop goes `idle`) or challenges it back to `techlead`
+- `techlead` may hand control to `engineer`, hand control to `manager` for housekeeping, or file a stop request; it never sets `idle` itself
 - `engineer` never chooses routing; the hook returns control automatically
 
 Every implementation continuation must be recorded inside the epic runtime. Prompt text goes to `.runtime/prompt-log.md` and `.runtime/prompt-log.jsonl`. Lifecycle events and timing go to `.runtime/progress-log.jsonl` and readable `.runtime/progress-log.md`, with `.runtime/progress-report.md` regenerated from the structured event log.
@@ -293,7 +293,7 @@ A user message never stops the implementation loop; the hook adds a one-line `[e
 
 Use `node <skill-dir>/scripts/role-summary.mjs --slug "<epic-slug>"` for compact loop state plus latest manager and engineer reports. Do not read prompt/progress runtime logs during normal implementation flow.
 
-Implementation must keep moving when the next task is clear. `tracker.md` is the task-order source of truth for techlead decisions. Structured roadmap scripts are convenience bookkeeping only. If a script task id, active task, or rendered tracker state disagrees with the visible `tracker.md`, do not stop the implementation loop solely for that mismatch. Record the mismatch in `implementation-log.md` or `state-of-epic.md`, update the human-facing files directly if needed, and continue with the next visible actionable task. Use `idle` only for a real product, design, verification, dependency, or user-decision blocker.
+Implementation must keep moving when the next task is clear. `tracker.md` is the task-order source of truth for techlead decisions. Structured roadmap scripts are convenience bookkeeping only. If a script task id, active task, or rendered tracker state disagrees with the visible `tracker.md`, do not stop the implementation loop solely for that mismatch. Record the mismatch in `implementation-log.md` or `state-of-epic.md`, update the human-facing files directly if needed, and continue with the next visible actionable task. Request a stop only for a real product, design, verification, dependency, or user-decision blocker, or when the work is done.
 
 If implementation should continue, `techlead` writes a concrete engineer brief through the brief writer and then sets the next role:
 
@@ -315,11 +315,13 @@ Housekeeping reasons should be explicit, for example:
 - `implementation-end-housekeeping`
 - `artifact-compaction-housekeeping`
 
-If implementation should pause or stop after any required housekeeping has completed, `techlead` runs:
+If implementation should pause or stop after any required housekeeping has completed, `techlead` files a stop request with a class (A done, B needs the human's hands or authority, C decision with a reasonable default, D environment friction, E ordering or bookkeeping, F product decision with no default). `set-next-role --role idle` is refused inside techlead and manager turns.
 
 ```bash
-node <skill-dir>/scripts/set-next-role.mjs --slug "<epic-slug>" --role idle --reason "<why the loop stops>"
+node <skill-dir>/scripts/request-stop.mjs --slug "<epic-slug>" --class "<A-F>" --reason "<why the loop should stop>" --blocks "<what the stop blocks>"
 ```
+
+The next turn is a manager stop review, which resolves it with `review-stop.mjs --outcome accepted` (the loop goes `idle` and the manager's final message is the stop report) or `--outcome challenged --instruction "<text>"` (the techlead resumes with that instruction). Each review logs a `stop-gate` progress event. A user stop (`stop-loop.mjs`, `stop loop mode`) bypasses the gate.
 
 `engineer` owns tactical execution:
 
