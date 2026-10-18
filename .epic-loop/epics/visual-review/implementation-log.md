@@ -190,3 +190,16 @@
   - Claude Code: runs 5 and 6, all checks pass after f752633. Codex: run 7 (partial, usage limit) and run 8 (minimal, D33): Stop-hook chaining, B challenged with the on-hold command, task on-hold with Hold: human-action (H1), independent work completed, final B accepted with a six-heading report committed by the manager (fd99a2b in the sandbox)
   - 11 turns, 3.9 M tokens. Previous task commit: 0f283bb
 - Residual risk: Not covered on Codex: F stop, rebind, class A, German chat (covered on Claude Code). Minor: the techlead's closure notes written after the last task commit stay uncommitted at a stop (D32 covers report, queue and decision log only). The agent-decision prompt fix (401f6ea) was not exercised on Codex (no class C default came up).
+
+## 2026-10-18T14:59:42+00:00 - done; Phase 1 closed
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Open the Phase 1 pull request and stop for the human's merge
+- Verdict: done; Phase 1 closed
+- Changed:
+  - Pushed feature/manager-stop-gate
+  - opened PR #13 https://github.com/usulpro/epic-loop/pull/13 (feature: manager stop gate, human queue and stop reports) against main
+- Verification:
+  - Techlead checked gh pr view 13: OPEN, not merged, head 93a6475 = local HEAD, 14 commits
+  - origin/main unchanged at 80fe08f. Pre-push: test:unit 150/150, validate passes. Phase review: all 8 Phase 1 tasks done, the verification task passed on Claude Code (runs 5, 6) and Codex (runs 7, 8).
+- Residual risk: Merge is the human's. Known limits are listed in the PR body and state-of-epic. Runtime copies still lack the stop gate until the post-merge self-update.

@@ -44,7 +44,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 1: Manager Stop Gate And Human-Readable Stop Reports
 
-- Phase status: doing
+- Phase status: done
 - Delivery: main checkout, branch `feature/manager-stop-gate` from `main`, merged into `main` before the other phases (D18, `docs/delivery.md`).
 - Intent: the techlead no longer stops the loop directly. Every stop passes a manager stop gate that challenges false blockers, queues deferrable questions and reorganizes work. A justified stop ends with a human-readable report against the epic's intent. Plain text first, no engine needed (D1–D3, D16, D17).
 
@@ -131,7 +131,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Docs: `docs/stop-gate.md`.
   - Result: Claude Code passed the full scenario in runs 5 and 6 (after the fixes in `f752633`); Codex passed the role mechanics in runs 7 (partial: B and D challenges, Stop-hook chaining) and 8 (minimal: B challenge, on-hold, accepted stop with a committed report). Logs: `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-*/log.md`.
 
-- [ ] Kind: review | Status: todo | Open the Phase 1 pull request and stop for the human's merge
+- [x] Kind: review | Status: done | Open the Phase 1 pull request and stop for the human's merge
   - Outcome: a pull request from `feature/manager-stop-gate` to `main` with a summary of the stop gate, the human queue, the hold kinds and the stop report, plus links to the verification runs. Unit tests and `validate` pass on the branch. The loop stops so the human can review and merge.
   - Surface: git branch, GitHub pull request, `state-of-epic.md`.
   - Acceptance: the PR URL is recorded in `state-of-epic.md` and `implementation-log.md`; the agent has not merged, pushed to `main`, or published.

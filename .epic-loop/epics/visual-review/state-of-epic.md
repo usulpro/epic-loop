@@ -29,11 +29,11 @@ Active task: TBD
 
 ## Blockers
 
-- H2 (external-wait): the Codex usage limit resets around 2026-10-19 01:35 local; the Codex verification rerun waits for it.
+- None. Waiting for the human merge of PR #13.
 
 ## Next Action
 
-- Implementation paused on 2026-10-18 after Codex run 7 hit the Codex usage limit. Phase 1: tasks 1-6 done; the Claude Code verification passed (sandbox runs 5, 6); on Codex the B and D challenges and Stop-hook chaining passed (run 7, partial).
-- After the limit resets (around 2026-10-19 01:35 local, H2): rerun the run 7 driver unchanged (`.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-codex/driver/`) to cover the F stop, the manager's report commits, the rebind, the class A stop and `agent-decision.mjs list`; then close the verification task and open the Phase 1 pull request. Two Codex sessions need roughly 20-25 M tokens.
+- Phase 1 is complete and closed. Pull request: https://github.com/usulpro/epic-loop/pull/13 (`feature/manager-stop-gate` → `main`), waiting for Oleg's review and squash-merge. The agent does not merge.
+- After the merge (per `docs/delivery.md`): `git checkout main && git pull`, then `pnpm run self-update`; then create the Phase 2-7 worktree (`../epic-loop-visual`, branch `feature/visual-review`) and start Phase 2 there.
 - Agent-made decisions to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
-- Resume: `node .claude/skills/epic-loop/scripts/bind-session.mjs --current --slug visual-review --mode implementation`.
+- Follow-ups recorded in the PR: challenge-path real-run evidence for C and E; the agent-decision prompt fix on Codex; closure notes written after the last task commit stay uncommitted at a stop; one stop request covers several classes but records one.
