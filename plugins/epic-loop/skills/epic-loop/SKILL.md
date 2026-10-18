@@ -204,6 +204,7 @@ Each epic should expose these human-facing files:
 - `implementation-log.md`: append-only execution notes, verification results, commits, blockers.
 - `decision-log.md`: architectural decisions, tradeoffs, rejected options, unresolved design questions.
 - `risk-register.md`: risks, deferred concerns, mitigation ideas, owner/status when known.
+- `human-queue.md`: what the loop needs from the human without stopping (`H<n>` items, written by `human-queue.mjs`); agent-made decisions go to `decision-log.md` through `agent-decision.mjs`.
 - `docs/problem-framing.md`: initial problem framing and scope source of truth.
 - `docs/`: additional documentation pack for architecture, contracts, verification, and rollout.
 
