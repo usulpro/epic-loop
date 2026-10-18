@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Streams one line per implementation-loop event and per fixture marker, for a Monitor.
+// Streams one line per implementation-loop event (turns, role commands, stop-gate reviews, skips) and per fixture marker, for a Monitor.
 // Usage: loop-watch.mjs <sandbox-dir> <epic-slug>. Runs until killed; tolerates files that do not exist yet.
 import fs from "node:fs";
 
@@ -11,10 +11,25 @@ if (!sandbox || !slug) {
 
 const files = { progress: `${sandbox}/.epic-loop/epics/${slug}/.runtime/progress-log.jsonl`, marker: `${sandbox}/.sandbox/markers.log` };
 const offsets = { progress: 0, marker: 0 };
-const ACTIONS = new Set(["turn-start", "turn-stop", "turn-waiting-background", "turn-aborted", "turn-interrupted", "synthetic-prompt-ignored", "user-message-in-turn", "skip", "loop-stopped", "role-command", "user-message-while-waiting"]);
+const ACTIONS = new Set(["turn-start", "turn-stop", "turn-waiting-background", "turn-aborted", "turn-interrupted", "synthetic-prompt-ignored", "user-message-in-turn", "skip", "loop-stopped", "role-command", "user-message-while-waiting", "stop-gate"]);
 const FIELDS = ["command", "role", "current_role", "iteration", "next_role", "reason", "status", "background_task_ids", "turn_key_adopted"];
 
+// Manager stop reviews: `stop-gate class="B" outcome="challenged" round=1 iteration=5 [report="…"] [instruction="…"]`.
+const STOP_GATE_FIELDS = [
+  ["class", "class"],
+  ["outcome", "outcome"],
+  ["round", "round"],
+  ["iteration", "iteration"],
+  ["report", "report_path"],
+  ["instruction", "instruction"],
+];
+
 function describe(event) {
+  if (event.action === "stop-gate") {
+    return STOP_GATE_FIELDS.filter(([, key]) => event[key] !== undefined && event[key] !== null)
+      .map(([name, key]) => `${name}=${JSON.stringify(key === "instruction" ? String(event[key]).slice(0, 160) : event[key])}`)
+      .join(" ");
+  }
   return FIELDS.filter((key) => event[key] !== undefined && event[key] !== null)
     .map((key) => `${key}=${JSON.stringify(event[key])}`)
     .join(" ");

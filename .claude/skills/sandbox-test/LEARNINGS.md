@@ -62,7 +62,7 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 | A minimal probe sandbox with payload-logging hooks answers harness questions (what fires on Esc, steer, notifications) before designing a fix | 1 | run 2 |
 | Interactive pty driving gated on `progress-log.jsonl` / marker files (D-6), several scenario steps in one session | 3 | run 2, run 3, run 4 |
 | `runtime-state.json` history via `tools/state-history.mjs` (D-9) | 2 | run 3, run 4 |
-| A Monitor on `tools/loop-watch.mjs` (loop events plus markers) instead of polling; copy `latest-*-report.md` at each turn boundary, since it is overwritten | 3 | run 4, run 5, run 6 |
+| A Monitor on `tools/loop-watch.mjs` (loop events plus markers) instead of polling; copy `latest-*-report.md` at each turn boundary, since it is overwritten. Since run 6's finding the tool also prints `stop-gate` events (class, outcome, round, report, instruction) | 3 | run 4, run 5, run 6 |
 | Triage by analysis and archived payloads before any agent run (3 of 10 findings dismissed without a sandbox) | 2 | run 3, run 4 |
 | A parallel research subagent for the other host (source + real rollouts + tiny exec runs) gives facts the run then confirms | 1 | run 2 |
 
@@ -81,7 +81,6 @@ When consolidating, keep `runs/` (or a summary of it) as history and reset this 
 - **`forbid` false positives (run 4).** `update available|auto-update` matched the agent's own "no update available" (doctor summary) and killed a session mid-scenario. Run 4 used `(?<!no )update available|auto-update`. A forbid pattern that can occur in model output needs to target the dialog's exact wording, or `forbid` should be dropped after the startup gate.
 - **Process cleanup (run 4).** `node` can be a version-manager shim (Volta), so `kill $!` misses the real process; start helpers through `$(node -p process.execPath)`. Never use `pkill -f <pattern>` from the agent's shell: it matches the shell's own command line and kills it. Use `pgrep`, filter, then `kill`.
 
-- **`loop-watch.mjs` misses newer progress events (run 6).** It does not print `stop-gate` events, so stop-review outcomes had to be read from `progress-log.jsonl`. Extend the tool when it is next touched.
 - **Natural fixtures do not force a stop class (run 5; partly solved run 6).** Run 6 exercised the B challenge path after the product fix; C, D and E are still resolved by the techlead before any request. The fixture gave each stop class a natural trigger, but the techlead resolved C, D and E itself (agent-made decision, workaround, reorder) and never filed those requests, so the manager's challenge path went unexercised. Testing a review path needs a fixture (or a role protocol in the prompt) that makes the techlead file that request; a natural fixture tests whether the techlead stops at all.
 
 ## Open questions

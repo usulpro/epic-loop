@@ -166,3 +166,17 @@
   - Techlead reran pnpm run test:unit 150/150 and validate
   - reviewed the 22-line diff. Previous checkpoint: 4719d68
 - Residual risk: The Codex rerun (after the usage-limit reset, H2) must show its agent-made decisions through agent-decision.mjs list.
+
+## 2026-10-18T13:49:24+00:00 - done
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Show stop-gate events in the sandbox-test loop-watch tool
+- Verdict: done
+- Changed:
+  - .claude/skills/sandbox-test/tools/loop-watch.mjs prints stop-gate events (class, outcome, round, iteration, report, instruction)
+  - LEARNINGS note resolved
+- Verification:
+  - Techlead reviewed the diff (existing line formats unchanged)
+  - engineer showed HEAD vs new output on a temp progress log, including a line appended mid-run
+  - validate passes. Previous task commit: 401f6ea
+- Residual risk: Loop paused: nothing independent left in Phase 1; the Codex verification rerun waits on H2 (usage-limit reset), the PR on the verification.

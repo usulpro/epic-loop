@@ -455,7 +455,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ## Follow-Up Tasks
 
-- [ ] Kind: follow-up | Status: todo | Show stop-gate events in the sandbox-test loop-watch tool
+- [x] Kind: follow-up | Status: done | Show stop-gate events in the sandbox-test loop-watch tool
   - Outcome: tools/loop-watch.mjs prints stop-gate events (class, outcome, round, report path) like other loop events.
   - Surface: .claude/skills/sandbox-test/tools/loop-watch.mjs
   - Acceptance: A sandbox Monitor on loop-watch shows each stop review outcome without reading progress-log.jsonl by hand.
