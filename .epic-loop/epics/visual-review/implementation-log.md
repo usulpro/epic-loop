@@ -32,3 +32,19 @@
   - pnpm run validate passes
 - Residual risk: Per-class rules are a placeholder in the stop-review prompt (task: Manager stop-review rules). A user stop during a stop review leaves stop_request in state until rebind clears it; harmless while idle. Live loop still runs the pre-change runtime copy by design (no self-update mid-run). Tasks reordered: the human-queue task now precedes the rules task, so the rules can name real queue and agent-decision commands.
 - Commit: 930a751
+
+## 2026-10-18T11:39:11+00:00 - checkpoint (task still doing)
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Agent-made decisions and the human queue as scripted epic artifacts
+- Verdict: checkpoint (task still doing)
+- Changed:
+  - human-queue.mjs, agent-decision.mjs and their lib modules
+  - role-summary blocks
+  - init-epic creates human-queue.md
+  - artifact-model and SKILL.md
+- Verification:
+  - Techlead reran pnpm run test:unit: 136/136 pass (6 new in human-queue-contracts)
+  - pnpm run validate passes
+- Residual risk: Engineer stopped on the on-hold part: every task/phase script fully re-renders tracker.md from a stale .runtime/roadmap-state.json and drops hand-written detail (reproduced in a temp root; confirmed in roadmap.mjs finalizeRoadmapMutation/ensureRoadmapState). Techlead took class C default D31 (agent-made): scripts re-import from tracker.md and patch it in place. Remaining scope: in-place tracker edits plus on-hold status.
+- Commit: fdc38ec

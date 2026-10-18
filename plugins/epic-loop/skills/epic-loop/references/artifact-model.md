@@ -67,7 +67,8 @@ Track:
 
 - phases and tasks
 - task kind: `implementation`, `verification`, `review`, `follow-up`, `architecture-reset`, `documentation-only`
-- status: `todo`, `doing`, `need-review`, `blocked`, `partially-satisfied`, `deferred`, `reset-required`, `done`
+- status: `todo`, `doing`, `need-review`, `blocked`, `on-hold`, `partially-satisfied`, `deferred`, `reset-required`, `done`
+  - `blocked` is a technical blocker the agent cannot remove; `on-hold` waits on the human and carries `Hold: <kind> (H<n>)`
 - expected system outcome
 - implementation surface
 - acceptance criteria
@@ -101,7 +102,12 @@ Reliable verification patterns to prefer:
 
 Temporary instrumentation is allowed when needed to make hidden behavior observable, for example adding short-lived console logs, file-based traces, or debug output. The verification task must say what temporary instrumentation will be added, what artifact it should reveal, and that the instrumentation must be removed or disabled again after the verification evidence is captured.
 
-`tracker.md` is rendered from `.runtime/roadmap-state.json`. Use task and phase scripts for mechanical status changes.
+`tracker.md` is the source of truth for phases and tasks, and it may be shaped by hand: prose, extra phase lines (`Delivery:`, `Intent:`), nested bullets and extra task labels (`Method:`, `Evidence:`) are kept. Use task and phase scripts for mechanical status changes:
+
+- Every script re-reads `tracker.md`. Phase ids come from `### Phase N:` headings (`phase-N`), task ids from the order within the phase (`phase-N-task-k`), follow-up ids from their order and title (`follow-up-01-<slug>`). An explicit `- Phase status:` line wins over the status derived from the tasks.
+- Scripts patch only the lines they change: the task line (checkbox and `Status:`), the phase's `- Phase status:` line, and the task's `Hold:` line. `add-follow-up-task.mjs` appends to `## Follow-Up Tasks`, creating the section at the end of the file.
+- `set-task-status.mjs --status on-hold --hold-kind <kind> --hold-item H<n>` needs an open `human-queue.md` item. It writes `  - Hold: <kind> (H<n>)` as the task's first sub-bullet, adds `on-hold` to the `## Task Statuses` list, and does not start the task or its phase. Any other status removes the `Hold:` line.
+- `render-tracker.mjs` is the exception: it re-renders the whole file from the model and discards hand-written detail. Use it only for script-generated trackers.
 
 ### `implementation-log.md`
 
@@ -226,7 +232,7 @@ Useful keys:
 
 ### `.runtime/roadmap-state.json`
 
-Purpose: best-effort structured bookkeeping for deterministic phase/task scripts.
+Purpose: cache for deterministic phase/task scripts. They re-import the model from `tracker.md` on every call and keep only the explicitly chosen active phase and task from this file while those ids still exist.
 
 During implementation, `tracker.md` is the human-visible source of truth for task order and task intent. If this file disagrees with `tracker.md`, prefer `tracker.md`, record the drift if useful, and continue with the next visible task rather than stopping the loop solely for bookkeeping repair.
 
@@ -236,7 +242,7 @@ Track:
 - task status
 - active phase and active task
 - follow-up tasks
-- rendered tracker projection state
+- the last imported tracker model
 
 ## Runtime Files
 

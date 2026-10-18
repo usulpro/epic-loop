@@ -135,6 +135,9 @@
   - A restrained TUI-inspired feel is welcome as a direction, not a requirement.
   - Dark and light themes ship from the start, chosen automatically from the OS (`prefers-color-scheme`).
   - The design is made with a design skill (design system first), and verification includes a design critique and an accessibility review.
+- **D31 — Status scripts edit tracker.md in place; tracker.md is the source of truth** (2026-10-18; agent-made, stop class C; unconfirmed).
+  - Default taken: Task and phase scripts re-import roadmap state from tracker.md on every call and patch only the lines they change (status token, checkbox, phase status, Hold line); render-tracker stays an explicit full re-render
+  - Why: Today every task/phase script re-renders tracker.md from a stale .runtime/roadmap-state.json and drops hand-written detail (nested outcomes, Method/Evidence, phase Intent, intro text, later hand edits); the on-hold status needs a Hold line that survives, and SKILL.md already names tracker.md the source of truth
 
 ## Open Questions
 

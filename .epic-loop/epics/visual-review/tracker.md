@@ -61,11 +61,12 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - every review writes a `stop-gate` progress event.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D1, D16).
 
-- [ ] Kind: implementation | Status: doing | Agent-made decisions and the human queue as scripted epic artifacts
+- [x] Kind: implementation | Status: done | Agent-made decisions and the human queue as scripted epic artifacts
   - Outcome:
     - A script records a class C decision in `decision-log.md` with a stable `D<n>` id and an "agent-made" marker (D17).
     - A script adds, lists and resolves human-queue items in one human-facing file, with stable `H<n>` ids, a hold kind (D26), the question or action, the default, and what each item blocks.
     - A new task status `on-hold` with `Hold: <kind> (H<n>)` is set and cleared by the task-status script; `blocked` is kept for technical blockers.
+    - Task and phase scripts edit `tracker.md` in place and re-read it on every call, so hand-shaped trackers keep their detail (D31, agent-made).
     - `role-summary.mjs` shows the open human-queue items and the agent-made decisions not yet confirmed.
   - Surface: new scripts under `scripts/`, `scripts/lib/` (decision and queue helpers), `references/artifact-model.md`, `init-epic.mjs` (the queue file in new epics), unit tests.
   - Acceptance: CLI contract tests show the following:
@@ -76,7 +77,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - existing epics without the new file keep working.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D17).
 
-- [ ] Kind: implementation | Status: todo | Manager stop-review rules for classes A–F
+- [ ] Kind: implementation | Status: doing | Manager stop-review rules for classes A–F
   - Outcome: in a stop-review turn the manager applies D16:
     - A is accepted;
     - B and F continue on independent work and queue the item, or are accepted when nothing independent is left;

@@ -200,7 +200,7 @@ Epic-loop stores human-facing epic artifacts under `.epic-loop/epics/{epic-slug}
 Each epic should expose these human-facing files:
 
 - `state-of-epic.md`: current mode, phase, last known state, blockers, next move.
-- `tracker.md`: rendered phases, tasks, task kinds, status, acceptance criteria, doc links.
+- `tracker.md`: phases, tasks, task kinds, status, acceptance criteria, doc links. Source of truth; task and phase scripts edit it in place.
 - `implementation-log.md`: append-only execution notes, verification results, commits, blockers.
 - `decision-log.md`: architectural decisions, tradeoffs, rejected options, unresolved design questions.
 - `risk-register.md`: risks, deferred concerns, mitigation ideas, owner/status when known.
@@ -211,7 +211,7 @@ Each epic should expose these human-facing files:
 Each epic stores hidden machine artifacts under `.epic-loop/epics/{epic-slug}/.runtime/`:
 
 - `runtime-state.json`: lightweight machine-readable coordination state.
-- `roadmap-state.json`: best-effort structured bookkeeping for scripts. It is not allowed to override the human-visible tracker during implementation.
+- `roadmap-state.json`: a cache for scripts, re-imported from `tracker.md` on every call. It never overrides the tracker.
 - `current-engineer-prompt.md`: replaceable active engineer brief.
 - `prompt-log.md` and `prompt-log.jsonl`: append-only implementation prompt log.
 - `progress-log.md`, `progress-log.jsonl`, and `progress-report.md`: lifecycle timing and role progress traces.
