@@ -104,8 +104,14 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: prompt contract tests show both rules; a fresh Claude Code sandbox run shows a mid-loop B request challenged with independent work left, the task `on-hold` with its H id, and every stop report committed.
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16, D23, D26, D32), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-claude/log.md`.
 
+- [ ] Kind: implementation | Status: doing | Make the techlead record its own defaults with the agent-decision script
+  - Outcome: whenever the techlead takes a reasonable default itself (class C, with or without a stop request), it records it with `agent-decision.mjs add`, never by hand-editing `decision-log.md`, so `role-summary` and the stop report list it for confirmation.
+  - Surface: the techlead prompt template and role reference, prompt contract tests.
+  - Acceptance: a contract test shows the rule in the techlead prompt; the next Codex sandbox run lists its agent-made decisions through `agent-decision.mjs list`.
+  - Docs: `decision-log.md` (D17), `.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-codex/log.md`.
+
 - [ ] Kind: verification | Status: on-hold | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
-  - Hold: human-action (H1)
+  - Hold: external-wait (H2)
   - Method: use `.claude/skills/sandbox-test`. Build a fixture epic whose tasks trigger each stop class:
     - A, the last task;
     - B, a step that needs a manual publish, plus an independent task;
@@ -124,7 +130,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the final report satisfies the stop-report checklist.
   - Cleanup: archive the sandbox runs under the sandbox-test `runs/` log; kill the foreign port holder.
   - Docs: `docs/stop-gate.md`.
-  - Progress: Claude Code run 5 done (`.claude/skills/sandbox-test/runs/2026-10-18-stop-gate-claude/log.md`); rerun after the gap fixes. Codex waits on H1.
+  - Progress: Claude Code passed in runs 5 and 6. Codex run 7 is partial (usage limit): B and D challenges and Stop-hook chaining pass; the F stop, report commits and rebind are not reached yet. Rerun after the limit resets (H2).
 
 - [ ] Kind: review | Status: todo | Open the Phase 1 pull request and stop for the human's merge
   - Outcome: a pull request from `feature/manager-stop-gate` to `main` with a summary of the stop gate, the human queue, the hold kinds and the stop report, plus links to the verification runs. Unit tests and `validate` pass on the branch. The loop stops so the human can review and merge.

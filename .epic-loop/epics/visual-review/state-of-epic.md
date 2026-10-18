@@ -4,7 +4,7 @@ Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
 Active phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
-Active task: Phase 1 Task 6 - Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+Active task: Phase 1 Task 6 - Make the techlead record its own defaults with the agent-decision script
 
 ## Read First
 
@@ -29,7 +29,7 @@ Active task: Phase 1 Task 6 - Prove the stop gate end to end in sandbox runs on 
 
 ## Blockers
 
-- H1 (human-action): approve the Codex sandbox run of the stop-gate verification with `-s danger-full-access -a never` (sandbox-test D-7) and confirm Codex quota. The verification task is `on-hold` on it; the Phase 1 pull request comes after it.
+- H2 (external-wait): the Codex usage limit resets around 2026-10-19 01:35 local; the Codex verification rerun waits for it.
 
 ## Next Action
 

@@ -142,3 +142,14 @@
   - Techlead checked the run 6 archive: 3 stop-gate events (B challenged with the exact on-hold command, F accepted, A accepted), stop reports 01 and 02 committed by the manager (b175aa5, 5770c16), clean tree after both sessions, task on-hold with Hold: human-action (H1) instead of blocked
   - cost $5.78. Gap-fix commit f752633 verified.
 - Residual risk: Codex half not run: waits on H1 (explicit approval for -s danger-full-access -a never). C/D/E challenge branches have unit-test evidence only. Follow-up added for loop-watch stop-gate events. Loop paused: nothing independent is left in Phase 1 (the PR task needs the verification).
+
+## 2026-10-18T13:46:12+00:00 - checkpoint: Codex run 7 partial; task on-hold (H2 external-wait)
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- Verdict: checkpoint: Codex run 7 partial; task on-hold (H2 external-wait)
+- Verification:
+  - Techlead checked the run 7 archive: 2 stop-gate events (B challenged with the exact on-hold command, D challenged with a port-0 workaround), 17 Stop-hook turn-starts, task on-hold with Hold: human-action (H1)
+  - usage limit error in the session output
+  - 11.3 M tokens
+- Residual risk: Checks 2-4 on Codex not reached. Finding: the Codex techlead hand-wrote agent-made decisions instead of agent-decision.mjs; fixed next in a new Phase 1 task while the limit resets. H1 (approval) is resolved; H2 tracks the reset.
