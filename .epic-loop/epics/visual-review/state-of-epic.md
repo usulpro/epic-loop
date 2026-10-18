@@ -4,7 +4,7 @@ Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
 Active phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
-Active task: Phase 1 Task 4 - Human-readable stop report from the manager
+Active task: Phase 1 Task 5 - Prove the stop gate end to end in sandbox runs on Claude Code and Codex
 
 ## Read First
 

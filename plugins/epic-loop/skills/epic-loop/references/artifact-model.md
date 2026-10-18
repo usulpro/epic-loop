@@ -27,6 +27,7 @@ Human-facing epic artifacts live under `.epic-loop/epics/{epic-slug}/`. Runtime 
     decision-log.md
     risk-register.md
     human-queue.md
+    stop-reports/
     docs/
     .runtime/
       runtime-state.json
@@ -165,6 +166,10 @@ node <skill-dir>/scripts/human-queue.mjs resolve --slug "<epic-slug>" --id H<n> 
 - `role-summary.mjs` lists the open items.
 
 Stable ids: `D<n>` decisions, `H<n>` human-queue items, `R<n>` risks, `Q<n>` open questions. The canonical form has no hyphen. A new id is the highest existing number plus one; ids are never reused or renumbered.
+
+### `stop-reports/`
+
+Purpose: the English copies of the manager's stop reports, one file per accepted stop: `<NN>-<YYYY-MM-DD>-class-<X>.md`, numbered in order. Written only by `review-stop.mjs --outcome accepted --stdin`, which refuses a report missing one of the required headings (see the manager role reference, "Stop Report"). Committed with the epic; created on the first accepted stop.
 
 ### `risk-register.md`
 

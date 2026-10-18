@@ -3,32 +3,32 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
-import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript, writeOpenImplementationTurn, writeSessionBinding } from "./test-utils.mjs";
+import { STOP_REPORT_FIXTURE, assertSuccess, makeTempRoot, readJsonFile, runNodeScript, writeOpenImplementationTurn, writeSessionBinding } from "./test-utils.mjs";
 
 const STOP_GATE_PLATFORMS = ["codex", "claude-code"];
 
 // A bound driver loop with an open role turn (iteration 2), on the given platform.
-function setupStopGateLoop(prefix, platform, role = "techlead", extra = {}) {
+function setupStopGateLoop(prefix, platform, role = "techlead", extra = {}, chat = "Role report in this turn") {
   const root = makeTempRoot(prefix);
   const slug = "stop-gate";
   const sessionId = "stop-gate-session";
   const transcriptPath = path.join(root, "transcript.jsonl");
   const epicRuntime = path.join(root, ".epic-loop", "epics", slug, ".runtime");
 
-  fs.writeFileSync(transcriptPath, `${JSON.stringify({ type: "assistant", message: { content: "Role report in this turn" } })}\n`, "utf8");
+  fs.writeFileSync(transcriptPath, `${JSON.stringify({ type: "assistant", message: { content: chat } })}\n`, "utf8");
   assertSuccess(runNodeScript("doctor.mjs", ["--root", root, "--platform", platform, "--json"]));
   assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Stop gate project", "--slug", slug, "--no-gitignore"]));
   fs.writeFileSync(path.join(epicRuntime, "current-engineer-prompt.md"), "Add mean(values) to src/stats.mjs.\n", "utf8");
   writeOpenImplementationTurn(root, slug, role, { turn_key: "prompt-stop-gate", ...extra });
   writeSessionBinding(root, slug, sessionId);
 
-  const script = (name, args = []) => runNodeScript(name, ["--root", root, "--slug", slug, ...args]);
+  const script = (name, args = [], input = undefined) => runNodeScript(name, ["--root", root, "--slug", slug, ...args], { input });
   const stop = () => {
     const result = runNodeScript("hook.mjs", ["--root", root], {
       input: JSON.stringify({
         cwd: root,
         hook_event_name: "Stop",
-        last_assistant_message: "Role report in this turn",
+        last_assistant_message: chat,
         prompt_id: "prompt-stop-gate",
         session_id: sessionId,
         stop_hook_active: true,
@@ -151,14 +151,15 @@ for (const platform of STOP_GATE_PLATFORMS) {
       const badOutcome = ctx.script("review-stop.mjs", ["--outcome", "maybe"]);
       assert.notEqual(badOutcome.status, 0);
 
-      assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "accepted"]));
+      assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], STOP_REPORT_FIXTURE));
       const loop = ctx.loop();
       assert.equal(loop.status, "idle");
       assert.equal(loop.next_role, "idle");
       assert.equal(loop.stop_request, null);
 
       assert.equal(ctx.stop(), null);
-      assert.match(fs.readFileSync(path.join(ctx.epicRuntime, "latest-manager-report.md"), "utf8"), /Role report in this turn/u);
+      // The saved English stop report is the manager report.
+      assert.match(fs.readFileSync(path.join(ctx.epicRuntime, "latest-manager-report.md"), "utf8"), /# Stop Report 01[\s\S]*## Next And How To Resume/u);
 
       const gates = ctx.progressEvents().filter((event) => event.action === "stop-gate");
       assert.equal(gates.length, 1);
@@ -172,6 +173,7 @@ for (const platform of STOP_GATE_PLATFORMS) {
           iteration: 3,
           outcome: "accepted",
           reason: "phase 1 verified",
+          report_path: loop.last_stop_report_path,
           round: 1,
           slug: "stop-gate",
           timestamp: undefined,
@@ -317,3 +319,102 @@ test("a repeated stop request is reviewed with the accept rule and the challenge
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
 });
+
+const STOP_REPORT_HEADINGS = [
+  "## Where The Epic Stands",
+  "## Achieved Since The Last Report",
+  "## Why The Loop Stopped",
+  "## What You Need To Do Or Decide",
+  "## Agent-Made Decisions To Confirm",
+  "## Next And How To Resume",
+];
+// The chat copy of a report is in the user's language; German here, as plain test data.
+const GERMAN_CHAT_REPORT = "Bericht: Phase 1 ist abgeschlossen. Bitte den Pull Request pruefen.";
+
+test("an accepted stop saves a numbered English stop report and the next review points to it", () => {
+  const ctx = setupStopGateLoop("stop-report-save-", "codex", "techlead");
+
+  try {
+    assertSuccess(ctx.requestStop("A", "phase 1 verified", "nothing left"));
+    const firstReview = ctx.stop().reason;
+    assert.match(firstReview, /## Stop Report/u);
+    for (const heading of STOP_REPORT_HEADINGS) {
+      assert.ok(firstReview.includes(heading), heading);
+    }
+    assert.match(firstReview, /Previous stop report: `none`/u);
+    assert.match(firstReview, /bind-session\.mjs --current --slug stop-gate --mode implementation/u);
+    assert.match(firstReview, /review-stop\.mjs --slug "stop-gate" --outcome accepted --stdin/u);
+    assert.match(firstReview, /same report in the user's language/u);
+
+    const accepted = ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], STOP_REPORT_FIXTURE);
+    assertSuccess(accepted);
+    const loop = ctx.loop();
+    assert.equal(loop.status, "idle");
+    assert.match(loop.last_stop_report_path, /^\.epic-loop\/epics\/stop-gate\/stop-reports\/01-\d{4}-\d{2}-\d{2}-class-A\.md$/u);
+    const saved = fs.readFileSync(path.join(ctx.root, loop.last_stop_report_path), "utf8");
+    assert.match(saved, /^# Stop Report 01\n\n- Date: \d{4}-\d{2}-\d{2}\n- Stop class: A\n- Techlead reason: phase 1 verified\n\n## Where The Epic Stands\n/u);
+    assert.ok(saved.endsWith(STOP_REPORT_FIXTURE));
+    assert.equal(ctx.progressEvents().find((event) => event.action === "stop-gate").report_path, loop.last_stop_report_path);
+    assert.equal(ctx.stop(), null);
+
+    // A later run of the loop (rebound) numbers the next report 02 and shows 01 as previous.
+    writeOpenImplementationTurn(ctx.root, "stop-gate", "techlead", { driver_session_id: "stop-gate-session", turn_key: "prompt-stop-gate" });
+    assertSuccess(ctx.requestStop("B", "npm publish needs the human", "the release task"));
+    assert.ok(ctx.stop().reason.includes(`Previous stop report: \`${loop.last_stop_report_path}\``));
+    assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], STOP_REPORT_FIXTURE));
+    assert.match(ctx.loop().last_stop_report_path, /\/02-\d{4}-\d{2}-\d{2}-class-B\.md$/u);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+test("an incomplete or empty stop report is refused and the review stays open", () => {
+  const ctx = setupStopGateLoop("stop-report-refused-", "codex", "techlead");
+
+  try {
+    assertSuccess(ctx.requestStop("F", "pick the pricing model", "all remaining tasks"));
+    assert.equal(ctx.stop().decision, "block");
+
+    const partial = STOP_REPORT_FIXTURE.replace("## Why The Loop Stopped\n", "").replace("## Agent-Made Decisions To Confirm\n", "");
+    const missing = ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], partial);
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /missing headings: ## Why The Loop Stopped, ## Agent-Made Decisions To Confirm\./u);
+
+    const empty = ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], "  \n");
+    assert.notEqual(empty.status, 0);
+    assert.match(empty.stderr, /stop report is empty/u);
+
+    const noStdin = ctx.script("review-stop.mjs", ["--outcome", "accepted"]);
+    assert.notEqual(noStdin.status, 0);
+    assert.match(noStdin.stderr, /requires the English stop report on stdin/u);
+
+    const loop = ctx.loop();
+    assert.equal(loop.status, "running");
+    assert.equal(loop.stop_request.class, "F");
+    assert.equal(fs.existsSync(path.join(ctx.root, ".epic-loop", "epics", "stop-gate", "stop-reports")), false);
+    assert.equal(ctx.progressEvents().filter((event) => event.action === "stop-gate").length, 0);
+  } finally {
+    fs.rmSync(ctx.root, { force: true, recursive: true });
+  }
+});
+
+for (const platform of STOP_GATE_PLATFORMS) {
+  test(`${platform}: the manager report of an accepted stop is the saved English copy`, () => {
+    const ctx = setupStopGateLoop(`stop-report-copy-${platform}-`, platform, "techlead", {}, GERMAN_CHAT_REPORT);
+
+    try {
+      assertSuccess(ctx.requestStop("A", "phase 1 verified", "nothing left"));
+      assert.equal(ctx.stop().decision, "block");
+      assertSuccess(ctx.script("review-stop.mjs", ["--outcome", "accepted", "--stdin"], STOP_REPORT_FIXTURE));
+      assert.equal(ctx.stop(), null);
+
+      const latest = fs.readFileSync(path.join(ctx.epicRuntime, "latest-manager-report.md"), "utf8");
+      assert.match(latest, /# Stop Report 01/u);
+      assert.match(latest, /## Next And How To Resume\nReview the PR, then rebind the session\./u);
+      assert.doesNotMatch(latest, /Bericht/u);
+      assert.doesNotMatch(fs.readFileSync(path.join(ctx.epicRuntime, "manager-reports.jsonl"), "utf8"), /Bericht/u);
+    } finally {
+      fs.rmSync(ctx.root, { force: true, recursive: true });
+    }
+  });
+}

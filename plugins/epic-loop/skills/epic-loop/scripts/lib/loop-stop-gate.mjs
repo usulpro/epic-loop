@@ -1,6 +1,9 @@
+import fs from "node:fs";
+
 import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject } from "./loop.mjs";
+import { missingStopReportHeadings, saveStopReport } from "./stop-reports.mjs";
 
 // Stop classes (decision D16 of the visual-review epic):
 // A done, B needs the human's hands or authority, C decision with a reasonable default,
@@ -97,6 +100,9 @@ export function reviewStop(flags = {}) {
   const request = loop.stop_request;
   const accepted = outcome === "accepted";
   const nextRole = accepted ? "idle" : "techlead";
+  // Accepting requires the English stop report; it is checked before anything changes.
+  const reportBody = accepted ? readStopReport(flags) : null;
+  const reportPath = accepted ? saveStopReport(root, slug, { body: reportBody, reason: request.reason, stopClass: request.class }) : null;
 
   writeJson(runtimePath, {
     ...runtime,
@@ -108,6 +114,7 @@ export function reviewStop(flags = {}) {
       next_role: nextRole,
       next_role_set_iteration: loop.iteration,
       status: accepted ? "idle" : "running",
+      ...(accepted ? { last_stop_report_path: reportPath, stop_report_copy_iteration: loop.iteration } : {}),
       stop_challenge: accepted ? null : { blocks: request.blocks, class: request.class, instruction, reason: request.reason, round: request.round },
       stop_request: null,
       stop_review_iteration: null,
@@ -124,6 +131,7 @@ export function reviewStop(flags = {}) {
     iteration: loop.iteration,
     outcome,
     reason: request.reason,
+    ...(reportPath ? { report_path: reportPath } : {}),
     round: request.round,
     slug,
     timestamp,
@@ -131,9 +139,24 @@ export function reviewStop(flags = {}) {
 
   console.log(
     accepted
-      ? `Stop accepted for ${slug} (class ${request.class}). The loop goes idle; end the turn with the stop report.`
+      ? `Stop accepted for ${slug} (class ${request.class}). Report saved: ${reportPath}. The loop goes idle; end the turn with the same report in the user's language.`
       : `Stop challenged for ${slug} (class ${request.class}). The techlead resumes with your instruction.`,
   );
+}
+
+function readStopReport(flags) {
+  if (!flags.stdin) {
+    throw new Error("--outcome accepted requires the English stop report on stdin (--stdin).");
+  }
+  const body = fs.readFileSync(0, "utf8");
+  if (!body.trim()) {
+    throw new Error("The stop report is empty.");
+  }
+  const missing = missingStopReportHeadings(body);
+  if (missing.length > 0) {
+    throw new Error(`The stop report is missing headings: ${missing.join(", ")}.`);
+  }
+  return body;
 }
 
 export function isStopReviewTurn(loop) {

@@ -105,3 +105,20 @@ export function writeOpenImplementationTurn(root, slug, role = "engineer", extra
     "utf8",
   );
 }
+
+// A complete English stop report, as review-stop.mjs --outcome accepted --stdin requires.
+export const STOP_REPORT_FIXTURE = [
+  "## Where The Epic Stands",
+  "Phase 1 is complete.",
+  "## Achieved Since The Last Report",
+  "The parser ships.",
+  "## Why The Loop Stopped",
+  "The phase is done (class A).",
+  "## What You Need To Do Or Decide",
+  "Nothing.",
+  "## Agent-Made Decisions To Confirm",
+  "None.",
+  "## Next And How To Resume",
+  "Review the PR, then rebind the session.",
+  "",
+].join("\n");

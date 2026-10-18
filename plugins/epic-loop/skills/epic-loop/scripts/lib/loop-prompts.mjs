@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { STOP_REPORT_HEADINGS, latestStopReportPath } from "./stop-reports.mjs";
+
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const SKILL_DIR = path.dirname(path.dirname(LIB_DIR));
 export const MANAGER_PROMPT_TEMPLATE_PATH = path.join(SKILL_DIR, "assets", "templates", "implementation-manager-prompt.md");
@@ -74,10 +76,13 @@ export const STOP_CLASS_RULES = {
 export const REPEATED_STOP_RULE = "This is a repeated request after a challenge: accept it. There is only one challenge round.";
 
 // The manager is reviewing a stop the techlead requested, instead of doing housekeeping.
-export function buildStopReviewPrompt(slug, iteration, stopRequest) {
+export function buildStopReviewPrompt(projectRoot, slug, iteration, stopRequest) {
   return renderTemplate(fs.readFileSync(STOP_REVIEW_PROMPT_TEMPLATE_PATH, "utf8"), {
     EpicSlug: slug,
     Iteration: String(iteration),
+    PreviousStopReport: latestStopReportPath(projectRoot, slug) ?? "none",
+    ResumeCommand: `node ${path.join(SKILL_DIR, "scripts", "bind-session.mjs")} --current --slug ${slug} --mode implementation`,
+    StopReportHeadings: STOP_REPORT_HEADINGS.join("\n"),
     SkillDir: SKILL_DIR,
     StopClassRule: formatStopClassRule(slug, stopRequest),
     StopBlocks: stopRequest.blocks ?? "",

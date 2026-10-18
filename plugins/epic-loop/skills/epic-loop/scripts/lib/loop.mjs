@@ -403,7 +403,7 @@ function buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityR
   const stopChallenge = role === "techlead" && loop.stop_challenge ? loop.stop_challenge : null;
 
   if (stopReview) {
-    return { prompt: buildStopReviewPrompt(slug, iteration, stopReview), promptFile: STOP_REVIEW_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
+    return { prompt: buildStopReviewPrompt(projectRoot, slug, iteration, stopReview), promptFile: STOP_REVIEW_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
   }
 
   if (role === "manager") {

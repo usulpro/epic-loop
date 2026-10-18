@@ -82,3 +82,20 @@
   - reviewed the rule data against D16/D23
   - prompt-level contracts cover all six classes and round 2
 - Residual risk: Behavioural acceptance (a real manager applying the rules per class in fixture runs) is owned by the Phase 1 verification task, as the tracker states.
+
+## 2026-10-18T11:53:12+00:00 - done
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Human-readable stop report from the manager
+- Verdict: done
+- Changed:
+  - lib/stop-reports.mjs
+  - review-stop accepted requires the English report on stdin and saves stop-reports/NN-date-class-X.md
+  - the saved copy is the manager report
+  - Stop Report section in the stop-review prompt
+  - manager role, artifact-model, SKILL.md
+- Verification:
+  - Techlead reran pnpm run test:unit 147/147 and validate
+  - reviewed the loop-stop-gate and loop-artifacts diffs (validation before any write
+  - copy used only for the accepting manager turn). Previous task commit: f84098b
+- Residual risk: Report quality and the checklist review of saved copies against docs/stop-gate.md belong to the Phase 1 verification task.

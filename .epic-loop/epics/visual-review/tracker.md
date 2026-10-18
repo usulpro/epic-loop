@@ -87,7 +87,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: each class has one scripted fixture case in which a stop request reaches a stop-review turn; the manager's outcome and instruction match D16 in each case (run as part of the phase verification task).
   - Docs: `docs/stop-gate.md`, `decision-log.md` (D16).
 
-- [ ] Kind: implementation | Status: doing | Human-readable stop report from the manager
+- [x] Kind: implementation | Status: done | Human-readable stop report from the manager
   - Outcome:
     - When the manager accepts a stop, its final message is a report measured against the epic's intent: goals vs. state, outcomes since the last report, why it stopped, what the human must do or decide (human queue, with defaults), agent-made decisions to confirm, and how to resume.
     - The chat message is in the user's language. An English copy is saved in the epic and recorded as the manager report.
@@ -95,7 +95,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: in the phase verification runs, each accepted stop produces such a report. A checklist review of the saved copies against `docs/stop-gate.md` "Stop Report" passes.
   - Docs: `docs/stop-gate.md`, `docs/problem-framing.md`.
 
-- [ ] Kind: verification | Status: todo | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- [ ] Kind: verification | Status: doing | Prove the stop gate end to end in sandbox runs on Claude Code and Codex
   - Method: use `.claude/skills/sandbox-test`. Build a fixture epic whose tasks trigger each stop class:
     - A, the last task;
     - B, a step that needs a manual publish, plus an independent task;

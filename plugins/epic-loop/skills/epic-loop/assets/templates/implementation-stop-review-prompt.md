@@ -34,14 +34,33 @@ The challenge instruction must be concrete: the task to continue with, any H id 
 Then resolve the request with exactly one command:
 
 ```bash
-# accept: the loop goes idle; your final message is the report
-node -<<*{{SkillDir}}*>>-/scripts/review-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" --outcome accepted
-
 # challenge: the techlead resumes with your instruction in its prompt
 node -<<*{{SkillDir}}*>>-/scripts/review-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" --outcome challenged --instruction "<concrete instruction for the techlead>"
+
+# accept: the loop goes idle; the English stop report on stdin is required (see Stop Report)
+node -<<*{{SkillDir}}*>>-/scripts/review-stop.mjs --slug "-<<*{{EpicSlug}}*>>-" --outcome accepted --stdin <<'EOF'
+<the English stop report>
+EOF
 ```
+
+## Stop Report
+
+When you accept, write a report for the human, measured against the epic's intent (`docs/problem-framing.md`, the phases in `tracker.md`), not against the code. Use exactly these headings:
+
+```text
+-<<*{{StopReportHeadings}}*>>-
+```
+
+- Where The Epic Stands: goals vs. state.
+- Achieved Since The Last Report: outcomes, not files. Previous stop report: `-<<*{{PreviousStopReport}}*>>-` (if none, since the loop started).
+- Why The Loop Stopped: one or two lines, with the stop class in plain words.
+- What You Need To Do Or Decide: the open human-queue items with their defaults and what each blocks, or "Nothing."
+- Agent-Made Decisions To Confirm: the unconfirmed agent-made decisions, each with how to confirm or reverse, or "None."
+- Next And How To Resume: what happens next, and the resume command: `-<<*{{ResumeCommand}}*>>-`
+
+Take the human-queue items and agent-made decisions from `role-summary.mjs`. The copy you pass on stdin is always English; `review-stop.mjs` saves it under `stop-reports/` and refuses a report that misses a heading.
 
 Do not use `set-next-role.mjs` in this turn. Run `review-stop.mjs` as your last command, then stop after your final message:
 
-- accepted: end with a short report: why the loop stopped and what the human must do;
+- accepted: your final chat message is the same report in the user's language (the language the user writes in this session);
 - challenged: one or two lines on why the stop was challenged and what the techlead should do.

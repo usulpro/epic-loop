@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
-import { assertSuccess, makeTempRoot, readJsonFile, runNodeScript, writeOpenImplementationTurn, writeSessionBinding } from "./test-utils.mjs";
+import { STOP_REPORT_FIXTURE, assertSuccess, makeTempRoot, readJsonFile, runNodeScript, writeOpenImplementationTurn, writeSessionBinding } from "./test-utils.mjs";
 
 const TURN_KEY = "prompt-loop";
 
@@ -409,7 +409,7 @@ test("a role that leaves a background process running completes its turn explici
     assert.equal(ctx.hook("Stop", waitingStop(["dev-server", "bg-late"])).decision, "block");
     assert.equal(ctx.loop().current_role, "manager");
 
-    assertSuccess(runNodeScript("review-stop.mjs", ["--root", ctx.root, "--slug", ctx.slug, "--outcome", "accepted"]));
+    assertSuccess(runNodeScript("review-stop.mjs", ["--root", ctx.root, "--slug", ctx.slug, "--outcome", "accepted", "--stdin"], { input: STOP_REPORT_FIXTURE }));
     assert.equal(ctx.loop().next_role_set_iteration, 4);
 
     const noTurn = runNodeScript("complete-turn.mjs", ["--root", ctx.root, "--slug", ctx.slug]);
