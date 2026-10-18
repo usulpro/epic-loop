@@ -99,3 +99,21 @@
   - reviewed the loop-stop-gate and loop-artifacts diffs (validation before any write
   - copy used only for the accepting manager turn). Previous task commit: f84098b
 - Residual risk: Report quality and the checklist review of saved copies against docs/stop-gate.md belong to the Phase 1 verification task.
+
+## 2026-10-18T11:54:15+00:00 - started (Claude Code half)
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- Verdict: started (Claude Code half)
+- Residual risk: Codex half queued as H1 (human-action): sandbox-test D-7 requires explicit per-run approval for -s danger-full-access -a never. Claude Code half proceeds as independent work. Previous task commit: 22b8446.
+
+## 2026-10-18T12:16:32+00:00 - checkpoint: Claude Code run 5 done, task stays open
+
+- Phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+- Task: Prove the stop gate end to end in sandbox runs on Claude Code and Codex
+- Verdict: checkpoint: Claude Code run 5 done, task stays open
+- Verification:
+  - Techlead checked the archive: 2 stop-gate events (B accepted, A accepted), stop-reports 01 and 02 pass the checklist, German chat with English saved copies, H1-H3 queued, agent-made D1/D2
+  - restore test 8/8
+  - cost $6.15
+- Residual risk: Findings: (1) C/D/E never filed, so the challenge path has no real-run evidence; (2) a human wait mid-loop was marked blocked, no H item, on-hold never used; (3) accepted stops leave stop reports uncommitted; (4) one request covered B/F/D under one class. 2 and 3 are fixed in a new Phase 1 task before the verification closes (D32 agent-made for 3); the rerun should also exercise the challenge path for B. Codex half still waits on H1.
