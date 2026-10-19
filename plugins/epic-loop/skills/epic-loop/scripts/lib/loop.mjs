@@ -40,7 +40,7 @@ import { readRoadmapSummary } from "./roadmap.mjs";
 const LOOP_ROLES = ["manager", "techlead", "engineer", "idle"];
 const WAITING_FOR_TURN_TRANSITION = "awaiting-transition";
 
-export function startImplementationLoop(projectRoot, { sessionId, slug }) {
+export function startImplementationLoop(projectRoot, { sessionId, slug, transcriptPath = null }) {
   const timestamp = nowIso();
   const runtimePath = runtimeStatePath(projectRoot, slug);
   const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
@@ -64,6 +64,7 @@ export function startImplementationLoop(projectRoot, { sessionId, slug }) {
       active_turn_started_at: null,
       active_turn_stopped_at: null,
       driver_session_id: sessionId,
+      driver_transcript_path: transcriptPath ?? (loop.driver_session_id === sessionId ? (loop.driver_transcript_path ?? null) : null),
       iteration: Number.isFinite(loop.iteration) ? loop.iteration : 0,
       last_reason: "implementation-start",
       last_session_id: sessionId,

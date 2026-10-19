@@ -7,9 +7,11 @@ import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answe
 import { ringDoorbell } from "./doorbell.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
+import { readEpicActivity } from "../epic/activity.mjs";
 import { buildOverview } from "../epic/overview.mjs";
+import { buildStatistics } from "../epic/statistics.mjs";
 import { streamEpicEvents, watcherCount } from "./events.mjs";
-import { renderEpicHome, renderHomeMain } from "./home.mjs";
+import { renderActivity, renderEpicHome, renderHomeMain } from "./home.mjs";
 import { injectReview, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
 import { epicDir, epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
@@ -183,9 +185,20 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     if (home) {
       const slug = decode(home[1]);
       if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+      const dir = epicDir(root, slug);
+      // ?fragment=activity is the activity section alone, refreshed after an activity event.
+      if (url.searchParams.get("fragment") === "activity") return send(res, 200, renderActivity(readEpicActivity(root, dir)), "text/html; charset=utf-8");
       const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
       const gates = listOpenGates(root, slug);
-      const view = { epic, gates, inbox: readInbox(epicDir(root, slug)), overview: buildOverview(epicDir(root, slug), { gates }), reviews: listReviews(root, slug) };
+      const view = {
+        activity: readEpicActivity(root, dir),
+        epic,
+        gates,
+        inbox: readInbox(dir),
+        overview: buildOverview(dir, { gates }),
+        reviews: listReviews(root, slug),
+        statistics: buildStatistics(dir),
+      };
       // ?fragment=main is the inner <main> the live page swaps in after a change event.
       if (url.searchParams.get("fragment") === "main") return send(res, 200, renderHomeMain(view), "text/html; charset=utf-8");
       return send(res, 200, renderEpicHome(projectName, view), "text/html; charset=utf-8");

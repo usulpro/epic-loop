@@ -1,6 +1,8 @@
 // The epic home (Phase 5): the live overview of one epic. `renderEpicHome` is the full page;
 // `renderHomeMain` is the inner <main> content, which /_runtime/home.js fetches with
-// `?fragment=main` and swaps in when /api/<slug>/events reports a change.
+// `?fragment=main` and swaps in when /api/<slug>/events reports a change. `renderActivity` is the
+// activity section alone (`?fragment=activity`), refreshed on `event: activity`.
+import { formatDuration } from "../epic/statistics.mjs";
 import { escapeHtml, layout, pendingBadge } from "./pages.mjs";
 
 const reviewHref = (slug, id) => `/${encodeURIComponent(slug)}/reviews/${encodeURIComponent(id)}/`;
@@ -36,6 +38,102 @@ ${[
   row("iteration", loop.iteration === null ? "none" : String(loop.iteration)),
 ].join("\n")}
           </dl>
+        </section>
+`;
+}
+
+export function relativeTime(at, now = Date.now()) {
+  const ms = now - Date.parse(at);
+  if (!Number.isFinite(ms)) return "";
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+const ago = (at) => (at ? `<time class="el-ago" data-ago="${escapeHtml(at)}" datetime="${escapeHtml(at)}" title="${escapeHtml(at)}">${relativeTime(at)}</time>` : "");
+
+// What the driver session is doing now (Task 3): the tail of its transcript, newest first.
+export function renderActivity(activity) {
+  const items = activity?.items ?? [];
+  const head = [
+    activity?.role ? `<span class="el-tag el-tag--accent">${escapeHtml(activity.role)}</span>` : "",
+    items[0]?.at ? `<span class="el-meta">last ${ago(items[0].at)}</span>` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const body = items.length
+    ? `          <ol class="el-feed">
+${items
+  .map(
+    (item) =>
+      `            <li class="el-feed__item" data-kind="${escapeHtml(item.kind)}"><span class="el-feed__time el-meta">${ago(item.at)}</span><span class="el-feed__kind">${escapeHtml(item.kind === "message" ? (item.role ?? "message") : item.kind)}</span><span class="el-feed__text">${escapeHtml(item.summary)}</span></li>`,
+  )
+  .join("\n")}
+          </ol>`
+    : '          <p class="el-muted">No activity recorded yet.</p>';
+  return `        <section class="el-section el-activity" id="el-activity" data-live-activity aria-labelledby="el-activity-title">
+          <div class="el-section__head"><h2 id="el-activity-title">Activity</h2>${head}</div>
+${body}
+        </section>
+`;
+}
+
+const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
+
+function waitLine(label, wait) {
+  if (!wait.count) return row(label, '<span class="el-muted">none</span>');
+  return row(label, `${plural(wait.count, "wait")} · ${formatDuration(wait.durationMs)}${wait.open ? ' · <span class="el-tag el-tag--danger">waiting now</span>' : ""}`);
+}
+
+// Turn statistics (Task 3), from the progress log; the numbers match progress-report.md.
+function statisticsSection(stats) {
+  if (!stats) return "";
+  const empty = '<p class="el-muted">No completed turns yet.</p>';
+  const roles = stats.byRole.length
+    ? `<div class="el-table-wrap"><table class="el-table" data-stats="roles">
+              <thead><tr><th>role</th><th>turns</th><th>total</th><th>average</th></tr></thead>
+              <tbody>
+${stats.byRole.map((item) => `                <tr data-role="${escapeHtml(item.role)}"><td>${escapeHtml(item.role)}</td><td>${item.turns}</td><td>${formatDuration(item.durationMs)}</td><td>${formatDuration(item.averageMs)}</td></tr>`).join("\n")}
+              </tbody>
+            </table></div>`
+    : empty;
+  const phases = stats.phases.length
+    ? `<div class="el-table-wrap"><table class="el-table" data-stats="phases">
+              <thead><tr><th>phase / task</th><th>turns</th><th>active time</th></tr></thead>
+              <tbody>
+${stats.phases
+  .map((phase) =>
+    [
+      `                <tr class="el-stats__phase" data-phase="${escapeHtml(phase.phase)}"><td>${escapeHtml(phase.phase)}</td><td>${phase.turns}</td><td>${formatDuration(phase.durationMs)}</td></tr>`,
+      ...phase.tasks.map(
+        (task) =>
+          `                <tr class="el-stats__task" data-task="${escapeHtml(task.task)}"><td>${escapeHtml(task.task)}</td><td>${task.turns}</td><td>${formatDuration(task.durationMs)}</td></tr>`,
+      ),
+    ].join("\n"),
+  )
+  .join("\n")}
+              </tbody>
+            </table></div>`
+    : empty;
+  return `        <section class="el-section el-stats">
+          <details id="el-stats">
+            <summary><h2>Turn statistics</h2> <span class="el-meta">${formatDuration(stats.activeMs)} active · ${plural(stats.turns, "turn")}</span></summary>
+            <dl class="el-kv">
+${[
+  row("active time", formatDuration(stats.activeMs)),
+  row("turns", `${stats.completedTurns} completed · ${stats.interruptedTurns} interrupted · ${stats.abortedTurns} aborted`),
+  row("wall time", `${formatDuration(stats.elapsedMs)} · ${formatDuration(stats.idleMs)} idle or paused`),
+  waitLine("background waits", stats.waits.background),
+  waitLine("awaiting review", stats.waits.review),
+].join("\n")}
+            </dl>
+            <h3>By role</h3>
+            ${roles}
+            <h3>By phase and task</h3>
+            ${phases}
+          </details>
         </section>
 `;
 }
@@ -198,13 +296,14 @@ ${done.map((review) => `              <tr><td><span class="el-id">${escapeHtml(r
         </section>`;
 }
 
-export function renderHomeMain({ epic, gates = [], inbox = [], overview, reviews }) {
+export function renderHomeMain({ activity = null, epic, gates = [], inbox = [], overview, reviews, statistics = null }) {
   const title = overview.title ?? epic.title;
   return `        <div class="el-page-head"><div class="el-label">epic</div><h1>${escapeHtml(title)}</h1><p class="el-meta">${escapeHtml(epic.slug)} · ${escapeHtml(overview.mode ?? epic.mode)}</p>${overview.intent ? `<p class="el-intent">${escapeHtml(overview.intent)}</p>` : ""}</div>
-${loopSection(overview)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
+${loopSection(overview)}${renderActivity(activity)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${statisticsSection(statistics)}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
 }
 
-export function renderEpicHome(projectName, { epic, gates = [], inbox = [], overview, reviews }) {
+export function renderEpicHome(projectName, view) {
+  const { epic, overview, reviews } = view;
   const pending = reviews.filter((review) => !review.submittedAt).length;
   return layout({
     title: overview.title ?? epic.title,
@@ -215,6 +314,6 @@ export function renderEpicHome(projectName, { epic, gates = [], inbox = [], over
     headerEnd: `<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending</span> ${pendingBadge(pending)}`,
     main: { attributes: ` data-epic="${escapeHtml(epic.slug)}" data-live-main` },
     scripts: ['<script type="module" src="/_runtime/home.js"></script>'],
-    body: renderHomeMain({ epic, gates, inbox, overview, reviews }),
+    body: renderHomeMain(view),
   });
 }

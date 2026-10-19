@@ -1,11 +1,12 @@
 // The live epic home (Phase 5): follows /api/<slug>/events and swaps in the fresh <main> from
 // /<slug>?fragment=main after each change, keeping the scroll position, the open state of every
-// <details id>, and an unsent inbox draft. Ticks the elapsed time of the open role turn. The page
-// works without this script; it is only current on reload then.
+// <details id>, and an unsent inbox draft. An `activity` event refreshes only the activity section
+// from /<slug>?fragment=activity. Ticks the elapsed time of the open role turn and the relative
+// times of the feed. The page works without this script; it is only current on reload then.
 const main = document.querySelector("main[data-live-main]");
 const marker = document.querySelector(".el-live");
 const slug = main?.dataset.epic;
-const state = { refreshes: 0, live: "connecting" };
+const state = { activityRefreshes: 0, refreshes: 0, live: "connecting" };
 window.epicLoopHome = state;
 
 function formatElapsed(ms) {
@@ -14,8 +15,17 @@ function formatElapsed(ms) {
   return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m` : `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
+function formatAgo(ms) {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
 function tick() {
   for (const node of document.querySelectorAll("time[data-since]")) node.textContent = formatElapsed(Date.now() - Date.parse(node.dataset.since));
+  for (const node of document.querySelectorAll("time[data-ago]")) node.textContent = formatAgo(Date.now() - Date.parse(node.dataset.ago));
 }
 
 function setLive(value) {
@@ -63,6 +73,36 @@ async function refresh() {
   return inFlight;
 }
 
+let activityInFlight = null;
+let activityAgain = false;
+async function refreshActivity() {
+  if (activityInFlight) {
+    activityAgain = true;
+    return activityInFlight;
+  }
+  activityInFlight = (async () => {
+    if (inFlight) await inFlight;
+    const response = await fetch(`/${encodeURIComponent(slug)}?fragment=activity`, { cache: "no-store", headers: { accept: "text/html" } });
+    const section = main.querySelector("[data-live-activity]");
+    if (!response.ok || !section) return;
+    const template = document.createElement("template");
+    template.innerHTML = (await response.text()).trim();
+    const next = template.content.firstElementChild;
+    if (!next) return;
+    section.replaceWith(next);
+    tick();
+    state.activityRefreshes += 1;
+    main.dispatchEvent(new CustomEvent("epic-loop:activity"));
+  })().finally(() => {
+    activityInFlight = null;
+    if (activityAgain) {
+      activityAgain = false;
+      refreshActivity();
+    }
+  });
+  return activityInFlight;
+}
+
 let delay = 1000;
 function connect() {
   const source = new EventSource(`/api/${encodeURIComponent(slug)}/events`);
@@ -73,6 +113,7 @@ function connect() {
     if (wasPaused) refresh();
   });
   source.addEventListener("change", () => refresh());
+  source.addEventListener("activity", () => refreshActivity());
   source.addEventListener("error", () => {
     source.close();
     setLive("paused");

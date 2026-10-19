@@ -266,6 +266,7 @@ export function bindSession(flags = {}) {
     startImplementationLoop(root, {
       sessionId,
       slug,
+      transcriptPath: typeof currentSession?.transcript_path === "string" ? currentSession.transcript_path : null,
     });
   } else {
     writeEpicRuntimeMode(root, slug, mode);

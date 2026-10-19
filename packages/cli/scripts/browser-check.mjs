@@ -300,15 +300,49 @@ Next task id: T3
   - Acceptance: all pass.
 `;
 
+const PROGRESS_FIXTURE = path.resolve(import.meta.dirname, "..", "..", "..", "tests", "fixtures", "activity", "progress-log.jsonl");
+
+// A short Claude Code transcript for the activity feed, ending `secondsAgo` before now.
+function transcriptLines(secondsAgo = 5) {
+  const at = (offset) => new Date(Date.now() - (secondsAgo + offset) * 1000).toISOString();
+  const tool = (offset, name, input) => ({ type: "assistant", timestamp: at(offset), message: { content: [{ type: "tool_use", name, input }] } });
+  const result = (offset, text) => ({ type: "user", timestamp: at(offset), message: { content: [{ type: "tool_result", content: text }] } });
+  return [
+    { type: "user", isMeta: true, timestamp: at(95), message: { content: "Stop hook feedback:\nFocused implementation task 7.\n\nExecute the task brief below." } },
+    { type: "assistant", timestamp: at(90), message: { content: [{ type: "thinking", thinking: "hidden" }] } },
+    tool(80, "Read", { file_path: "src/parser.mjs" }),
+    result(79, "1\texport function parse(input) {"),
+    tool(40, "Edit", { file_path: "src/parser.mjs", old_string: "a", new_string: "b" }),
+    result(39, "The file src/parser.mjs has been updated successfully."),
+    tool(20, "Bash", { command: "node --test tests/parser.test.mjs", description: "Run the parser tests" }),
+    result(12, "ok 14 - parses nested lists"),
+    { type: "assistant", timestamp: at(0), message: { content: [{ type: "text", text: "The parser handles nested lists now; running the full suite next." }] } },
+  ]
+    .map((line) => JSON.stringify(line))
+    .join("\n");
+}
+
 // The live epic home: changes on disk reach the open page through the event stream without a
-// reload, open <details> stay open, and the open turn's elapsed time ticks.
+// reload, open <details> stay open, the open turn's elapsed time ticks, and a new action in the
+// driver's transcript shows in the activity feed.
 async function checkHome(s, server, project) {
   const { evaluate, waitFor, expect } = s;
   const epicDir = path.join(project.root, ".epic-loop", "epics", "demo");
   const runtimePath = path.join(epicDir, ".runtime", "runtime-state.json");
   fs.writeFileSync(path.join(epicDir, "tracker.md"), HOME_TRACKER);
   fs.writeFileSync(path.join(epicDir, "decision-log.md"), "# Decision Log\n\n## Active Decisions\n\n- None recorded yet.\n");
-  const loop = { active_turn_started_at: new Date(Date.now() - 61000).toISOString(), current_role: "engineer", iteration: 7, status: "running" };
+  fs.mkdirSync(path.join(project.root, ".epic-loop", ".runtime"), { recursive: true });
+  fs.writeFileSync(path.join(project.root, ".epic-loop", ".runtime", "platform.json"), JSON.stringify({ platform: "claude-code" }));
+  fs.copyFileSync(PROGRESS_FIXTURE, path.join(epicDir, ".runtime", "progress-log.jsonl"));
+  const transcript = path.join(project.root, "driver-transcript.jsonl");
+  fs.writeFileSync(transcript, `${transcriptLines()}\n`);
+  const loop = {
+    active_turn_started_at: new Date(Date.now() - 61000).toISOString(),
+    current_role: "engineer",
+    driver_transcript_path: transcript,
+    iteration: 7,
+    status: "running",
+  };
   fs.writeFileSync(runtimePath, JSON.stringify({ mode: "implementation", implementation_loop: loop }));
   await s.send("Page.navigate", { url: `${server.url}demo` });
   await waitFor("window.epicLoopHome && window.epicLoopHome.live === 'live'", "home live");
@@ -317,9 +351,19 @@ async function checkHome(s, server, project) {
   const elapsedBefore = await evaluate("document.querySelector('time.el-elapsed').textContent");
   await sleep(1500);
   expect((await evaluate("document.querySelector('time.el-elapsed').textContent")) !== elapsedBefore, `the open turn's elapsed time ticks (${elapsedBefore})`);
+  expect((await evaluate("document.querySelectorAll('#el-activity .el-feed__item').length")) === 8, "the activity feed lists the transcript's items without the thinking");
+  expect(await evaluate("!document.getElementById('el-stats').open"), "turn statistics start closed");
+  await evaluate("document.getElementById('el-stats').open = true");
   // The home has no theme switch of its own: force each theme for its screenshot.
   await evaluate("document.documentElement.dataset.theme = 'light'");
   await s.shot("home-light");
+
+  const appended = Date.now();
+  const call = { type: "assistant", timestamp: new Date().toISOString(), message: { content: [{ type: "tool_use", name: "Bash", input: { command: "pnpm run test:unit" } }] } };
+  fs.appendFileSync(transcript, `${JSON.stringify(call)}\n`);
+  await waitFor("document.querySelector('#el-activity .el-feed__item .el-feed__text')?.textContent === 'Bash: pnpm run test:unit'", "activity update", 3000);
+  expect(true, `an appended tool call shows in the activity feed in ${Date.now() - appended} ms`);
+  expect((await evaluate("window.epicLoopHome.activityRefreshes")) >= 1, "the activity event refreshed only the activity section");
 
   const started = Date.now();
   fs.writeFileSync(path.join(epicDir, "tracker.md"), HOME_TRACKER.replace("Status: todo | T1", "Status: doing | T1"));
@@ -339,6 +383,7 @@ async function checkHome(s, server, project) {
   expect(true, "a new agent-made decision reaches the page");
   expect((await evaluate("window.__homeMarker")) === "kept", "no reload: the window marker survives the updates");
   expect(await evaluate("document.getElementById('task-T2').open"), "an open <details> stays open across updates");
+  expect(await evaluate("document.getElementById('el-stats').open"), "the opened statistics stay open across updates");
   expect((await evaluate("window.epicLoopHome.refreshes")) >= 3, "each change swapped in a fresh fragment");
   await evaluate("document.documentElement.dataset.theme = 'dark'");
   await s.shot("home-dark");

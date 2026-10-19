@@ -572,3 +572,25 @@
   - techlead reran home and server tests 13/13 and browser-check
   - test:unit 249/249, validate passes
 - Residual risk: phone width not checked in a browser (CSS breakpoint at 40rem); parser copies in the CLI must follow skill format changes
+
+## 2026-10-19T21:20:12+00:00 - closed
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Phase 5 Task 3 - Activity feed: what the agent is doing now, and turn statistics
+- Verdict: closed
+- Changed:
+  - skill: implementation_loop.driver_transcript_path recorded from the driver's hook payloads (lib/loop-transcript.mjs, hooks.mjs, bind in epics.mjs/loop.mjs), documented in references/hooks-and-session-routing.md
+  - CLI: per-platform transcript tail readers (src/epic/activity.mjs), a deliberate copy of the progress-report aggregation plus background and review waits (src/epic/statistics.mjs)
+  - home: Activity section after Loop and a collapsible Turn statistics section
+  - server: ?fragment=activity
+  - SSE: watches the driver transcript (re-armed on a new path) and the progress log, sends event: activity
+  - home.js refreshes only the activity section
+  - docs/review-engine.md route contract
+- Verification:
+  - pnpm run test:unit 257/257 (new: activity.test.mjs, driver-transcript.test.mjs, epic-home activity/stats tests
+  - statistics match progress-report.md built by rebuild-progress.mjs)
+  - pnpm run validate passed
+  - browser-check all passed (appended tool call shown in about 0.4 s without reload)
+  - light and dark home screenshots reviewed, feed column wrap fixed
+- Residual risk: Live check on both platforms is part of Phase 5 Task 6; this repo's live loop sees driver_transcript_path only after the next self-update. Fixtures are synthetic, modeled on the archived samples.
+- Commit: this task commit (feat(app): activity feed and turn statistics)

@@ -199,6 +199,8 @@ This designates the current session as the exclusive implementation driver for t
 
 For driver binding, Codex `--current` uses the existing Codex current-session capture and session metadata fallback. Claude Code `--current` reads only the Claude Code hook capture for the selected platform; the capture must be fresh, match the current project root, and include string `session_id` and `transcript_path`. If the Claude Code capture is missing, stale, malformed, wrong-root, or ambiguous, pass `--session-id "<session_id>"` explicitly.
 
+The loop state also keeps the driver's transcript path, `implementation_loop.driver_transcript_path`, for the epic home's activity feed. Bind sets it when the session lookup knows the path, and every hook payload of the driver session that carries `transcript_path` refreshes it. Payloads from other sessions never change it.
+
 Unbind on user request with `node <skill-dir>/scripts/unbind-session.mjs --current` (or `--session-id "<session_id>"`, optional `--reason`). It deactivates the session's entry in `session-bindings.json` (`active: false`, `deactivated_at`, `deactivated_reason`); hooks become silent no-ops for that session id afterwards. Unbinding an unbound session is a harmless no-op. Rebind later through the normal `bind-session.mjs` flow.
 
 ## Doorbell

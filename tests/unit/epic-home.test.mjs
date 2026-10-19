@@ -8,6 +8,7 @@ import { after, before, test } from "node:test";
 import { assertSuccess, makeTempRoot, repoRoot, runNodeScript } from "./test-utils.mjs";
 
 const cliEntry = path.join(repoRoot, "packages", "cli", "src", "cli.mjs");
+const fixtures = path.join(repoRoot, "tests", "fixtures", "activity");
 const SLUG = "home";
 
 const TRACKER = `# Tracker
@@ -59,10 +60,14 @@ Active task: Phase 2 Task 2 (T4) - Publish the package
 let root;
 let home;
 let port;
+let transcript;
 const started = new Set();
 
 function writeRuntime(loop) {
-  fs.writeFileSync(path.join(root, ".epic-loop", "epics", SLUG, ".runtime", "runtime-state.json"), JSON.stringify({ mode: "implementation", implementation_loop: loop }));
+  fs.writeFileSync(
+    path.join(root, ".epic-loop", "epics", SLUG, ".runtime", "runtime-state.json"),
+    JSON.stringify({ mode: "implementation", implementation_loop: { driver_transcript_path: transcript, ...loop } }),
+  );
 }
 
 before(() => {
@@ -70,6 +75,10 @@ before(() => {
   home = makeTempRoot("epic-home-home");
   const epicDir = path.join(root, ".epic-loop", "epics", SLUG);
   fs.mkdirSync(path.join(epicDir, ".runtime"), { recursive: true });
+  fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), JSON.stringify({ platform: "claude-code" }));
+  transcript = path.join(root, "driver-transcript.jsonl");
+  fs.copyFileSync(path.join(fixtures, "claude-session.jsonl"), transcript);
   fs.mkdirSync(path.join(epicDir, "docs"), { recursive: true });
   fs.writeFileSync(path.join(epicDir, "tracker.md"), TRACKER);
   fs.writeFileSync(path.join(epicDir, "state-of-epic.md"), STATE);
@@ -83,6 +92,7 @@ before(() => {
   fs.mkdirSync(reviewDir, { recursive: true });
   fs.writeFileSync(path.join(reviewDir, "page.html"), "<title>Add the token</title><main>x</main>");
   fs.writeFileSync(path.join(reviewDir, "review.json"), JSON.stringify({ id: "2026-10-20-token", title: "Add the token" }));
+  fs.copyFileSync(path.join(fixtures, "progress-log.jsonl"), path.join(epicDir, ".runtime", "progress-log.jsonl"));
   writeRuntime({
     active_turn_started_at: new Date(Date.now() - 125000).toISOString(),
     current_role: "manager",
@@ -122,15 +132,15 @@ function get(pathname, headers = {}) {
   });
 }
 
-// Opens the event stream and resolves the next `change` event after `action` runs.
-function nextChange(action, timeoutMs = 2000) {
+// Opens the event stream and resolves the next `name` event after `action` runs.
+function nextEvent(name, action, timeoutMs = 2000) {
   return new Promise((resolve, reject) => {
     const req = http.get({ headers: { host: `127.0.0.1:${port}` }, host: "127.0.0.1", path: `/api/${SLUG}/events`, port }, (res) => {
       assert.match(res.headers["content-type"], /text\/event-stream/u);
       let buffer = "";
       const timer = setTimeout(() => {
         req.destroy();
-        reject(new Error(`no change event within ${timeoutMs} ms`));
+        reject(new Error(`no ${name} event within ${timeoutMs} ms`));
       }, timeoutMs + 500);
       res.setEncoding("utf8");
       res.on("data", (chunk) => {
@@ -139,7 +149,7 @@ function nextChange(action, timeoutMs = 2000) {
           res.acted = true;
           setTimeout(action, 100);
         }
-        const match = buffer.match(/event: change\ndata: (.+)\n\n/u);
+        const match = buffer.match(new RegExp(`event: ${name}\ndata: (.+)\n\n`, "u"));
         if (match) {
           clearTimeout(timer);
           req.destroy();
@@ -150,6 +160,8 @@ function nextChange(action, timeoutMs = 2000) {
     req.on("error", () => {});
   });
 }
+
+const nextChange = (action, timeoutMs) => nextEvent("change", action, timeoutMs);
 
 const health = async () => JSON.parse((await get("/_health")).text);
 
@@ -232,4 +244,77 @@ test("the event stream applies the Origin guard and leaves no watcher behind", {
   });
   for (let index = 0; index < 50 && (await health()).watchers !== baseline; index += 1) await new Promise((resolve) => setTimeout(resolve, 50));
   assert.equal((await health()).watchers, baseline);
+});
+
+test("the home shows the driver's activity, newest first, and ?fragment=activity returns only that section", async () => {
+  writeRuntime({ current_role: "techlead", iteration: 14, status: "running" });
+  const html = (await get(`/${SLUG}`)).text;
+  assert.match(
+    html,
+    /<section class="el-section el-activity" id="el-activity" data-live-activity[^>]*>[\s\S]*<h2 id="el-activity-title">Activity<\/h2><span class="el-tag el-tag--accent">techlead<\/span> <span class="el-meta">last <time class="el-ago" data-ago="2026-10-20T10:00:09.000Z"/u,
+  );
+  const feed = html.slice(html.indexOf('<ol class="el-feed">'), html.indexOf("</ol>"));
+  const kinds = [...feed.matchAll(/data-kind="([a-z]+)"/gu)].map((match) => match[1]);
+  assert.deepEqual(kinds, ["message", "turn", "message", "result", "tool", "result", "tool", "turn"]);
+  assert.match(feed, /<span class="el-feed__kind">tool<\/span><span class="el-feed__text">Read: \/project\/\.epic-loop\/epics\/demo\/tracker\.md<\/span>/u);
+  assert.match(feed, /title="2026-10-20T10:00:03\.000Z">\d+[smhd] ago<\/time>/u);
+  assert.doesNotMatch(feed, /SECRET-THINKING/u);
+  // The activity section sits right after the loop state.
+  assert.ok(html.indexOf('class="el-section el-loop"') < html.indexOf('id="el-activity"') && html.indexOf('id="el-activity"') < html.indexOf("el-waiting"));
+
+  const fragment = await get(`/${SLUG}?fragment=activity`);
+  assert.equal(fragment.status, 200);
+  assert.match(fragment.text, /^\s*<section class="el-section el-activity" id="el-activity"/u);
+  assert.doesNotMatch(fragment.text, /el-loop|el-phases|<html/u);
+
+  // A missing transcript is a quiet empty state.
+  writeRuntime({ current_role: "techlead", driver_transcript_path: path.join(root, "missing.jsonl"), status: "running" });
+  assert.match((await get(`/${SLUG}?fragment=activity`)).text, /<p class="el-muted">No activity recorded yet\.<\/p>/u);
+  writeRuntime({ current_role: "techlead", iteration: 14, status: "running" });
+});
+
+test("appending to the driver's transcript sends event: activity, and the fragment shows the new item", { timeout: 20000 }, async () => {
+  writeRuntime({ current_role: "engineer", iteration: 15, status: "running" });
+  const line = { type: "assistant", timestamp: new Date().toISOString(), message: { content: [{ type: "tool_use", name: "Grep", input: { pattern: "appendedPattern" } }] } };
+  await nextEvent("activity", () => fs.appendFileSync(transcript, `${JSON.stringify(line)}\n`));
+  assert.match((await get(`/${SLUG}?fragment=activity`)).text, /<li class="el-feed__item" data-kind="tool">[^\n]*Grep: appendedPattern/u);
+
+  // A new transcript path in the runtime state re-arms the watch.
+  const next = path.join(root, "driver-transcript-2.jsonl");
+  fs.writeFileSync(next, "");
+  await nextChange(() => writeRuntime({ current_role: "engineer", driver_transcript_path: next, iteration: 15, status: "running" }));
+  await nextEvent("activity", () => fs.appendFileSync(next, `${JSON.stringify({ ...line, message: { content: [{ type: "text", text: "second transcript" }] } })}\n`));
+  assert.match((await get(`/${SLUG}?fragment=activity`)).text, /second transcript/u);
+  writeRuntime({ current_role: "techlead", iteration: 14, status: "running" });
+});
+
+test("the turn statistics match progress-report.md built by the skill from the same progress log", async () => {
+  assertSuccess(runNodeScript("rebuild-progress.mjs", ["--root", root, "--slug", SLUG]));
+  const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", SLUG, ".runtime", "progress-report.md"), "utf8");
+  const field = (label) => report.match(new RegExp(`^- ${label}: (.+)$`, "mu"))[1];
+  const html = (await get(`/${SLUG}`)).text;
+  const stats = html.slice(html.indexOf('<section class="el-section el-stats">'), html.indexOf("</section>", html.indexOf('<section class="el-section el-stats">')));
+  assert.match(stats, /<details id="el-stats">/u, "closed by default");
+  assert.match(stats, new RegExp(`<dt>active time</dt><dd>${field("Active turn time")}</dd>`, "u"));
+  assert.match(
+    stats,
+    new RegExp(`<dt>turns</dt><dd>${field("Completed turns")} completed · ${field("Interrupted turns")} interrupted · ${field("Aborted turns")} aborted</dd>`, "u"),
+  );
+  assert.match(stats, new RegExp(`<dt>wall time</dt><dd>${field("Elapsed wall time")} · ${field("Observed idle or paused time")} idle or paused</dd>`, "u"));
+  const roles = [...report.matchAll(/^- (manager|techlead|engineer): (.+) across (\d+) turns?$/gmu)];
+  assert.equal(roles.length, 3);
+  for (const [, role, total, turns] of roles) assert.match(stats, new RegExp(`<tr data-role="${role}"><td>${role}</td><td>${turns}</td><td>${total}</td>`, "u"));
+  const phases = [...report.matchAll(/^### (.+)\n\n- Active time: (.+)\n- Turns: (\d+)$/gmu)];
+  const tasks = [...report.matchAll(/^#### (.+)\n\n- Active time: (.+)\n- Turns: (\d+)$/gmu)];
+  assert.equal(phases.length, 2);
+  assert.equal(tasks.length, 3);
+  for (const [, phase, time, turns] of phases)
+    assert.ok(stats.includes(`<tr class="el-stats__phase" data-phase="${phase}"><td>${phase}</td><td>${turns}</td><td>${time}</td></tr>`), phase);
+  for (const [, task, time, turns] of tasks)
+    assert.ok(stats.includes(`<tr class="el-stats__task" data-task="${task}"><td>${task}</td><td>${turns}</td><td>${time}</td></tr>`), task);
+  // The fixture: engineer turns 255s + 90s (aborted) average 2m 53s; one background wait of 2m;
+  // one review wait from 09:08:10 to the next turn at 09:20:10.
+  assert.match(stats, /<tr data-role="engineer"><td>engineer<\/td><td>2<\/td><td>5m 45s<\/td><td>2m 53s<\/td><\/tr>/u);
+  assert.match(stats, /<dt>background waits<\/dt><dd>1 wait · 2m<\/dd>/u);
+  assert.match(stats, /<dt>awaiting review<\/dt><dd>1 wait · 12m<\/dd>/u);
 });

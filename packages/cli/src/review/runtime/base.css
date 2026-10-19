@@ -1326,9 +1326,93 @@ body.el-lightbox-open #el-problem {
 .el-live[data-live="paused"] {
   color: var(--color-danger);
 }
+.el-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 22rem;
+  overflow-y: auto;
+  font-size: var(--fs-sm);
+}
+.el-feed__item {
+  display: grid;
+  grid-template-columns: 8ch 9ch 1fr;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: var(--rule-width) solid var(--color-rule);
+}
+.el-feed__item:last-child {
+  border-bottom: 0;
+}
+.el-feed__time {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.el-feed__kind {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  padding-top: 1px;
+}
+.el-feed__item[data-kind="tool"] .el-feed__kind {
+  color: var(--color-accent);
+}
+.el-feed__item[data-kind="tool"] .el-feed__text,
+.el-feed__item[data-kind="result"] .el-feed__text {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.el-feed__item[data-kind="result"] .el-feed__text,
+.el-feed__item[data-kind="turn"] .el-feed__text {
+  color: var(--color-text-muted);
+}
+.el-feed__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.el-stats > details > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+.el-stats > details > summary h2 {
+  display: inline;
+  margin: 0;
+}
+.el-stats > details > .el-kv {
+  margin: var(--space-5) 0;
+}
+.el-stats h3 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+}
+.el-stats td:not(:first-child),
+.el-stats th:not(:first-child) {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.el-stats__task td:first-child {
+  padding-left: var(--space-6);
+  color: var(--color-text-muted);
+}
+.el-stats__phase td {
+  font-weight: var(--fw-medium);
+}
 @media (max-width: 40rem) {
   .el-kv {
     grid-template-columns: 1fr;
+  }
+  .el-feed__item {
+    grid-template-columns: 8ch 1fr;
+  }
+  .el-feed__kind {
+    display: none;
   }
   .el-phase > summary .el-progress {
     margin-left: 0;

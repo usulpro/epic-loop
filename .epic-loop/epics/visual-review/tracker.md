@@ -249,7 +249,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: against a fixture epic, changing a task status, opening a gate or recording an agent-made decision updates the open home page within seconds without reload.
   - Docs: `docs/review-engine.md` (app and routes).
 
-- [ ] Kind: implementation | Status: todo | Activity feed: what the agent is doing now, and turn statistics
+- [x] Kind: implementation | Status: done | Activity feed: what the agent is doing now, and turn statistics
   - Outcome:
     - The home shows the driver session's recent activity: tool calls and messages, condensed, read from the Claude Code transcript or the Codex rollout, with no model involved.
     - It also shows turn history and statistics from the progress log: durations per role, phase and task, waits, aborted turns.

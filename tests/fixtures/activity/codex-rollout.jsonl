@@ -1,0 +1,13 @@
+{"timestamp":"2026-10-20T11:00:00.000Z","type":"session_meta","payload":{"id":"thread-1","cwd":"/project"}}
+{"timestamp":"2026-10-20T11:00:00.100Z","type":"event_msg","payload":{"type":"task_started"}}
+{"timestamp":"2026-10-20T11:00:00.200Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"developer instructions"}]}}
+{"timestamp":"2026-10-20T11:00:00.300Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"# AGENTS.md instructions for /project\n<INSTRUCTIONS>..."}]}}
+{"timestamp":"2026-10-20T11:00:00.400Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Run the next task."}]}}
+{"timestamp":"2026-10-20T11:00:01.000Z","type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"SECRET-REASONING should never show"}],"encrypted_content":"zzz"}}
+{"timestamp":"2026-10-20T11:00:02.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","call_id":"c1","arguments":"{\"command\":[\"bash\",\"-lc\",\"pnpm test\"]}"}}
+{"timestamp":"2026-10-20T11:00:03.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"c1","output":"tests passed: 12\nmore output"}}
+{"timestamp":"2026-10-20T11:00:04.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"exec","call_id":"c2","input":"const r = await tools.exec_command({cmd:\"cat tracker.md\"});"}}
+{"timestamp":"2026-10-20T11:00:05.000Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"c2","output":"Script completed"}}
+{"timestamp":"2026-10-20T11:00:06.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Tests pass; the task is done."}]}}
+{"timestamp":"2026-10-20T11:00:06.100Z","type":"event_msg","payload":{"type":"token_count","info":null}}
+{"timestamp":"2026-10-20T11:00:06.200Z","type":"event_msg","payload":{"type":"task_complete","last_agent_message":"Tests pass; the task is done."}}
