@@ -18,6 +18,13 @@ What the implementation loop needs from the human without stopping for it. Writt
   - Default: none
   - Blocks: the Codex half of the Phase 4 verification and Phase 4 closure; can be approved together with H3
   - Raised: 2026-10-19
+- **H5**
+  - Kind: human-action
+  - Ask: Review and squash-merge PR #16 (https://github.com/usulpro/epic-loop/pull/16) into main, then in the main checkout run git pull and pnpm run self-update
+  - Why: Only the human merges into main (docs/delivery.md); the PR delivers Phases 2-5
+  - Default: none
+  - Blocks: Phases 6-7 and the follow-ups on a new branch from main
+  - Raised: 2026-10-19
 
 ## Resolved
 
