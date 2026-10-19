@@ -5,7 +5,7 @@ import path from "node:path";
 // PATCHes from two tabs merge instead of overwriting each other.
 const queues = new Map();
 
-function enqueue(key, task) {
+export function enqueue(key, task) {
   const previous = queues.get(key) ?? Promise.resolve();
   const next = previous.then(task, task);
   queues.set(

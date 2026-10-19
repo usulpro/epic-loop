@@ -88,8 +88,13 @@ function markIngested(root, slug, flags) {
   const { loop, runtime, runtimePath } = readLoop(root, slug);
   requireManagerTurn(loop, "ingested");
   const gate = requireOpenGate(loop, review);
+  // The ingest turn's Stop already marked these answers: do not log them twice.
+  if (gate.status === "ingested" && gate.ingested_submitted_at && gate.ingested_submitted_at === (gate.submitted_at ?? gate.ingested_submitted_at)) {
+    console.log(`The answers of review ${review} are already ingested.`);
+    return;
+  }
   const timestamp = nowIso();
-  replaceGate(runtimePath, runtime, loop, { ...gate, ingested_at: timestamp, status: "ingested" }, timestamp);
+  replaceGate(runtimePath, runtime, loop, { ...gate, ingested_at: timestamp, ingested_submitted_at: gate.submitted_at ?? null, status: "ingested" }, timestamp);
   logGate(root, slug, loop, "gate-ingested", timestamp, { review, submitted_at: gate.submitted_at ?? null });
   console.log(`Marked the answers of review ${review} ingested.`);
 }

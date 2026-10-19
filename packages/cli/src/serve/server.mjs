@@ -5,8 +5,9 @@ import path from "node:path";
 import { REVIEW_RUNTIME_DIR, reviewVendorFile } from "../paths.mjs";
 import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answers.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
-import { injectReview, renderEpicHome, renderEpicList, renderNotFound, renderProblemThanks } from "./pages.mjs";
-import { epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
+import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
+import { injectReview, renderEpicHome, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
+import { epicDir, epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
 const MAX_BODY = 1024 * 1024;
 
@@ -101,6 +102,17 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     throw new HttpError(405, "Method not allowed.");
   }
 
+  async function handleInbox(req, res, slug) {
+    if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+    if (req.method !== "POST") throw new HttpError(405, "Method not allowed.");
+    const { form, data } = await readPayload(req);
+    const text = String(data?.text ?? "").trim();
+    if (!text) throw new HttpError(400, "Write what the loop should know.");
+    const entry = await appendInbox(epicDir(root, slug), text.slice(0, INBOX_TEXT_LIMIT));
+    if (form) return send(res, 200, renderInboxThanks(projectName, `/${encodeURIComponent(slug)}`, entry), "text/html; charset=utf-8");
+    return sendJson(res, 201, entry);
+  }
+
   function handleReview(req, res, slug, id, rest) {
     if (!reviewExists(root, slug, id)) throw new HttpError(404, "There is no such review.");
     const dir = reviewDir(root, slug, id);
@@ -142,6 +154,8 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       return sendFile(res, file);
     }
 
+    const inbox = raw.match(/^\/api\/([^/]+)\/inbox$/u);
+    if (inbox) return handleInbox(req, res, decode(inbox[1]));
     const api = raw.match(/^\/api\/([^/]+)\/reviews\/([^/]+)\/(answers|submit|problem)$/u);
     if (api) return handleApi(req, res, decode(api[1]), decode(api[2]), api[3]);
     if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "Method not allowed.");
@@ -154,7 +168,7 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       const slug = decode(home[1]);
       if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
       const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
-      return send(res, 200, renderEpicHome(projectName, epic, listReviews(root, slug), listOpenGates(root, slug)), "text/html; charset=utf-8");
+      return send(res, 200, renderEpicHome(projectName, epic, listReviews(root, slug), listOpenGates(root, slug), readInbox(epicDir(root, slug))), "text/html; charset=utf-8");
     }
     throw new HttpError(404, "There is no page at this address.");
   }

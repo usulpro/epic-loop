@@ -34,7 +34,7 @@ import {
   normalizePromptFile,
   prependResumeNote,
 } from "./loop-prompts.mjs";
-import { awaitReviewIfBlocked } from "./loop-gates.mjs";
+import { INGEST_PROMPT_TEMPLATE_PATH, buildIngestPrompt, formatIngestNote, ingestSnapshot, logIngestStart, planIngest, settleHumanGates } from "./loop-ingest.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 const LOOP_ROLES = ["manager", "techlead", "engineer", "idle"];
@@ -246,8 +246,9 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   ({ loop, runtime } = recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
 
-  // A manager turn that opened a blocking gate ends here: the loop awaits the review.
-  if (loop.status === "running" && awaitReviewIfBlocked(projectRoot, slug, runtime, loop, payload, timestamp)) {
+  let awaiting;
+  ({ awaiting, loop, runtime } = settleHumanGates(projectRoot, slug, runtime, loop, payload, timestamp));
+  if (awaiting) {
     return null;
   }
 
@@ -288,35 +289,16 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   }
 
   const capProximityRoute = platform === "claude-code" ? getClaudeBlockCapProximityRoute(loop, timestamp) : null;
-  const role = capProximityRoute ? "manager" : loop.next_role;
-  if (role === WAITING_FOR_TURN_TRANSITION) {
+  // Pending human input (answers, inbox) is ingested by a manager turn before the techlead or
+  // engineer turn that would run otherwise.
+  const ingestPlan = capProximityRoute ? null : planIngest(projectRoot, slug, loop, loop.next_role);
+  const role = capProximityRoute || ingestPlan ? "manager" : loop.next_role;
+  const skipReason = continuationSkipReason(role);
+  if (skipReason) {
     appendLoopLog(projectRoot, {
       action: "skip",
-      reason: "next-role-not-set",
-      session_id: payload.session_id ?? null,
-      slug,
-      timestamp,
-    });
-    return null;
-  }
-
-  if (role === "idle" || !role) {
-    appendLoopLog(projectRoot, {
-      action: "skip",
-      next_role: role ?? null,
-      reason: "no-continuation-role",
-      session_id: payload.session_id ?? null,
-      slug,
-      timestamp,
-    });
-    return null;
-  }
-
-  if (!["manager", "techlead", "engineer"].includes(role)) {
-    appendLoopLog(projectRoot, {
-      action: "skip",
-      next_role: role,
-      reason: "unsupported-role",
+      ...(skipReason === "next-role-not-set" ? {} : { next_role: role ?? null }),
+      reason: skipReason,
       session_id: payload.session_id ?? null,
       slug,
       timestamp,
@@ -326,7 +308,7 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
 
   const iteration = Number.isFinite(loop.iteration) ? loop.iteration + 1 : 1;
   const resumesAbortedTurn = loop.resume_after_user_turn && role === loop.current_role;
-  const { prompt, promptFile, stopChallenge, stopReview } = buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute);
+  const { ingestNote, prompt, promptFile, stopChallenge, stopReview } = buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute, ingestPlan);
   // Only the final housekeeping turn before a finite-cap pause needs the manual-continue
   // note. With an uncapped run (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0) roles chain automatically,
   // so appending it to every prompt would misinform the agent.
@@ -345,6 +327,8 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
       background_wait_iteration: null,
       background_wait_ms: 0,
       current_role: role,
+      ingest: ingestPlan ? ingestSnapshot(ingestPlan, iteration) : (loop.ingest ?? null),
+      ingest_note: ingestNote ? null : (loop.ingest_note ?? null),
       iteration,
       last_continuation_at: timestamp,
       last_reason: capProximityRoute?.reason ?? loop.last_reason ?? null,
@@ -379,11 +363,16 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
     session_id: payload.session_id ?? null,
     slug,
     ...(stopReview ? { stop_review: true, stop_class: stopReview.class } : {}),
+    ...(ingestPlan ? { ingest: true } : {}),
     stop_hook_active: payload.stop_hook_active === true,
     task: runtime.active_task ?? null,
     timestamp,
     turn_id: payload.turn_id ?? null,
   });
+
+  if (ingestPlan) {
+    logIngestStart(projectRoot, slug, ingestPlan, iteration, payload, timestamp);
+  }
 
   appendPromptLog(projectRoot, {
     iteration,
@@ -402,7 +391,17 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   };
 }
 
-function buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute) {
+function continuationSkipReason(role) {
+  if (role === WAITING_FOR_TURN_TRANSITION) return "next-role-not-set";
+  if (role === "idle" || !role) return "no-continuation-role";
+  return ["manager", "techlead", "engineer"].includes(role) ? null : "unsupported-role";
+}
+
+function buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityRoute, ingestPlan = null) {
+  if (ingestPlan) {
+    return { prompt: buildIngestPrompt(projectRoot, slug, iteration, ingestPlan), promptFile: INGEST_PROMPT_TEMPLATE_PATH, stopChallenge: null, stopReview: null };
+  }
+
   // A manager turn routed by request-stop reviews that stop instead of doing housekeeping.
   const stopReview = role === "manager" && loop.stop_request ? loop.stop_request : null;
   // A challenged stop is delivered to the next techlead turn once.
@@ -418,7 +417,9 @@ function buildRolePrompt(projectRoot, slug, loop, role, iteration, capProximityR
   }
 
   if (role === "techlead") {
-    return { prompt: buildTechleadPrompt(slug, iteration, stopChallenge), promptFile: TECHLEAD_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
+    // The turn after a manager ingest gets the "Human Input Ingested" note once.
+    const ingestNote = loop.ingest_note ? formatIngestNote(loop.ingest_note) : null;
+    return { ingestNote, prompt: buildTechleadPrompt(slug, iteration, stopChallenge, ingestNote), promptFile: TECHLEAD_PROMPT_TEMPLATE_PATH, stopChallenge, stopReview };
   }
 
   return { prompt: buildEngineerPrompt(projectRoot, slug, loop, iteration), promptFile: loop.prompt_file ?? null, stopChallenge, stopReview };

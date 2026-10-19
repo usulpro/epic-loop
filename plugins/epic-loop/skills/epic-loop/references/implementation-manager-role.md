@@ -226,7 +226,15 @@ Only the manager opens a gate (D1): it registers a checked review page as someth
 3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server).
 4. Settle gates in a later manager turn: `gate.mjs ingested --review <id>` once the answers are recorded, `gate.mjs close --review <id> [--reason …]` when the gate is done. `gate.mjs list` shows them; `role-summary.mjs` lists open gates.
 
-Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Picking up submitted answers into a manager ingest turn is wired in later (human gates).
+Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Submitted answers come back to you in an ingest turn (below).
+
+### Ingest
+
+At every role transition the loop looks for human input: answers submitted on a gate's page and not yet ingested, and new entries in the epic inbox (`inbox.jsonl`, written from the epic home). If there is any, the next turn is a **manager ingest turn** (`assets/templates/implementation-manager-ingest-prompt.md`) before the techlead or engineer turn that would run. It also resumes a loop that is `awaiting-review`.
+
+- Record, do not plan (D23): decisions into `decision-log.md`, answered H items with `human-queue.mjs resolve`, agent-made decisions with `agent-decision.mjs confirm` (`--reversed` to reverse), inbox requests where they belong, and `gate.mjs close` for gates whose questions are all answered.
+- Hold kinds (D26): a `security-hold` resolves only from an explicit confirmation control answered true, passed as `--confirmation`; `human-action` resolves on "done"; `external-wait` never resolves here.
+- End with a short "what changed" report. The hook marks exactly the input the turn was given as ingested (`gate-ingested`, `inbox-ingested`), and the techlead's next prompt carries the report as "Human Input Ingested". Input that arrives during the turn waits for the next pickup.
 
 ## Handoff Constraint
 

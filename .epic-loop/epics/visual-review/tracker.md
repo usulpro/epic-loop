@@ -150,7 +150,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - events are logged with the review id.
   - Docs: `docs/human-gates.md`.
 
-- [ ] Kind: implementation | Status: todo | Answers and inbox pickup at every role transition, with manager ingest
+- [x] Kind: implementation | Status: done | Answers and inbox pickup at every role transition, with manager ingest
   - Outcome:
     - On each driver Stop the loop finds submitted, un-ingested answers and new inbox entries, and routes to a manager ingest turn first.
     - The manager records answers and inbox requests into the artifacts and writes a "what changed" note.

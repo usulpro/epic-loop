@@ -161,6 +161,56 @@ test("the epic home shows open gates from the loop state and survives a missing 
   assert.doesNotMatch(missing.text, /<h2>Gates<\/h2>/u);
 });
 
+test("the inbox endpoint appends numbered entries from JSON and the plain form, and the epic home shows the form and the entries", async () => {
+  const inboxPath = path.join(project.root, ".epic-loop", "epics", "demo", "inbox.jsonl");
+  try {
+    const home = await request(port, "/demo");
+    assert.match(home.text, /<form class="el-card el-inbox__form" method="post" action="\/api\/demo\/inbox"/u);
+    assert.match(home.text, /<textarea id="el-inbox-text" class="el-comment" name="text"/u);
+
+    const first = await request(port, "/api/demo/inbox", { method: "POST", ...json({ text: "  Keep the footer links.  " }) });
+    assert.equal(first.status, 201);
+    const entry = JSON.parse(first.text);
+    assert.equal(entry.id, "I1");
+    assert.equal(entry.text, "Keep the footer links.");
+    assert.ok(entry.createdAt);
+
+    const form = await request(port, "/api/demo/inbox", { method: "POST", body: "text=No+carousel%2C+please.", headers: { "content-type": "application/x-www-form-urlencoded" } });
+    assert.equal(form.status, 200);
+    assert.match(form.text, /Sent to the loop/u);
+    assert.match(form.text, /<span class="el-id">I2<\/span>/u);
+    assert.match(form.text, /href="\/demo"/u);
+
+    assert.equal((await request(port, "/api/demo/inbox", { method: "POST", ...json({ text: "   " }) })).status, 400);
+    const crossOrigin = await request(port, "/api/demo/inbox", {
+      method: "POST",
+      body: JSON.stringify({ text: "evil" }),
+      headers: { "content-type": "application/json", origin: "http://evil.example" },
+    });
+    assert.equal(crossOrigin.status, 403);
+    assert.equal((await request(port, "/api/nope/inbox", { method: "POST", ...json({ text: "x" }) })).status, 404);
+    assert.equal((await request(port, "/api/demo/inbox")).status, 405);
+
+    const lines = fs
+      .readFileSync(inboxPath, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(
+      lines.map((line) => [line.id, line.text]),
+      [
+        ["I1", "Keep the footer links."],
+        ["I2", "No carousel, please."],
+      ],
+    );
+
+    const homeAfter = await request(port, "/demo");
+    assert.ok(homeAfter.text.indexOf("No carousel, please.") < homeAfter.text.indexOf("Keep the footer links."), "newest entry first");
+  } finally {
+    fs.rmSync(inboxPath, { force: true });
+  }
+});
+
 test("review assets are served and traversal is refused", async () => {
   const asset = await request(port, "/demo/reviews/r1/assets/shot.txt");
   assert.equal(asset.status, 200);

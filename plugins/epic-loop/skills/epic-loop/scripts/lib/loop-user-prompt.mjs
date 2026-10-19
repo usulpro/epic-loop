@@ -5,6 +5,7 @@ import { appendLoopLog } from "./loop-artifacts.mjs";
 import { isWaitingForBackgroundTasks, waitedMs, waitingTurnGuidance } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
 import { AWAITING_REVIEW, openGates, reviewPath } from "./loop-gates.mjs";
+import { pendingHumanInput } from "./loop-ingest.mjs";
 import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
 // A user message never stops the implementation loop by itself. The loop stops only on an
@@ -62,7 +63,7 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
         `[epic-loop] epic=${slug} mode=implementation — the user stopped the loop while it awaited a review. Confirm the loop is stopped and that it resumes with: ${resumeCommand(slug)}`,
       );
     }
-    return userPromptContext(awaitingReviewNote(slug, loop));
+    return userPromptContext(awaitingReviewNote(projectRoot, slug, loop));
   }
 
   if (loop.status !== "running") {
@@ -200,9 +201,13 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
 
 // A blocking gate ended the manager's turn: nothing runs until the human answers the page or
 // the loop is resumed explicitly.
-function awaitingReviewNote(slug, loop) {
+function awaitingReviewNote(projectRoot, slug, loop) {
   const waiting = openGates(loop).filter((gate) => gate.blocking);
   const reviews = (waiting.length > 0 ? waiting : openGates(loop)).map((gate) => `${gate.review} (${reviewPath(slug, gate.review)})`);
+  const pending = pendingHumanInput(projectRoot, slug, loop);
+  if (pending.gates.length + pending.inbox.length > 0) {
+    return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. The human's input has arrived; answer the user briefly and end your reply: the loop then runs a manager ingest turn and continues. ${stopHint(slug)}`;
+  }
   return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. Nothing runs after this reply. Answer the user; the human answers that page in the epic-loop app (epic-loop serve). Only if the user asks to continue the loop now, resume it: ${resumeCommand(slug)}. ${stopHint(slug)}`;
 }
 

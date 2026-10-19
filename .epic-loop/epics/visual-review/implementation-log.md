@@ -447,3 +447,23 @@
   - techlead reran both files 20/20
   - test:unit 214/214, validate passes, browser-check passes
 - Residual risk: answers are not routed to a manager ingest turn yet (Task 2); gate.mjs reaches the live runtime copy only after self-update
+
+## 2026-10-19T19:48:54+00:00 - done
+
+- Phase: Phase 4 - Human Gates In The Loop
+- Task: Answers and inbox pickup at every role transition, with manager ingest
+- Verdict: done
+- Changed:
+  - lib/loop-ingest.mjs: pending input (submitted gate answers not ingested, inbox entries after inbox_through), resume from awaiting-review, manager ingest turn before techlead/engineer (stop review first, techlead always after ingest), snapshot marked ingested on the ingest Stop with gate-ingested/inbox-ingested, one-time Human Input Ingested techlead note
+  - ingest prompt template
+  - inbox endpoint, form and recent entries in the CLI app (inbox.jsonl, I<n> ids)
+  - human-queue resolve needs --confirmation for security-hold
+  - role-summary pending input
+  - manager Ingest and techlead Human Input Ingested references
+  - implementation-cycle step 15
+  - docs/human-gates.md
+- Verification:
+  - ingest-contracts.test.mjs 8 tests (both platforms for routing and resume), inbox server test, gate contract updated
+  - techlead reran ingest, gate, review-server and human-queue tests 35/35
+  - test:unit 223/223, validate passes, browser-check passes
+- Residual risk: inbox ids restart if inbox.jsonl is deleted while inbox_through stays; the loop wakes only on a Stop until the doorbell (Task 3); new scripts reach the live runtime only after self-update

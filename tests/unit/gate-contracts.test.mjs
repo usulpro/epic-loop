@@ -140,15 +140,16 @@ for (const platform of PLATFORMS) {
       ctx.submit("2026-10-20T10:00:00.000Z");
 
       ctx.prompt("answered");
-      ctx.stop();
       let submitted = ctx.events("answers-submitted");
       assert.equal(submitted.length, 1);
       assert.equal(submitted[0].review, REVIEW);
       assert.equal(submitted[0].submitted_at, "2026-10-20T10:00:00.000Z");
       assert.equal(submitted[0].event, "UserPromptSubmit");
       assert.equal(ctx.loop().gates[0].status, "submitted");
-      // No routing yet: the loop still awaits the review.
+      // A user message does not route; the loop still awaits the review until the next Stop.
       assert.equal(ctx.loop().status, "awaiting-review");
+      ctx.stop();
+      assert.equal(ctx.events("answers-submitted").length, 1);
 
       ctx.submit("2026-10-20T11:00:00.000Z");
       ctx.stop();

@@ -5,6 +5,7 @@ import { epicRoot, epicRuntimeRoot, readJson, requireFlag, resolveRoot, runtimeS
 import { readAgentDecisions } from "./agent-decisions.mjs";
 import { readHumanQueue } from "./human-queue.mjs";
 import { AWAITING_REVIEW, describeGate, openGates, reviewPath } from "./loop-gates.mjs";
+import { pendingHumanInput } from "./loop-ingest.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 export function roleSummary(flags = {}) {
@@ -16,6 +17,7 @@ export function roleSummary(flags = {}) {
   const latestManagerReportPath = path.join(epicRuntimeRoot(root, slug), "latest-manager-report.md");
   const statePath = path.join(epicRoot(root, slug), "state-of-epic.md");
 
+  const pending = pendingHumanInput(root, slug, runtime.implementation_loop ?? {});
   const summary = {
     slug,
     mode: runtime.mode ?? null,
@@ -38,6 +40,7 @@ export function roleSummary(flags = {}) {
       review,
       status,
     })),
+    pending_human_input: { inbox: pending.inbox.map((entry) => entry.id), reviews: pending.gates.map((gate) => gate.review) },
     unconfirmed_agent_decisions: readAgentDecisions(root, slug)
       .filter((decision) => decision.state === "unconfirmed")
       .map(({ id, title }) => ({ id, title })),
@@ -63,6 +66,13 @@ export function roleSummary(flags = {}) {
     for (const item of summary.open_human_queue) {
       console.log(`- ${item.id} ${item.kind}: ${item.ask} (blocks: ${item.blocks})`);
     }
+  }
+  const { inbox: pendingInbox, reviews: pendingReviews } = summary.pending_human_input;
+  if (pendingInbox.length + pendingReviews.length > 0) {
+    console.log("");
+    console.log(
+      `Pending human input (ingested by a manager turn at the next role transition): ${pendingReviews.length} answered review(s)${pendingReviews.length ? ` (${pendingReviews.join(", ")})` : ""}, ${pendingInbox.length} inbox entr${pendingInbox.length === 1 ? "y" : "ies"}${pendingInbox.length ? ` (${pendingInbox.join(", ")})` : ""}.`,
+    );
   }
   const gates = openGates(runtime.implementation_loop);
   if (gates.length > 0) {

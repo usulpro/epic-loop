@@ -99,7 +99,27 @@ ${items}
 `;
 }
 
-export function renderEpicHome(projectName, epic, reviews, gates = []) {
+// The inbox (D22): a no-JS form that sends a request to the running loop, and the last entries.
+function inboxSection(epic, inbox) {
+  const recent = inbox.slice(-5).toReversed();
+  const list = recent.length
+    ? `
+          <ul class="el-inbox__list">
+${recent.map((entry) => `            <li><span class="el-id">${escapeHtml(entry.id)}</span> <span class="el-meta">${escapeHtml(entry.createdAt)}</span><div>${escapeHtml(entry.text)}</div></li>`).join("\n")}
+          </ul>`
+    : "";
+  return `        <section class="el-section el-inbox">
+          <div class="el-section__head"><h2>Send to the loop</h2><span class="el-meta">${inbox.length}</span></div>
+          <form class="el-card el-inbox__form" method="post" action="/api/${encodeURIComponent(epic.slug)}/inbox" style="display:grid;gap:8px">
+            <label class="el-field__label" for="el-inbox-text">A request or a change for the loop; it is picked up at the next role transition.</label>
+            <textarea id="el-inbox-text" class="el-comment" name="text" rows="3" maxlength="4000" required></textarea>
+            <div><button class="el-btn el-btn--primary" type="submit">Send to the loop</button></div>
+          </form>${list}
+        </section>
+`;
+}
+
+export function renderEpicHome(projectName, epic, reviews, gates = [], inbox = []) {
   const pending = reviews.filter((review) => !review.submittedAt);
   const done = reviews.filter((review) => review.submittedAt);
   const gateIds = new Set(gates.map((gate) => gate.review));
@@ -138,7 +158,7 @@ ${gateNotices(epic, reviews, gates)}        <section class="el-section">
           <div class="el-section__head"><h2>Waiting for you</h2>${pendingBadge(pending.length)}</div>
 ${notices}
         </section>
-${history}`,
+${inboxSection(epic, inbox)}${history}`,
   });
 }
 
@@ -149,6 +169,16 @@ export function renderNotFound(projectName, message = "There is no page at this 
     body: `        <div class="el-page-head"><div class="el-label">404</div><h1>Not found</h1></div>
         <p>${escapeHtml(message)}</p>
         <p><a href="/">Back to the epics</a></p>`,
+  });
+}
+
+export function renderInboxThanks(projectName, backHref, entry) {
+  return layout({
+    title: "Sent to the loop",
+    crumbs: [{ href: "/", label: projectName }],
+    body: `        <div class="el-page-head"><div class="el-label">inbox</div><h1>Sent to the loop</h1></div>
+        <p>Your request is recorded as <span class="el-id">${escapeHtml(entry.id)}</span>. The loop picks it up at its next role transition.</p>
+        <p><a class="el-btn el-btn--primary" href="${escapeHtml(backHref)}">Back to the epic</a></p>`,
   });
 }
 

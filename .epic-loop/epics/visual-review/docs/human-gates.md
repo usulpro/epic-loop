@@ -34,6 +34,20 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
   - then it writes a "what changed" note and hands over to the techlead.
 - **The techlead plans:** follow-ups, rework after a reversed decision, reordering.
 - **Ingest is idempotent.** A second ring or a re-check finds nothing new and changes nothing.
+- **Implementation (Phase 4 Task 2).**
+  - **Inbox:** `POST /api/<slug>/inbox` (JSON `{ text }` or the no-JS form on the epic home) appends `{ id: "I<n>", text, createdAt }` to `.epic-loop/epics/<slug>/inbox.jsonl`.
+  - **What counts as pending:**
+    - a gate (not closed) whose `answers.json` `submittedAt` differs from its `ingested_submitted_at`;
+    - an inbox entry numbered above `implementation_loop.inbox_through`.
+  - **When the ingest turn runs:**
+    - Pending input routes a manager ingest turn (prompt template `implementation-manager-ingest-prompt.md`) before a techlead or engineer turn.
+    - On `awaiting-review` it resumes the loop first (`review-answered`).
+    - A pending stop review keeps its turn.
+  - **Snapshot and events:**
+    - The snapshot is `implementation_loop.ingest = { iteration, gates: [{ review, submitted_at }], inbox_ids, inbox_through, skipped_role }`.
+    - Its Stop logs `gate-ingested` (`by: "ingest-turn"`) and `inbox-ingested` (`ids`, `through`).
+    - It leaves `ingest_note` for the techlead's one-time "Human Input Ingested" section.
+  - **`security-hold`:** `human-queue.mjs resolve` refuses it without `--confirmation`.
 
 ## Doorbell
 
