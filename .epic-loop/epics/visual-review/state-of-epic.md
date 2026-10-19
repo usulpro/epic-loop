@@ -3,7 +3,7 @@
 Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
-Active phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+Active phase: Phase 2 - Doorbell Spike
 Active task: TBD
 
 ## Read First
@@ -29,11 +29,12 @@ Active task: TBD
 
 ## Blockers
 
-- None. Waiting for the human merge of PR #13.
+- None.
 
 ## Next Action
 
-- Phase 1 is complete and closed. Pull request: https://github.com/usulpro/epic-loop/pull/13 (`feature/manager-stop-gate` → `main`), waiting for Oleg's review and squash-merge. The agent does not merge.
-- After the merge (per `docs/delivery.md`): `git checkout main && git pull`, then `pnpm run self-update`; then create the Phase 2-7 worktree (`../epic-loop-visual`, branch `feature/visual-review`) and start Phase 2 there.
-- Agent-made decisions to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
-- Follow-ups recorded in the PR: challenge-path real-run evidence for C and E; the agent-decision prompt fix on Codex; closure notes written after the last task commit stay uncommitted at a stop; one stop request covers several classes but records one.
+- Phase 1 was squash-merged into `main` as PR #13 (`f9dc7f9`).
+- The Phase 2-7 worktree `../epic-loop-visual` (branch `feature/visual-review`, from `main` at `f9dc7f9`) is set up: runtime copies in sync with `plugins/`, Claude Code hooks installed, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0`, doctor ready.
+- Implementation loop restarted in the worktree on 2026-10-19; next is Phase 2, first task "Doorbell probe kit for sandbox runs".
+- Agent-made decisions still to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
+- Follow-ups recorded in PR #13: challenge-path real-run evidence for C and E; the agent-decision prompt fix on Codex; closure notes written after the last task commit stay uncommitted at a stop; one stop request covers several classes but records one.

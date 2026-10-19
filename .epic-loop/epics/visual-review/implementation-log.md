@@ -203,3 +203,21 @@
   - Techlead checked gh pr view 13: OPEN, not merged, head 93a6475 = local HEAD, 14 commits
   - origin/main unchanged at 80fe08f. Pre-push: test:unit 150/150, validate passes. Phase review: all 8 Phase 1 tasks done, the verification task passed on Claude Code (runs 5, 6) and Codex (runs 7, 8).
 - Residual risk: Merge is the human's. Known limits are listed in the PR body and state-of-epic. Runtime copies still lack the stop gate until the post-merge self-update.
+
+## 2026-10-19T16:46:44+00:00 - done
+
+- Phase: Phase 2 - Doorbell Spike
+- Task: Doorbell probe kit for sandbox runs
+- Verdict: done
+- Changed:
+  - New .claude/skills/sandbox-test/tools/doorbell/ (installer, answers server, submit, waiters for asyncRewake event/session and run_in_background, UserPromptSubmit fallback, hook logger, pickup, register-thread, latency summary, probe instructions, README)
+  - run 9 log and drivers under runs/2026-10-19-doorbell-smoke/
+  - LEARNINGS D-15
+  - docs/doorbell.md smoke results
+  - risk R8
+- Verification:
+  - Agent-free kit self-test
+  - smoke run 9: Claude asyncRewake ring->hook 168 ms, pickup 3.8 s
+  - Claude run_in_background 63 ms / 5.1 s
+  - Codex codex queue on an idle TUI 10.1 s / 13.6 s on the default sandbox (96 k tokens). Techlead checked one pickup per archived probe log. test:unit 150/150, validate passes. Previous task commit: f9dc7f9 (merge base)
+- Residual risk: Claude wakes arrive as UserPromptSubmit with <task-notification> XML and Codex queue as a plain prompt (R8); asyncRewake timeout cap and stderr limit unconfirmed; nested Claude sessions not fully isolated from the host env

@@ -139,11 +139,11 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 2: Doorbell Spike
 
-- Phase status: todo
+- Phase status: doing
 - Delivery: worktree `../epic-loop-visual`, branch `feature/visual-review` (`docs/delivery.md`).
 - Intent: prove, before anything is built on it, which mechanism returns the human's answers to a waiting session on its own: terminal CLI on Claude Code and Codex, across session states. Output: a support matrix and the chosen mechanism per platform (D7, D8, D19, Q2, Q3).
 
-- [ ] Kind: implementation | Status: todo | Doorbell probe kit for sandbox runs
+- [x] Kind: implementation | Status: done | Doorbell probe kit for sandbox runs
   - Outcome: a reusable probe for the sandbox with four parts:
     - a tiny local "answers server" that writes an answers file with `submittedAt` and rings a chosen mechanism;
     - waiter variants: a Claude Code `asyncRewake` hook (event-triggered and session-long), a Claude Code `run_in_background` waiter, a Codex `codex queue` caller, and the `UserPromptSubmit` fallback;
