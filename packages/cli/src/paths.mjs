@@ -24,3 +24,7 @@ export function bundledSkillDir() {
 
   return PACKAGED_SKILL_DIR;
 }
+
+// Static files of the review runtime (tokens, styles, later the page runtime). The build copies
+// src/review/runtime/ to dist/review/runtime/, so this resolves from source and from the bundle.
+export const REVIEW_RUNTIME_DIR = path.join(ENTRY_DIR, "review", "runtime");

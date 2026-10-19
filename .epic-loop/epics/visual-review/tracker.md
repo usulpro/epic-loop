@@ -233,7 +233,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - colour contrast passes WCAG AA in both themes.
   - Docs: `decision-log.md` (D30), `docs/review-engine.md`.
 
-- [ ] Kind: implementation | Status: todo | Review server with lifecycle and answers API in the npm CLI
+- [x] Kind: implementation | Status: done | Review server with lifecycle and answers API in the npm CLI
   - Outcome:
     - `epic-loop serve` serves the epic app (D24): a home page per epic listing pending reviews as notifications with a count, and review routes with deep links. It also serves every epic's `reviews/<id>/` on a dynamic `127.0.0.1` port, with `--detach`, `--status` and `--stop`, a pidfile and the port in `.epic-loop/.runtime/server.json`.
     - Answers are saved with per-control merges, `submit` sets `submittedAt`, `problem` appends to `problems.jsonl`; all writes are atomic.

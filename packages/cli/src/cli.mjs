@@ -6,6 +6,7 @@ import { runDoctor } from "./doctor/index.mjs";
 import { runInstall, runUpdate } from "./install.mjs";
 import { readCliVersion } from "./paths.mjs";
 import { findProjectRoot } from "./project-root.mjs";
+import { runServe } from "./serve/lifecycle.mjs";
 import { runStatus } from "./status.mjs";
 
 const USAGE = `Usage: epic-loop [command] [options]
@@ -16,6 +17,7 @@ Commands:
   install --platform <p>      Install the skill into this project and set up hooks [--root] [--no-hooks]
   update                      Replace a local skill copy with this CLI's version [--skill-dir] [--force] [--json]
   config [get|set] <key> [v]  Read or write machine-local settings (keys: autoupdate)
+  serve                       Serve the epic app and review pages on 127.0.0.1 [--detach] [--status] [--stop] [--port] [--root] [--json]
 
 Platforms: codex, claude-code`;
 
@@ -84,6 +86,8 @@ async function main(argv) {
       return runUpdate(flags);
     case "config":
       return runConfig(rest, flags);
+    case "serve":
+      return runServe(flags);
     default:
       console.error(`Unknown command: ${command}\n\n${USAGE}`);
       return 1;

@@ -295,3 +295,21 @@
   - build copy tested and a real build produced dist/review/runtime. Screenshots in both themes at 1280 and 390 px (sandbox-logs/2026-10-20-design-language). Design critique: no blocking issue
   - fixed mobile overflow, compare bar wrap, 28 px segmented targets, table hover, mono prose. test:unit 156/156, validate passes. Previous task commit: 4389302
 - Residual risk: Separate accessibility-review skill not run; specimen ships in dist; packages/cli deps were installed in this worktree for the build check
+
+## 2026-10-19T18:37:29+00:00 - done
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Review server with lifecycle and answers API in the npm CLI
+- Verdict: done
+- Changed:
+  - packages/cli/src/serve/ (lifecycle, server, pages, answers, reviews, files): epic-loop serve with --detach/--status/--stop/--port/--root/--json, server.json, /_health, reuse and stale replacement
+  - routes /, /<slug>, /<slug>/reviews/<id>/ (301 to the trailing slash), /_runtime/*
+  - answers GET/PATCH per-control merge, submit (idempotent), problem (JSON and form) with atomic queued writes
+  - injected runtime CSS, review meta and a no-JS problem form
+  - Host, Origin, traversal and 1 MB guards. cli.mjs, paths.mjs (REVIEW_RUNTIME_DIR). docs/review-engine.md updated for the trailing slash, the answers shape and the guards
+- Verification:
+  - tests/unit/review-server.test.mjs 8/8 (techlead rerun), no orphan servers
+  - full test:unit 164/164, validate passes
+  - bundled dist/epic-loop.mjs serve checked with curl (pages, injection, runtime CSS 200) and stopped
+  - screenshots in sandbox-logs/2026-10-20-review-server. Previous task commit: 82253dd
+- Residual risk: No push of answers changed elsewhere to open pages (runtime task decides refresh vs SSE); concurrent first starts of two detached servers are not locked

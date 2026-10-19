@@ -21,7 +21,7 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
 - One app per project with routes:
   - `/` lists the epics;
   - `/<slug>` is the epic home: pending reviews as notifications with a count; Phase 5 grows it into the full overview;
-  - `/<slug>/reviews/<id>` is a review page.
+  - `/<slug>/reviews/<id>/` is a review page. The canonical URL ends with `/`, so relative assets in `page.html` resolve inside the review; the address without it redirects (301).
 - The manager gives deep links to review routes.
 
 ## Server (npm CLI)
@@ -33,13 +33,14 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - a dynamic port by default.
 - **API:**
   - static files of a review;
-  - `GET`/`PATCH` answers, a per-control merge so two tabs do not overwrite each other;
+  - `GET`/`PATCH /api/<slug>/reviews/<id>/answers`: the body is `{ controls: { name: value } }`, merged per control so two tabs do not overwrite each other; `answers.json` holds `{ controls, savedAt, submittedAt }`;
   - `POST submit` sets `submittedAt`;
   - `POST problem` appends to `problems.jsonl`.
 
   All writes are atomic.
 - Submit and problem reports are the doorbell events of Phase 4. Phase 3 only writes them to disk.
-- Host is `127.0.0.1`; local machine only (D12).
+- Host is `127.0.0.1`; local machine only (D12). The server refuses a foreign `Host` header (DNS rebinding) and cross-origin writes, and caps bodies at 1 MB.
+- Pages carry `<meta name="epic-loop-review" content="<slug>/<id>">`; the page runtime builds its API URLs from it.
 
 ## Runtime And Components
 

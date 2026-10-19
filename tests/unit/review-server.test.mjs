@@ -1,0 +1,222 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import http from "node:http";
+import path from "node:path";
+import { after, before, test } from "node:test";
+
+import { makeTempRoot, repoRoot } from "./test-utils.mjs";
+
+const cliEntry = path.join(repoRoot, "packages", "cli", "src", "cli.mjs");
+const started = new Set();
+
+function env(home) {
+  const value = { ...process.env, EPIC_LOOP_NO_UPDATE_CHECK: "1", HOME: home };
+  delete value.EPIC_LOOP_CLI;
+  delete value.EPIC_LOOP_SKILL_DIR;
+  return value;
+}
+
+function makeProject() {
+  const root = fs.realpathSync(makeTempRoot("serve"));
+  const review = path.join(root, ".epic-loop", "epics", "demo", "reviews", "r1");
+  fs.mkdirSync(path.join(review, "assets"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".epic-loop", "epics", "demo", "state-of-epic.md"), "# State Of Epic\n\nEpic: Demo Epic\n");
+  fs.writeFileSync(
+    path.join(review, "page.html"),
+    '<!doctype html><html><head><title>Pick a doorbell</title></head><body><h1>Pick</h1><img src="assets/shot.txt" alt="shot"><script>throw new Error("page script is broken")</script></body></html>\n',
+  );
+  fs.writeFileSync(path.join(review, "assets", "shot.txt"), "asset-bytes\n");
+  return { root, review, home: makeTempRoot("serve-home") };
+}
+
+function serve(project, ...args) {
+  const result = spawnSync(process.execPath, [cliEntry, "serve", "--root", project.root, "--json", ...args], { encoding: "utf8", env: env(project.home) });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const info = JSON.parse(result.stdout);
+  if (info.pid) started.add(info.pid);
+  return info;
+}
+
+function request(port, pathname, { method = "GET", body, headers = {} } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: "127.0.0.1", port, path: pathname, method, headers: { host: `127.0.0.1:${port}`, ...headers } }, (res) => {
+      let text = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => (text += chunk));
+      res.on("end", () => resolve({ status: res.statusCode, headers: res.headers, text }));
+    });
+    req.on("error", reject);
+    if (body !== undefined) req.end(typeof body === "string" ? body : JSON.stringify(body));
+    else req.end();
+  });
+}
+
+const json = (body) => ({ body, headers: { "content-type": "application/json" } });
+const alive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+let project;
+let port;
+
+before(() => {
+  project = makeProject();
+  port = serve(project, "--detach").port;
+});
+
+after(() => {
+  for (const pid of started) {
+    if (alive(pid)) process.kill(pid, "SIGKILL");
+  }
+});
+
+test("serve --detach writes server.json, a second serve reuses it, and --status reports it", () => {
+  const info = JSON.parse(fs.readFileSync(path.join(project.root, ".epic-loop", ".runtime", "server.json"), "utf8"));
+  assert.equal(info.port, port);
+  assert.equal(info.root, project.root);
+  assert.ok(alive(info.pid));
+  assert.equal(info.url, `http://127.0.0.1:${port}/`);
+  const again = serve(project, "--detach");
+  assert.equal(again.reused, true);
+  assert.equal(again.pid, info.pid);
+  assert.equal(again.port, port);
+  assert.equal(serve(project, "--status").running, true);
+});
+
+test("epic list, epic home and the review page render with the pending count and the injected problem control", async () => {
+  const list = await request(port, "/");
+  assert.equal(list.status, 200);
+  assert.match(list.text, /Demo Epic/u);
+  assert.match(list.text, /title="1 pending">1</u);
+  const home = await request(port, "/demo");
+  assert.match(home.text, /el-notice/u);
+  assert.match(home.text, /Pick a doorbell/u);
+  assert.match(home.text, /href="\/demo\/reviews\/r1\/"/u);
+  const redirect = await request(port, "/demo/reviews/r1");
+  assert.equal(redirect.status, 301);
+  assert.equal(redirect.headers.location, "/demo/reviews/r1/");
+  const page = await request(port, "/demo/reviews/r1/");
+  assert.equal(page.status, 200);
+  assert.match(page.text, /\/_runtime\/tokens\.css/u);
+  assert.match(page.text, /\/_runtime\/base\.css/u);
+  assert.match(page.text, /<form method="post" action="\/api\/demo\/reviews\/r1\/problem"/u);
+  assert.match(page.text, /page script is broken/u, "the page's own script is served unchanged");
+  assert.ok(page.text.indexOf("Something is wrong with this page") > page.text.indexOf("page script is broken"), "the control comes after the page body");
+  const css = await request(port, "/_runtime/tokens.css");
+  assert.equal(css.status, 200);
+  assert.match(css.headers["content-type"], /text\/css/u);
+  const missing = await request(port, "/nope/at/all");
+  assert.equal(missing.status, 404);
+  assert.match(missing.text, /Not found/u);
+});
+
+test("review assets are served and traversal is refused", async () => {
+  const asset = await request(port, "/demo/reviews/r1/assets/shot.txt");
+  assert.equal(asset.status, 200);
+  assert.equal(asset.text, "asset-bytes\n");
+  for (const attempt of [
+    "/demo/reviews/r1/../../state-of-epic.md",
+    "/demo/reviews/r1/%2e%2e/%2e%2e/state-of-epic.md",
+    "/demo/reviews/r1/%2E%2E%2F%2E%2E%2Fstate-of-epic.md",
+    "/demo/reviews/r1//etc/passwd",
+    "/_runtime/..%2f..%2fpaths.mjs",
+    "/demo/reviews/..%2f..%2fdemo/page.html",
+  ]) {
+    const response = await request(port, attempt);
+    assert.equal(response.status, 404, attempt);
+    assert.doesNotMatch(response.text, /Epic: Demo Epic|root:|ENTRY_DIR/u, attempt);
+  }
+});
+
+test("concurrent PATCHes merge per control and the last write to one control wins", async () => {
+  await Promise.all([
+    request(port, "/api/demo/reviews/r1/answers", { method: "PATCH", ...json({ controls: { mechanism: "hook" } }) }),
+    request(port, "/api/demo/reviews/r1/answers", { method: "PATCH", ...json({ controls: { comment: "fine" } }) }),
+  ]);
+  await request(port, "/api/demo/reviews/r1/answers", { method: "PATCH", ...json({ controls: { comment: "fine, ship it" } }) });
+  const answers = JSON.parse((await request(port, "/api/demo/reviews/r1/answers")).text);
+  assert.deepEqual(answers.controls, { mechanism: "hook", comment: "fine, ship it" });
+  assert.ok(answers.savedAt);
+  const onDisk = JSON.parse(fs.readFileSync(path.join(project.review, "answers.json"), "utf8"));
+  assert.deepEqual(onDisk.controls, answers.controls);
+  const bad = await request(port, "/api/demo/reviews/r1/answers", { method: "PATCH", ...json({ controls: ["x"] }) });
+  assert.equal(bad.status, 400);
+});
+
+test("submit sets submittedAt once unless resubmitted, and clears the pending count", async () => {
+  const first = JSON.parse((await request(port, "/api/demo/reviews/r1/submit", { method: "POST", ...json({}) })).text);
+  assert.ok(first.submittedAt);
+  const second = JSON.parse((await request(port, "/api/demo/reviews/r1/submit", { method: "POST", ...json({}) })).text);
+  assert.equal(second.submittedAt, first.submittedAt);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const third = JSON.parse((await request(port, "/api/demo/reviews/r1/submit", { method: "POST", ...json({ resubmit: true }) })).text);
+  assert.notEqual(third.submittedAt, first.submittedAt);
+  assert.match((await request(port, "/")).text, /title="nothing pending">0</u);
+});
+
+test("problem reports append to problems.jsonl from JSON and from the plain form", async () => {
+  const fromJson = await request(port, "/api/demo/reviews/r1/problem", { method: "POST", ...json({ text: "image missing", url: "/demo/reviews/r1/" }) });
+  assert.equal(fromJson.status, 200);
+  const fromForm = await request(port, "/api/demo/reviews/r1/problem", {
+    method: "POST",
+    body: "text=layout+broken&url=%2Fdemo%2Freviews%2Fr1%2F",
+    headers: { "content-type": "application/x-www-form-urlencoded", origin: `http://127.0.0.1:${port}`, "user-agent": "test-agent" },
+  });
+  assert.equal(fromForm.status, 200);
+  assert.match(fromForm.text, /href="\/demo\/reviews\/r1\/"/u);
+  const lines = fs
+    .readFileSync(path.join(project.review, "problems.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    lines.map((line) => line.text),
+    ["image missing", "layout broken"],
+  );
+  assert.equal(lines[1].userAgent, "test-agent");
+  assert.ok(lines.every((line) => line.at));
+});
+
+test("foreign Host and cross-origin writes are refused, and oversized bodies are rejected", async () => {
+  assert.equal((await request(port, "/", { headers: { host: "evil.example" } })).status, 403);
+  assert.equal((await request(port, "/", { headers: { host: `evil.example:${port}` } })).status, 403);
+  const crossOrigin = await request(port, "/api/demo/reviews/r1/answers", {
+    method: "PATCH",
+    body: JSON.stringify({ controls: { x: 1 } }),
+    headers: { "content-type": "application/json", origin: "http://evil.example" },
+  });
+  assert.equal(crossOrigin.status, 403);
+  const answers = JSON.parse((await request(port, "/api/demo/reviews/r1/answers")).text);
+  assert.equal(answers.controls.x, undefined);
+  const localhost = await request(port, "/", { headers: { host: `localhost:${port}` } });
+  assert.equal(localhost.status, 200);
+  const huge = await request(port, "/api/demo/reviews/r1/problem", {
+    method: "POST",
+    body: JSON.stringify({ text: "x".repeat(1024 * 1024 + 10) }),
+    headers: { "content-type": "application/json" },
+  }).catch(() => ({ status: 413 }));
+  assert.equal(huge.status, 413);
+});
+
+test("--stop stops the server and removes server.json; a stale record is replaced on the next start", async () => {
+  const info = JSON.parse(fs.readFileSync(path.join(project.root, ".epic-loop", ".runtime", "server.json"), "utf8"));
+  assert.equal(serve(project, "--stop").stopped, true);
+  assert.equal(alive(info.pid), false);
+  assert.equal(fs.existsSync(path.join(project.root, ".epic-loop", ".runtime", "server.json")), false);
+  assert.equal(serve(project, "--status").running, false);
+
+  fs.writeFileSync(path.join(project.root, ".epic-loop", ".runtime", "server.json"), JSON.stringify({ pid: 999999, port: 1, url: "http://127.0.0.1:1/", root: project.root }));
+  assert.equal(serve(project, "--status").stale, true);
+  const fresh = serve(project, "--detach");
+  assert.equal(fresh.reused, false);
+  assert.notEqual(fresh.pid, 999999);
+  assert.equal((await request(fresh.port, "/_health")).status, 200);
+  assert.equal(serve(project, "--stop").stopped, true);
+  assert.equal(alive(fresh.pid), false);
+});
