@@ -256,3 +256,22 @@
   - codex queue: mid-turn held until the turn completes (39.5 s), after Esc not dispatched until the next completed turn, 15 min idle 13.4 s, closed thread queued and dispatched on resume (about 3 s), remote app server 14.0 s
   - fallback injects on Codex. Rollouts tag queued turns turn_trigger queue. Techlead checked one pickup per passing cell and the queue trigger in QD. 0.73 M Codex tokens of the 2 M budget. test:unit 150/150, validate passes. Previous task commit: d2ccfb2
 - Residual risk: Cell C (queued message during a loop) needs a danger-full-access run; QD pickup latency unknown (model stall); hook payload visibility of turn_trigger unchecked; the setsid fix in run-ccell.sh is untested
+
+## 2026-10-19T18:22:20+00:00 - done
+
+- Phase: Phase 2 - Doorbell Spike
+- Task: Doorbell end to end in a running Claude Code implementation loop, and the Claude Code mechanism choice
+- Verdict: done
+- Changed:
+  - Run 12 log and drivers under runs/2026-10-20-doorbell-claude-e2e/
+  - docs/doorbell.md Claude Code Choice proposal
+  - R1 updated
+  - agent-made decision D34 (asyncRewake waiter hook on Stop and SessionStart)
+  - follow-up follow-up-02 (review-stop --file, unresolved stop review routing)
+  - task 4 split and task 5 on hold with H3 (stop review)
+  - LEARNINGS
+- Verification:
+  - E1: engineer background waiter, turn-waiting-background held the gate, wake 60 ms logged synthetic-prompt-ignored with turn_key_adopted, pickup 3.3 s, same engineer turn reported, loop chained on. E2: fallback alone does not hold a gate (loop moved on)
+  - human ok logged user-message-in-turn with the pointer injected. E3: asyncRewake woke the idle loop in 0.2 s
+  - the model rebound and the loop resumed with no human message. Techlead checked the progress and probe logs. test:unit 150/150, validate passes. About $5.27. Previous task commit: 86efcc8
+- Residual risk: E1 and E2 stalled at class A because review-stop needs stdin under a no-redirection rule (follow-up-02); E3 auto-continue relied on the model rebinding; Codex half on hold (H3)

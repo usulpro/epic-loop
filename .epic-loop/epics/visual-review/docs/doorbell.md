@@ -107,4 +107,54 @@ Notes:
 
 ## Choice
 
-To be written after the matrix.
+### Claude Code (proposal, 2026-10-20, awaiting the human's confirmation)
+
+Evidence: the Claude Code matrix above (run 10) and the end-to-end run `.claude/skills/sandbox-test/runs/2026-10-20-doorbell-claude-e2e/log.md` (run 12).
+
+**Recommended: an epic-loop-installed `asyncRewake` waiter hook, armed on `Stop` and on `SessionStart`, with an explicit `timeout`. It is active only while the epic has an open blocking gate (loop status `awaiting-review`).** The fallback covers what the hook cannot reach.
+
+Why this fits `human-gates.md`:
+
+- **A blocking gate leaves the session idle,** and only a hook can wake an idle session without a role.
+  - Run 12 E3: the session idled after an accepted class B stop. The submit woke it in 0.2 s, and the loop came back with no human message.
+  - A role-held background waiter (E1) also works, but it keeps a role turn open. It cannot serve a manager-opened gate that ends the loop turn.
+- **It covers every terminal state that matters (run 10):**
+  - idle: about 4 s;
+  - mid-turn: delivered in the same turn after the running tool call, with no duplicate;
+  - after Esc: waiters survive it;
+  - 15 min idle: works, given an explicit `timeout`;
+  - resume: the `SessionStart` hook (`source: resume`) re-arms and fires at once when answers are pending.
+
+  The `Stop` hook alone misses resume, because a resume fires no `Stop`. The `SessionStart` hook alone is one-shot per session.
+- **epic-loop already tolerates it.** During a running loop, a wake is `synthetic-prompt-ignored`, and the loop keeps chaining (run 10, cells 1C and 3C).
+- **The rewake body carries the pointer.** 20 KB is delivered untruncated. The undocumented `rewakeMessage` option can set a recognisable prefix.
+
+Keep the role's background waiter (run 12 E1) as the pattern for a **role-level** wait. This is when a role itself must wait for something it started: `turn-waiting-background` holds the role turn, and the notification resumes it (3.3 s ring → pickup).
+
+**Fallback rules:**
+
+- `UserPromptSubmit` injects the pending-answers pointer on the next human message, whatever its text. It works inside a loop too: run 12 E2 logged `user-message-in-turn`, and the pointer reached the techlead.
+- **The fallback alone never holds a gate.** With no waiter, a role that "waits" ends its turn and the loop moves on (E2). So gates must use the hook waiter. The fallback only covers what the hook cannot reach:
+  - a session closed and resumed in a host without hook support;
+  - a waiter killed by an expired `timeout`;
+  - surfaces not yet verified (VS Code extension, desktop app).
+- The answers page says "send any message to continue" when no doorbell is available.
+
+**Product changes for Phase 4:**
+
+- **Gate state on disk.** A blocking gate sets the loop status to `awaiting-review` (not `idle`), with the gate id and its answers file. The waiter hook exits at once (exit 0) unless such a gate is open, so it costs nothing otherwise.
+- **Hook install.** `install-hooks.mjs` adds the waiter entries: `Stop` and `SessionStart`, with `asyncRewake: true` and an explicit `timeout`, for example 86400. A lock keeps a single waiter, because the `Stop` hook fires on every Stop-hook block of a loop chain.
+- **A marker on the wake prompt.** Set `rewakeMessage` (for example `[epic-loop doorbell] gate <id>:`), so the `UserPromptSubmit` hook can tell a doorbell wake from other task notifications.
+- **Deterministic auto-continue.** When the `UserPromptSubmit` hook sees that marker while the loop is `awaiting-review`, it resumes the loop itself: driver binding, then manager ingest. In E3 the model did it with `bind-session.mjs`, but only because the prompt told it to; the skill's own rule is "resume only on request".
+- **Logging.** epic-loop logs nothing for a wake while the loop is not running (E3). Add an `answers-submitted` / `doorbell-wake` progress event.
+- **Stop acceptance input.** `review-stop.mjs --outcome accepted` needs the report on stdin. Under a no-redirection command policy the manager cannot accept, and the loop stalls at `next-role-not-set` (E1 and E2). Add `--file` (or an argument form), and keep an unresolved stop review from looping.
+
+**Doctor checks:**
+
+- every epic-loop asyncRewake hook has an explicit `timeout`, because the default 600 s kills the waiter;
+- a warning that `asyncRewake` is backgrounded only in interactive sessions, so a headless `claude -p` driver relies on the fallback;
+- the Claude Code version is at least 2.1.293, the version these results come from (lower bound not tested).
+
+### Codex
+
+On hold (H3): the end-to-end Codex run needs a `danger-full-access` sandbox run. The Codex matrix above already shows `codex queue` delivering in every state except after Esc (where the queue waits for the next completed turn) and a running loop (untested).

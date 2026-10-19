@@ -2,7 +2,7 @@
 
 | Id | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- | --- |
-| R1 | The doorbell does not work on some surfaces (VS Code extension, desktop app, Codex IDE) or session states (after Esc) | Answers need a manual nudge there | D8 gate first; universal `UserPromptSubmit` fallback; the page says "send any message" when no doorbell is available | open |
+| R1 | The doorbell does not work on some surfaces (VS Code extension, desktop app, Codex IDE) or session states (after Esc) | Answers need a manual nudge there | D8 gate first; universal `UserPromptSubmit` fallback; the page says "send any message" when no doorbell is available. Claude Code terminal, verified 2026-10-20 (runs 10, 12): an asyncRewake waiter works idle, mid-turn, after Esc, 15 min idle (explicit `timeout` needed) and on resume (`SessionStart` re-arm); closing kills waiters. Codex terminal (run 11): `codex queue` works except after Esc (waits for the next completed turn); loop case on hold (H3). VS Code extension, desktop app and Codex IDE still unverified | open |
 | R2 | The stop gate becomes pushy and continues the loop past real blockers | Wasted or harmful work; loss of trust | Explicit always-stop criteria (Q1); log every challenged stop with its outcome so the boundary can be tuned | open |
 | R3 | Page building inside the loop is slow or expensive | Loop stalls at every gate | Subagent page builder (D4); proportionality ladder (D6); engine-owned boilerplate | open |
 | R4 | The engine grows into a platform | Effort spent on tooling instead of value | "Semi-manual is enough"; promote a block only on the second real need | open |

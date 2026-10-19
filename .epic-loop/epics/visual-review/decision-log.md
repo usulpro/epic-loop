@@ -146,6 +146,9 @@
   - The Codex half of the Phase 1 verification is one minimal mechanics run (run 8: 3 tasks, one session, low reasoning effort, no user config, a 14-turn watchdog), not the full Claude scenario.
   - If it cannot be completed, Phase 1 is merged anyway and the Codex verification is recorded as tech debt.
   - Why: run 7 used the whole Codex quota (11.3 M tokens) on the full 9-task scenario; Codex only needs the role mechanics checked.
+- **D34 — Claude Code doorbell mechanism: an epic-loop asyncRewake waiter hook on Stop and SessionStart** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: epic-loop installs asyncRewake waiter hooks on Stop and SessionStart with an explicit timeout, active only while a blocking gate is open (loop status awaiting-review); the role background waiter stays the pattern for role-level waits; UserPromptSubmit stays the fallback and never holds a gate alone
+  - Why: Runs 10 and 12: the hook wakes an idle session in about 0.2 s, covers idle, mid-turn, after Esc, 15 min idle and resume (SessionStart re-arm), and epic-loop already treats the wake as synthetic; the fallback alone lets the loop move on without the answers (E2); details in docs/doorbell.md Choice
 
 ## Open Questions
 

@@ -4,7 +4,13 @@ What the implementation loop needs from the human without stopping for it. Writt
 
 ## Open
 
-- None.
+- **H3**
+  - Kind: human-action
+  - Ask: Approve one Codex sandbox run of the doorbell end-to-end loop check with -s danger-full-access -a never (sandbox-test D-7), and confirm Codex quota for about 2-4 M tokens
+  - Why: epic-loop loop commits fail under Codex workspace-write; writable_roots does not lift the .git protection (run 11)
+  - Default: none
+  - Blocks: the Codex end-to-end doorbell check (queued message during a running loop) and the Codex mechanism choice in Phase 2
+  - Raised: 2026-10-19
 
 ## Resolved
 

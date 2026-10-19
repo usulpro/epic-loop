@@ -182,17 +182,37 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Cleanup: kill waiters and servers, remove queued leftovers, archive the runs.
   - Docs: `docs/doorbell.md`.
 
-- [ ] Kind: verification | Status: todo | Doorbell end to end in a running implementation loop, and the mechanism choice
-  - Method: on each platform, bind a sandbox epic, run the implementation loop, and let a role raise a probe gate. The role ends its turn waiting. Submit answers through the probe server. Confirm the loop resumes with no chat message, then repeat once with the fallback path.
+- [x] Kind: verification | Status: done | Doorbell end to end in a running Claude Code implementation loop, and the Claude Code mechanism choice
+  - Method:
+    - Bind a sandbox epic on Claude Code and run the implementation loop.
+    - Let a role raise a probe gate and end its turn waiting.
+    - Submit answers through the probe server.
+    - Confirm the loop resumes with no chat message.
+    - Repeat once with the fallback path.
   - Tools: the probe kit, sandbox-test driver, `loop-watch.mjs`, progress logs.
   - Evidence:
-    - both platforms resume without a human message;
-    - the fallback resumes on any human message;
-    - `docs/doorbell.md` holds the support matrix with links to run logs, the chosen mechanism per platform, the fallback rules, and the doctor checks needed (Codex version, hook options);
-    - D7 and R1 are updated.
+    - Claude Code resumes without a human message.
+    - The fallback resumes on any human message.
+    - `docs/doorbell.md` holds the chosen Claude Code mechanism, the fallback rules, and the doctor checks needed (hook options such as the asyncRewake `timeout`).
+    - D7 and R1 are updated for Claude Code.
   - Cleanup: archive the runs; remove probe hooks from the sandbox fixtures.
   - Docs: `docs/doorbell.md`, `decision-log.md` (D7, D8, D19).
-  - Note (2026-10-20): the Codex half needs a `danger-full-access` sandbox run, because loop commits fail under `workspace-write` (run 11). It also covers the deferred Codex matrix cell C (a queued message during a loop).
+  - Split (2026-10-20, stop review H3): the Codex half moved to the next task.
+
+- [ ] Kind: verification | Status: on-hold | Doorbell end to end on Codex, and the Codex mechanism choice
+  - Hold: human-action (H3)
+  - Method:
+    - Run the same end-to-end check on Codex, with the sandbox run `-s danger-full-access -a never`, because loop commits fail under `workspace-write` (run 11).
+    - Include the deferred Codex matrix cell C: a queued message during a running loop, and how epic-loop classifies it.
+  - Tools: the probe kit, sandbox-test Codex driver (`runs/2026-10-20-doorbell-codex-matrix/driver/`), progress logs, Codex rollouts.
+  - Evidence:
+    - Codex resumes without a human message.
+    - The fallback resumes on any human message.
+    - `docs/doorbell.md` holds the chosen Codex mechanism and the doctor checks needed (Codex version, `codex queue`).
+    - D7 and R1 are updated for Codex.
+  - Cleanup: archive the runs; remove queued leftovers.
+  - Docs: `docs/doorbell.md`, `decision-log.md` (D7, D8, D19).
+  - Needs: H3 (the human's approval of the `danger-full-access` run and Codex quota).
 
 ### Phase 3: Review Engine In The CLI
 
@@ -459,3 +479,9 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Outcome: tools/loop-watch.mjs prints stop-gate events (class, outcome, round, report path) like other loop events.
   - Surface: .claude/skills/sandbox-test/tools/loop-watch.mjs
   - Acceptance: A sandbox Monitor on loop-watch shows each stop review outcome without reading progress-log.jsonl by hand.
+
+- [ ] Kind: follow-up | Status: todo | Let the manager accept a stop without stdin, and keep an unresolved stop review from looping
+  - Outcome: review-stop.mjs --outcome accepted also takes the report from a file (--file); a stop-review turn that ends without review-stop does not bounce between techlead and manager until next-role-not-set
+  - Surface: scripts/lib/loop-stop-gate.mjs, review-stop.mjs, the stop-review prompt, hook-contracts and cli-contracts tests
+  - Acceptance: a CLI contract test accepts a stop with --file; a hook contract test shows the routing after an unresolved stop review; found in sandbox run 12 (E1, E2) under a no-redirection command rule
+  - Docs: .claude/skills/sandbox-test/runs/2026-10-20-doorbell-claude-e2e/log.md, docs/stop-gate.md
