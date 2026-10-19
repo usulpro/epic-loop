@@ -39,6 +39,16 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
     - The defining line gets an anchor (`<span class="el-anchor" id="D16">`) instead of a self-link.
     - `/_runtime/refs.js` shows the entry in a popover on hover and focus (`role="tooltip"`, `aria-describedby`); Escape closes it, and a click goes to the definition.
     - On review pages the same script wraps ids in the text of `<main>`, skipping code, links, labels and form controls.
+  - **Language (Phase 5 Task 5, D9, D28, D40):**
+    - **Switch:** the second language is the `Second language:` line of `state-of-epic.md` (written by `set-second-language.mjs`). With one set, the home and doc pages show an `EN | <CODE>` switch. Its links `?lang=<en|code>` set an `el-lang` cookie (`Path=/; SameSite=Strict`) and redirect back (303); `?lang=` with another code is 400. Full pages and fragments honor the cookie, and `<html lang>` follows the served language.
+    - **Docs:** a doc page in the second language renders the cached translation of its markdown source through the same renderer, with the English heading ids. On a miss it renders English with a "Translating…" note (`data-translating`) and queues a job; after a rejection it renders English with "Translation unavailable".
+    - **Home:** the home translates its own text as segments (titles, intent, asks, UI labels; not ids, times, code or the activity feed), batched into one job per refresh for the missing ones.
+    - **Runner:** one headless process at a time per server, deduplicated, in a scratch directory, with a 120 s timeout (`EPIC_LOOP_TRANSLATE_TIMEOUT_MS`) that kills its process group.
+      - Claude Code: `claude -p --model haiku --tools "" --output-format text --no-session-persistence --strict-mcp-config --disable-slash-commands` (prompt on stdin).
+      - Codex: `codex exec -m gpt-6-luna -c model_reasoning_effort="low" -s read-only --skip-git-repo-check --ephemeral --color never -C <scratch> -o <scratch>/last-message.txt -`.
+      - `EPIC_LOOP_CLAUDE_BIN`, `EPIC_LOOP_CODEX_BIN`, `EPIC_LOOP_TRANSLATE_CLAUDE_MODEL` and `EPIC_LOOP_TRANSLATE_CODEX_MODEL` override them.
+    - **Validation:** a doc translation must keep the same code, link and image targets, id mentions and heading count, and a segment the same ids. Otherwise it is rejected, logged and not retried.
+    - **Cache:** `.runtime/translations/<lang>/`: `docs/<sha256(prompt version, lang, source)>.md` or `.rejected`, `segments.json` keyed per segment hash, and `jobs.jsonl` (at, kind, key, platform, model, ms, ok, reason). Editing a doc misses only that doc. The event stream turns a new `jobs.jsonl` line into `event: translated`, and the page swaps in its fragment; a page still translating also checks when the stream connects and every 15 s.
   - `/<slug>/reviews/<id>/` is a review page. The canonical URL ends with `/`, so relative assets in `page.html` resolve inside the review; the address without it redirects (301).
 - The manager gives deep links to review routes.
 

@@ -112,7 +112,8 @@ function connect() {
     const wasPaused = state.live === "paused";
     delay = 1000;
     setLive("live");
-    if (wasPaused) refresh();
+    // A job may have finished before the stream connected: a page still translating checks once.
+    if (wasPaused || main.querySelector("[data-translating]")) refresh();
   });
   source.addEventListener("change", (event) => {
     if (!liveFile) return refresh();
@@ -120,6 +121,8 @@ function connect() {
       if (JSON.parse(event.data).file === liveFile) refresh();
     } catch {}
   });
+  // A finished translation job: swap in the (now translated) fragment.
+  source.addEventListener("translated", () => refresh());
   source.addEventListener("activity", () => {
     if (main.querySelector("[data-live-activity]")) refreshActivity();
   });
@@ -130,6 +133,15 @@ function connect() {
     delay = Math.min(delay * 2, 30000);
   });
 }
+
+// Fallback while a doc page says "Translating…": refresh now and then in case the event is missed.
+let translatingChecks = 0;
+setInterval(() => {
+  if (main?.querySelector("[data-translating]") && translatingChecks < 20) {
+    translatingChecks += 1;
+    refresh();
+  }
+}, 15000);
 
 if (main && slug) {
   tick();

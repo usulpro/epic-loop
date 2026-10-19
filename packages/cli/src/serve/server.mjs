@@ -6,18 +6,16 @@ import { REVIEW_RUNTIME_DIR, reviewVendorFile } from "../paths.mjs";
 import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answers.mjs";
 import { ringDoorbell } from "./doorbell.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
-import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
-import { readEpicActivity } from "../epic/activity.mjs";
-import { listEpicDocs } from "../epic/docs.mjs";
+import { INBOX_TEXT_LIMIT, appendInbox } from "./inbox.mjs";
 import { buildIdIndex } from "../epic/id-index.mjs";
-import { buildOverview } from "../epic/overview.mjs";
-import { buildStatistics } from "../epic/statistics.mjs";
 import { streamEpicEvents, watcherCount } from "./events.mjs";
 import { docsResponse } from "./docs.mjs";
-import { renderActivity, renderEpicHome, renderHomeMain } from "./home.mjs";
+import { homeHtml } from "./home-route.mjs";
+import { activeLanguage, langCookieHeader, langSwitch, readSecondLanguage } from "./i18n.mjs";
+import { idMentions, validateTranslatedDoc } from "./markdown.mjs";
+import { createTranslator } from "./translator.mjs";
 import { injectReview, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
-import { linkIdsInHtml } from "./refs.mjs";
-import { epicDir, epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
+import { epicDir, epicExists, listEpicsWithReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
 const MAX_BODY = 1024 * 1024;
 
@@ -90,9 +88,27 @@ function sendIds(req, res, root, slug) {
   return sendJson(res, 200, { aliases: index.aliases, ids: index.ids });
 }
 
+// An epic page's language: `?lang=<en|second>` sets the cookie and redirects back (303) without
+// the parameter; otherwise the cookie picks the language. Null when the response is already sent.
+function epicPage(req, res, url, root, slug) {
+  if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+  const dir = epicDir(root, slug);
+  const second = readSecondLanguage(dir);
+  const asked = url.searchParams.get("lang");
+  if (asked !== null) {
+    if (asked !== "en" && asked !== second) throw new HttpError(400, "This epic has no such language.");
+    res.writeHead(303, { "cache-control": "no-store", location: url.pathname, "set-cookie": langCookieHeader(asked) });
+    res.end();
+    return null;
+  }
+  const lang = activeLanguage(req, second);
+  return { dir, lang, slug, switch: langSwitch(url.pathname, second, lang) };
+}
+
 export function createReviewServer({ root, projectName = path.basename(root), onListening }) {
   let origins = [];
   let hosts = [];
+  const translator = createTranslator({ root, segmentIds: idMentions, validateDoc: validateTranslatedDoc });
 
   async function handleApi(req, res, slug, id, action) {
     if (!reviewExists(root, slug, id)) throw new HttpError(404, "Unknown review.");
@@ -197,36 +213,23 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     if (review) return handleReview(req, res, decode(review[1]), decode(review[2]), review[3]);
     const docs = raw.match(/^\/([^/]+)\/docs(?:\/(.*))?$/u);
     if (docs) {
-      const slug = decode(docs[1]);
-      if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
-      const out = docsResponse(projectName, epicDir(root, slug), slug, decode(docs[2] ?? ""), url.searchParams.get("fragment"));
+      const page = epicPage(req, res, url, root, decode(docs[1]));
+      if (!page) return undefined;
+      const out = docsResponse(projectName, page.dir, page.slug, decode(docs[2] ?? ""), {
+        fragment: url.searchParams.get("fragment"),
+        lang: page.lang,
+        langSwitch: page.switch,
+        translator,
+      });
       if (!out) throw new HttpError(404, "There is no such doc in this epic.");
       return out.file ? sendFile(res, out.file) : send(res, 200, out.html, "text/html; charset=utf-8");
     }
     const home = raw.match(/^\/([^/]+)\/?$/u);
     if (home) {
-      const slug = decode(home[1]);
-      if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
-      const dir = epicDir(root, slug);
-      // ?fragment=activity is the activity section alone, refreshed after an activity event.
-      const index = buildIdIndex(dir);
-      const withRefs = (html) => linkIdsInHtml(html, index, slug);
-      if (url.searchParams.get("fragment") === "activity") return send(res, 200, withRefs(renderActivity(readEpicActivity(root, dir))), "text/html; charset=utf-8");
-      const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
-      const gates = listOpenGates(root, slug);
-      const view = {
-        activity: readEpicActivity(root, dir),
-        docs: listEpicDocs(dir),
-        epic,
-        gates,
-        inbox: readInbox(dir),
-        overview: buildOverview(dir, { gates }),
-        reviews: listReviews(root, slug),
-        statistics: buildStatistics(dir),
-      };
-      // ?fragment=main is the inner <main> the live page swaps in after a change event.
-      if (url.searchParams.get("fragment") === "main") return send(res, 200, withRefs(renderHomeMain(view)), "text/html; charset=utf-8");
-      return send(res, 200, renderEpicHome(projectName, view, withRefs), "text/html; charset=utf-8");
+      const page = epicPage(req, res, url, root, decode(home[1]));
+      if (!page) return undefined;
+      const html = homeHtml({ fragment: url.searchParams.get("fragment"), lang: page.lang, langSwitch: page.switch, projectName, root, slug: page.slug, translator });
+      return send(res, 200, html, "text/html; charset=utf-8");
     }
     throw new HttpError(404, "There is no page at this address.");
   }

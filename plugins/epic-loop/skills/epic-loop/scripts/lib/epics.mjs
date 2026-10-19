@@ -179,6 +179,38 @@ export function setEpicMode(flags = {}) {
   console.log(`Epic mode set for ${slug}: ${mode}`);
 }
 
+const LANGUAGE_CODE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/u;
+const SECOND_LANGUAGE_LINE = /^Second language:.*$/mu;
+
+// The epic's second language (D40): one `Second language: <code>|none` line in state-of-epic.md,
+// read by the epic app for its language switch. English is always the first language.
+export function setSecondLanguage(flags = {}) {
+  const root = resolveRoot(flags.root);
+  const slug = requireFlag(flags, "slug");
+  const lang = String(requireFlag(flags, "lang")).trim();
+  if (lang !== "none" && (!LANGUAGE_CODE.test(lang) || /^en(-|$)/iu.test(lang))) {
+    throw new Error(`Invalid --lang "${lang}". Expected a language code other than English (e.g. ru, pt-BR) or none.`);
+  }
+  const statePath = path.join(epicRoot(root, slug), "state-of-epic.md");
+  if (!fs.existsSync(statePath)) {
+    throw new Error(`State file not found: ${statePath}`);
+  }
+  const text = fs.readFileSync(statePath, "utf8");
+  const line = `Second language: ${lang}`;
+  let next;
+  if (SECOND_LANGUAGE_LINE.test(text)) next = text.replace(SECOND_LANGUAGE_LINE, line);
+  else {
+    // After the header block (Epic, Slug, Created, Active phase/task lines), before the first section.
+    const lines = text.split("\n");
+    const at = lines.findIndex((item, index) => index > 0 && item.startsWith("## "));
+    const insertAt = at === -1 ? lines.length : at > 0 && lines[at - 1] === "" ? at - 1 : at;
+    lines.splice(insertAt, 0, line);
+    next = lines.join("\n");
+  }
+  if (next !== text) fs.writeFileSync(statePath, next, "utf8");
+  console.log(`Second language for ${slug}: ${lang}`);
+}
+
 export function status(flags = {}, positionals = []) {
   const root = resolveRoot(flags.root);
   const slug = positionals[0];

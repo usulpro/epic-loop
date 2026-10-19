@@ -9,12 +9,16 @@ import { driverTranscriptPath } from "../epic/activity.mjs";
 // runtime-state.json names a different `driver_transcript_path`.
 //   GET /api/<slug>/events  ->  retry, then `event: change` / `data: {"file":"tracker.md"}`
 //                                       or `event: activity` / `data: {}`
+//                                       or `event: translated` / `data: {}`
 const DEBOUNCE_MS = 300;
+// A finished translation job (Task 5): the page swaps in its translated fragment.
+const TRANSLATED = /^\.runtime\/translations\/[^/]+\/jobs\.jsonl$/u;
 const HEARTBEAT_MS = 20000;
 const POLL_MS = 1000;
 const WATCHED = [
   /^\.runtime\/runtime-state\.json$/u,
   /^\.runtime\/progress-log\.jsonl$/u,
+  TRANSLATED,
   // Every top-level artifact: tracker and archive layers, queue, logs, registers, state.
   /^[^/]+\.md$/u,
   /^inbox\.jsonl$/u,
@@ -96,6 +100,7 @@ export function streamEpicEvents(req, res, epicDir) {
   res.write("retry: 2000\n: connected\n\n");
   const sendChange = debounced((file) => res.write(`event: change\ndata: ${JSON.stringify({ file })}\n\n`));
   const sendActivity = debounced(() => res.write("event: activity\ndata: {}\n\n"));
+  const sendTranslated = debounced(() => res.write("event: translated\ndata: {}\n\n"));
   let transcript = driverTranscriptPath(epicDir);
   let unwatchTranscript = watchFile(transcript, sendActivity);
   const rearm = () => {
@@ -107,8 +112,10 @@ export function streamEpicEvents(req, res, epicDir) {
     sendActivity();
   };
   const unwatch = watch(epicDir, (file) => {
-    if (file.split(path.sep).join("/") === ".runtime/runtime-state.json") rearm();
-    sendChange(file);
+    const relative = file.split(path.sep).join("/");
+    if (TRANSLATED.test(relative)) return sendTranslated();
+    if (relative === ".runtime/runtime-state.json") rearm();
+    return sendChange(file);
   });
   const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), HEARTBEAT_MS);
   open += 1;
@@ -121,6 +128,7 @@ export function streamEpicEvents(req, res, epicDir) {
     unwatchTranscript();
     sendChange.cancel();
     sendActivity.cancel();
+    sendTranslated.cancel();
     clearInterval(heartbeat);
   };
   req.on("close", close);

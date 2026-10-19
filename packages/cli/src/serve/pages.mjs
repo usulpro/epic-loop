@@ -11,7 +11,7 @@ function cssLinks() {
   return RUNTIME_CSS.map((href) => `<link rel="stylesheet" href="${href}" />`).join("\n    ");
 }
 
-export function layout({ title, crumbs = [], headerEnd = "", body, main = {}, scripts = [] }) {
+export function layout({ title, crumbs = [], headerEnd = "", body, main = {}, scripts = [], lang = "en" }) {
   const nav = crumbs
     .map((crumb, index) => {
       const last = index === crumbs.length - 1;
@@ -20,7 +20,7 @@ export function layout({ title, crumbs = [], headerEnd = "", body, main = {}, sc
     })
     .join("");
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeHtml(lang)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

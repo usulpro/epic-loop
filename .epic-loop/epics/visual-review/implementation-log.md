@@ -618,3 +618,27 @@
   - acceptance on a migrated scratch copy of this epic: 14 pages, 353 internal links and 251 anchors with 0 failures, 251 of 251 expected id mentions expanded, 1 unknown id (T0)
 - Residual risk: A doc page refreshes on changes to its own file only, not when the id index changes elsewhere.
 - Commit: this task commit (feat(app): docs browser with expandable id references)
+
+## 2026-10-19T21:43:51+00:00 - closed
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Phase 5 Task 5 - Presentation-layer localization of epic content
+- Verdict: closed
+- Changed:
+  - skill: set-second-language.mjs writes the 'Second language:' line of state-of-epic.md (D40), manager role and artifact model updated
+  - CLI: EN | <code> switch on the home and doc pages via ?lang= links that set an el-lang cookie (SameSite=Strict) and redirect
+  - background translator (one headless process at a time, deduplicated queue, scratch cwd, 120 s timeout killing the process group) on claude -p haiku or codex exec gpt-6-luna read-only per platform.json
+  - docs translated as markdown sources with English heading ids, home translated as batched segments
+  - validation of code, link targets, ids and heading count with rejection and no retry
+  - cache under .runtime/translations/<lang>/ keyed by content hash with jobs.jsonl
+  - event: translated swaps the fragment
+  - route contract in docs/review-engine.md
+- Verification:
+  - pnpm run test:unit 270/270 (new epic-i18n.test.mjs with a fake translator, second-language.test.mjs)
+  - pnpm run validate passed
+  - build ok and the bundle translates a doc
+  - browser-check all passed (RU switch, translated doc in about 0.4 s without reload, choice persists on the home, EN back)
+  - light and dark screenshots of a translated doc reviewed
+  - real smoke calls: Claude Code haiku 3.97 s and Codex gpt-6-luna read-only 5.1 s, both validated
+- Residual risk: Header labels and the docs index page stay English; this repo's live epic gets its Second language line only after the next self-update.
+- Commit: this task commit (feat(app): language switch with background translation)

@@ -813,6 +813,27 @@ input[type="checkbox"]:disabled {
   color: var(--color-accent-fg);
   background: var(--color-accent);
 }
+/* The app's language switch uses links (no script needed): same look as the buttons. */
+.el-seg > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text-muted);
+  background: var(--color-raised);
+  border-left: var(--rule-width) solid var(--color-rule);
+  text-decoration: none;
+}
+.el-seg > a:first-child {
+  border-left: 0;
+}
+.el-seg > a:hover {
+  color: var(--color-text);
+}
+.el-seg > a[aria-current="true"] {
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+}
 
 /* ---------- Comparison frame ---------- */
 
@@ -1474,6 +1495,10 @@ body.el-lightbox-open #el-problem {
 }
 .el-doc__path {
   font-family: var(--font-mono);
+}
+.el-doc__note {
+  margin-top: var(--space-2);
+  font-style: italic;
 }
 .el-path {
   color: var(--color-text-muted);

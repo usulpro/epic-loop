@@ -465,7 +465,44 @@ async function checkDocs(s, server, project) {
   expect(true, "the review page popover opens");
 }
 
+const FAKE_TRANSLATOR = path.resolve(import.meta.dirname, "..", "..", "..", "tests", "fixtures", "translate", "fake-translator.mjs");
+
+// The language switch with the fake translator (never a model): RU on a doc page shows the
+// translation once the background job finishes, without a manual reload, and the choice holds on
+// the home.
+async function checkI18n(s, server, project) {
+  const { evaluate, waitFor, expect } = s;
+  const epicDir = path.join(project.root, ".epic-loop", "epics", "demo");
+  fs.writeFileSync(path.join(epicDir, "state-of-epic.md"), "# State Of Epic\n\nEpic: Demo\nSecond language: ru\n");
+  await s.send("Page.navigate", { url: `${server.url}demo/docs/docs/guide.md` });
+  await waitFor("document.readyState === 'complete' && window.epicLoopHome?.live === 'live' && !!document.querySelector('.el-lang a[data-lang=\"ru\"]')", "language switch");
+  const clicked = Date.now();
+  await evaluate("document.querySelector('.el-lang a[data-lang=\"ru\"]').click()");
+  await waitFor("document.readyState === 'complete' && window.epicLoopHome?.live === 'live' && document.cookie.includes('el-lang=ru')", "switched page");
+  expect(await evaluate("!!document.querySelector('[data-translating]')"), "a cache miss shows the quiet Translating… note");
+  const refreshesBefore = await evaluate("window.epicLoopHome.refreshes");
+  await waitFor("document.querySelector('article.el-doc h1')?.textContent === '[ru] Doorbell guide'", "translated doc", 8000);
+  expect(true, `the translated doc appears without a manual reload in ${Date.now() - clicked} ms`);
+  expect((await evaluate("window.epicLoopHome.refreshes")) > refreshesBefore, "the translated fragment was swapped in by the live script");
+  expect((await evaluate("document.querySelectorAll('article.el-doc a.el-ref').length")) === 3, "ids still expand in the translation");
+  await evaluate("document.documentElement.dataset.theme = 'light'");
+  await s.shot("i18n-doc-light");
+  await evaluate("document.documentElement.dataset.theme = 'dark'");
+  await s.shot("i18n-doc-dark");
+
+  await s.send("Page.navigate", { url: `${server.url}demo` });
+  await waitFor("document.readyState === 'complete' && window.epicLoopHome?.live === 'live'", "home after switch");
+  expect((await evaluate("document.querySelector('.el-lang a[aria-current=\"true\"]')?.dataset.lang")) === "ru", "the choice persists on the home");
+  await waitFor("document.getElementById('el-loop-title')?.textContent === '[ru] Loop'", "translated home labels", 8000);
+  expect(true, "the home's labels arrive translated without a reload");
+  await evaluate("document.querySelector('.el-lang a[data-lang=\"en\"]').click()");
+  await waitFor("document.readyState === 'complete' && document.getElementById('el-loop-title')?.textContent === 'Loop'", "back to English");
+  expect(true, "EN switches back");
+}
+
 async function main() {
+  // The language check translates with the fake translator, never a model.
+  process.env.EPIC_LOOP_CLAUDE_BIN = FAKE_TRANSLATOR;
   const project = makeProject();
   const server = serve(project.root, "--detach");
   const browser = await launchChrome(chromeBin);
@@ -478,6 +515,7 @@ async function main() {
     await checkVisual(s, server, project);
     await checkHome(s, server, project);
     await checkDocs(s, server, project);
+    await checkI18n(s, server, project);
     s.expect(s.consoleErrors.length === 0, `no page errors (${s.consoleErrors.join(" | ") || "none"})`);
   } finally {
     await closeChrome(browser, cdp);

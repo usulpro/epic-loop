@@ -164,6 +164,9 @@
 - **D39 — Render epic markdown with markdown-it bundled into the CLI** (2026-10-19; agent-made, stop class C; unconfirmed).
   - Default taken: markdown-it 14.1.0 pinned as a CLI devDependency, bundled into dist by esbuild like the rest of the CLI, with html: false so raw HTML in docs is escaped
   - Why: The docs browser needs tables, nested lists and code fences rendered correctly; a hand-written renderer would be a long tail of edge cases, and the CLI already bundles its npm dependencies at build time
+- **D40 — The epic's second language lives in state-of-epic.md, set by a script** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: A 'Second language: <code>' line in state-of-epic.md, written only by a new set-second-language.mjs script that the manager runs from the language the human writes in (none when it is English); the app reads that line
+  - Why: There is no epic config file yet; the state file is already human-facing, read on every re-entry and parsed by the app, and a script keeps the change deterministic
 
 ## Open Questions
 

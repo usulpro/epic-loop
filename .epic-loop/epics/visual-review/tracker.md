@@ -265,7 +265,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: on this epic's own artifacts, every relative link resolves and every id mention expands to the right entry.
   - Docs: `decision-log.md` (D27).
 
-- [ ] Kind: implementation | Status: todo | Presentation-layer localization of epic content
+- [x] Kind: implementation | Status: done | Presentation-layer localization of epic content
   - Outcome:
     - A language switch shows epic docs, artifacts and the home in the second language.
     - Translation runs in a background headless process on a cheap model (Claude Code or Codex, per the platform), never in an agent session.

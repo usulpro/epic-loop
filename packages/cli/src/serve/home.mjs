@@ -303,8 +303,9 @@ export function renderHomeMain({ activity = null, docs = null, epic, gates = [],
 ${loopSection(overview)}${renderActivity(activity)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${statisticsSection(statistics)}${docs ? docsSection(epic.slug, docs) : ""}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
 }
 
-// `transform` post-processes the inner <main> (the server links id mentions with it).
-export function renderEpicHome(projectName, view, transform = (html) => html) {
+// `transform` post-processes the inner <main> (the server translates segments and links id
+// mentions with it); `lang` and `langSwitch` come from the language layer.
+export function renderEpicHome(projectName, view, transform = (html) => html, { lang = null, langSwitch = "" } = {}) {
   const { epic, overview, reviews } = view;
   const pending = reviews.filter((review) => !review.submittedAt).length;
   return layout({
@@ -313,7 +314,8 @@ export function renderEpicHome(projectName, view, transform = (html) => html) {
       { href: "/", label: projectName },
       { href: `/${encodeURIComponent(epic.slug)}`, label: epic.slug },
     ],
-    headerEnd: `<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending</span> ${pendingBadge(pending)}`,
+    headerEnd: `${langSwitch ? `${langSwitch} ` : ""}<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending</span> ${pendingBadge(pending)}`,
+    lang: lang ?? "en",
     main: { attributes: ` data-epic="${escapeHtml(epic.slug)}" data-live-main` },
     scripts: ['<script type="module" src="/_runtime/home.js"></script>', '<script type="module" src="/_runtime/refs.js"></script>'],
     body: transform(renderHomeMain(view)),

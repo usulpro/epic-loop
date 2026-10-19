@@ -94,6 +94,7 @@ For `implementation-start-housekeeping`, the manager must:
 - run the applicable baseline checks named by local project instructions
 - classify obvious supporting artifacts so techlead can fold task-related cleanup into the appropriate task commit
 - surface ambiguities to techlead when pending files cannot be safely classified
+- record the epic's second language for the app's language switch (D9): `node <skill-dir>/scripts/set-second-language.mjs --slug "<epic-slug>" --lang <code>`, with the language the human writes in, or `--lang none` when it is English
 
 The manager must not create standalone commits only for epic tracker/docs updates, logs, compaction stubs, or other housekeeping-support artifacts. If artifact changes are clearly tied to a task, report that classification to techlead so they can be included in the task commit. If there is ambiguity, report it to techlead instead of guessing.
 
@@ -213,7 +214,7 @@ Saving contract:
 
 When the human must answer something that does not fit a line of chat (proportionality levels 2 and 3 in [review-pages.md](review-pages.md)), the manager has a review page built. It never writes the page or a translation in its own context; it keeps only the subagents' summaries.
 
-1. Pick a review id (`<YYYY-MM-DD>-<short-topic>`) and the second language: the language the human writes in (D9), unless it is English.
+1. Pick a review id (`<YYYY-MM-DD>-<short-topic>`) and the second language: the language the human writes in (D9), unless it is English. If `state-of-epic.md` has no `Second language:` line yet or it differs, record it with `set-second-language.mjs`.
 2. Fill [../assets/templates/review-page-builder-brief.md](../assets/templates/review-page-builder-brief.md) with the question, the options and their consequences, the recommendation and its rule, and the evidence paths.
 3. Delegate it. The builder returns a gate summary: review id, URL, what is asked, controls, check result.
    - Claude Code: the Agent tool with `subagent_type: "general-purpose"` and the default model.

@@ -59,6 +59,7 @@ Keep it short:
 - active blockers
 - next intended action
 - important re-entry notes
+- `Second language: <code>|none`, written only by `set-second-language.mjs`; the epic app offers this language in its switch and keeps the files on disk English
 
 ### `tracker.md`
 
