@@ -61,6 +61,34 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - `links`;
   - `card`/`section` helpers for the one-decision-per-card pattern.
 - **Custom blocks:** page JS may read and write answers only through the runtime API, so the derived schema and autosave still hold.
+- **Runtime files** (`packages/cli/src/review/runtime/`, served under `/_runtime/`):
+  - `runtime.js` is an ES module, injected as `<script type="module">`;
+  - `components.mjs` holds the elements;
+  - `answer-store.mjs`, `progress.mjs` and `i18n.mjs` are pure modules, also used by unit tests and the check.
+- **Component markup (v1, slice A).** Light-DOM custom elements; every answer control has a `name` and takes its options from child markup, so the check can derive the schema from the HTML alone.
+  - `<el-card id="q1" title="…">…</el-card>`: one decision.
+  - `<el-section title="…">…</el-section>`: a group.
+  - `<el-choice name="…" [label] [recommended="<value>"] [rule="D16"] [optional]><el-option value="…" [note="…"]>Label</el-option>…</el-choice>`: radio options; the value is the option value.
+  - `<el-check name="…" [optional]>Label</el-check>`: a confirmation; its value is `true` or `false`, and it counts as answered only when checked.
+  - `<el-select name="…" [label] [placeholder] [optional]><el-option value="…">…</el-option></el-select>`.
+  - `<el-comment name="…" [label] [placeholder] [rows] [optional]></el-comment>`: free text.
+  - `<el-links><a href="…">…</a></el-links>` and `<el-table><table>…</table></el-table>`.
+  - Controls are required unless marked `optional`. Progress counts required controls.
+  - Without JS the elements still render as readable blocks, and options show as a list.
+- **`window.epicLoop`:**
+  - `get(name)`, `set(name, value)`, `onChange((name, value, { local }) => …)`;
+  - `registerControl(name, { optional, kind })` for custom blocks;
+  - `review` (`slug`, `id`, `apiBase`, `pageBase`).
+- **Saving.** Changes are debounced (400 ms) into one `PATCH` of only the changed controls. A failed save retries with backoff (1 s → 30 s) and warns before unload. When the tab becomes visible again, answers are re-fetched, unless a local edit is pending.
+
+## Translations (contract shared by the runtime and the check)
+
+- **Segments.** A segment is a visible text node, or the value of a `title`, `placeholder`, `aria-label`, `note` or `alt` attribute. Its key is the English text normalized by `normalizeSegment` in `i18n.mjs`: runs of whitespace collapse to one space, and the ends are trimmed. Segments without a letter (numbers, punctuation) are not translated.
+- **Never translated:** text inside `script`, `style`, `textarea`, `code`, `pre` and `[data-i18n-skip]`, and the runtime's own UI.
+- **Source file.** `i18n/source.json` (written by the check) lists the segments.
+- **Translation file.** `i18n/<lang>.json` is `{ "lang": "<code>", "segments": { "<normalized English>": "<translation>" } }`.
+- **Available languages.** They come from `review.json` (`"languages": ["ru"]`); with none listed, the switch is hidden.
+- **Switching.** The runtime replaces each segment that has a translation and keeps the original's surrounding whitespace. Switching back to English restores the original text and attributes exactly. The choice is remembered per review.
 - **"Something is wrong with this page"** (D21): injected by the server outside the page's DOM tree, with no dependency on page code. It works when the page is broken.
 
 ## Check (static, D21)

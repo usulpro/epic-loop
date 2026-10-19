@@ -248,7 +248,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the problem button is present on a page whose own script throws.
   - Docs: `docs/review-engine.md`.
 
-- [ ] Kind: implementation | Status: todo | Page runtime and web components v1
+- [ ] Kind: implementation | Status: doing | Page runtime and web components v1
   - Outcome: pages built from the v1 components work with no build step:
     - choice, checkbox, comment, select;
     - shot with group lightbox and side panel;

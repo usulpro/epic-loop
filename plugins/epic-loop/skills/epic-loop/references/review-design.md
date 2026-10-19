@@ -48,6 +48,26 @@ Use tokens, never raw values.
 | `el-lightbox`, `el-lightbox__stage`, `el-lightbox__panel` | full-screen image with the card's caption and controls in a side panel |
 | `el-id`, `el-label`, `el-meta`, `el-muted`, `el-kbd`, `el-tag` | `[D34]`-style ids, mono labels and metadata, muted prose, key hints, tags |
 
+## Page Markup
+
+Review pages use the runtime's elements. The runtime saves answers, shows progress and submit, and switches theme and language.
+
+```html
+<el-card id="q1" title="Which doorbell should Claude Code use?">
+  <p>Evidence and context.</p>
+  <el-choice name="mechanism" recommended="hook" rule="D16">
+    <el-option value="hook" note="Wakes an idle session in 0.2 s">asyncRewake waiter hook</el-option>
+    <el-option value="role" note="Holds the role turn open">Background waiter in the role</el-option>
+  </el-choice>
+  <el-comment name="mechanism-why" optional placeholder="Why?"></el-comment>
+</el-card>
+<el-check name="confirm-d31">Confirm D31</el-check>
+<el-select name="lang" label="Second language"><el-option value="ru">Russian</el-option></el-select>
+<el-section title="Evidence"><el-table><table>…</table></el-table><el-links><a href="…">Run log</a></el-links></el-section>
+```
+
+Every control needs a unique `name`; mark non-essential ones `optional`. Page scripts read and write answers only through `window.epicLoop`.
+
 States use real pseudo-classes. Static pages can force one with `.is-hover`, `.is-focus`, `.is-disabled`, `.is-error`; inputs use `disabled` and `aria-invalid="true"`.
 
 ## Do

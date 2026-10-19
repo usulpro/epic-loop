@@ -106,6 +106,8 @@ test("epic list, epic home and the review page render with the pending count and
   assert.match(page.text, /\/_runtime\/tokens\.css/u);
   assert.match(page.text, /\/_runtime\/base\.css/u);
   assert.match(page.text, /<form method="post" action="\/api\/demo\/reviews\/r1\/problem"/u);
+  assert.match(page.text, /<script type="module" src="\/_runtime\/runtime\.js"><\/script>/u);
+  assert.match(page.text, /<meta name="epic-loop-review" content="demo\/r1" \/>/u);
   assert.match(page.text, /page script is broken/u, "the page's own script is served unchanged");
   assert.ok(page.text.indexOf("Something is wrong with this page") > page.text.indexOf("page script is broken"), "the control comes after the page body");
   const css = await request(port, "/_runtime/tokens.css");

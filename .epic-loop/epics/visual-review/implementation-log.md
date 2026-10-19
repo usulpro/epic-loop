@@ -313,3 +313,23 @@
   - bundled dist/epic-loop.mjs serve checked with curl (pages, injection, runtime CSS 200) and stopped
   - screenshots in sandbox-logs/2026-10-20-review-server. Previous task commit: 82253dd
 - Residual risk: No push of answers changed elsewhere to open pages (runtime task decides refresh vs SSE); concurrent first starts of two detached servers are not locked
+
+## 2026-10-19T18:45:21+00:00 - checkpoint (slice A of 2; task stays doing)
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Page runtime and web components v1
+- Verdict: checkpoint (slice A of 2; task stays doing)
+- Changed:
+  - runtime.js (ES module) with answer-store, progress and i18n modules
+  - light-DOM components el-card, el-section, el-choice, el-check, el-select, el-comment, el-links, el-table
+  - window.epicLoop API
+  - debounced per-control saves with retry
+  - submit bar with progress, cards menu, save status, theme and language switches
+  - j/k and digit keys
+  - server injects the runtime as a module
+  - component and translation contracts in docs/review-engine.md and references/review-design.md
+  - scripts/browser-check.mjs (CDP over Node WebSocket)
+- Verification:
+  - Techlead reran tests/unit/review-runtime + review-server (14/14) and browser-check.mjs (15/15 pass: save, reload restore, theme, ru switch and exact revert, submit, problem form, no page errors). test:unit 170/170, validate passes. Screenshots in sandbox-logs/2026-10-20-review-runtime. Checkpoint reason: the task is split into two slices
+  - slice B (shot, lightbox, iframe, diagram, compare) follows. Previous task commit: 8ee9e7c
+- Residual risk: Runtime UI strings stay English; short pages do not pin the submit bar to the viewport bottom

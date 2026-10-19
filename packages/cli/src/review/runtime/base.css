@@ -91,6 +91,10 @@ hr {
   margin: var(--space-6) 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 img {
   max-width: 100%;
   height: auto;
@@ -648,6 +652,9 @@ input[type="checkbox"]:disabled {
   border-radius: 50%;
   background: var(--color-rule-strong);
 }
+.el-save[data-state="idle"] {
+  display: none;
+}
 .el-save[data-state="saving"]::before {
   background: transparent;
   border: 1.5px solid var(--color-text-muted);
@@ -950,4 +957,128 @@ input[type="checkbox"]:disabled {
     border-left: 0;
     border-top: var(--rule-width) solid var(--color-rule);
   }
+}
+
+/* ---------- Page components (runtime.js upgrades these light-DOM elements) ---------- */
+
+/* Readable before upgrade or without JS: every element is a block, options show as a list. */
+el-card,
+el-section,
+el-choice,
+el-check,
+el-select,
+el-comment,
+el-links,
+el-table {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+el-option {
+  display: block;
+  padding: var(--space-1) 0 var(--space-1) var(--space-5);
+}
+el-option::before {
+  content: "○ ";
+  font-family: var(--font-mono);
+  color: var(--color-text-faint);
+}
+el-option[note]::after {
+  content: " — " attr(note);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+el-card:not(.is-upgraded) {
+  padding: var(--space-5) var(--space-6);
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+el-card:not(.is-upgraded)[title]::before,
+el-section:not(.is-upgraded)[title]::before {
+  content: attr(title);
+  display: block;
+  margin-bottom: var(--space-3);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-lg);
+}
+el-check:not(.is-upgraded)::before {
+  content: "☐ ";
+  font-family: var(--font-mono);
+}
+el-card .el-choice-group,
+el-card el-comment,
+el-card el-select,
+el-card el-check {
+  margin-bottom: var(--space-4);
+}
+el-card:last-child,
+el-card > :last-child {
+  margin-bottom: 0;
+}
+el-card.is-upgraded {
+  margin-bottom: var(--space-5);
+}
+el-card[data-upgrade-error],
+el-choice[data-upgrade-error] {
+  outline: 1px dashed var(--color-danger);
+}
+
+.el-links__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.el-links__list li::before {
+  content: "→ ";
+  font-family: var(--font-mono);
+  color: var(--color-text-faint);
+}
+
+/* Table of contents in the submit bar: opens upward */
+.el-toc {
+  position: relative;
+}
+.el-toc > summary {
+  list-style: none;
+}
+.el-toc > summary::-webkit-details-marker {
+  display: none;
+}
+.el-toc__list {
+  position: absolute;
+  bottom: calc(100% + var(--space-3));
+  left: 0;
+  min-width: 18rem;
+  max-width: min(28rem, 90vw);
+  max-height: 60vh;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-3);
+  list-style: none;
+  background: var(--color-raised);
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+  font-family: var(--font-sans);
+}
+.el-toc__list a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-1);
+}
+.el-toc__list a:hover {
+  background: var(--color-sunken);
+}
+.el-toc__list li[data-answered="true"] .el-toc__mark {
+  color: var(--color-accent);
+}
+.el-toc__mark {
+  font-family: var(--font-mono);
+  color: var(--color-text-faint);
+}
+body.el-has-submitbar {
+  margin-bottom: 0;
 }
