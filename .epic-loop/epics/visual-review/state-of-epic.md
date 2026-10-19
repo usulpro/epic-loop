@@ -35,7 +35,9 @@ Active task: TBD
 
 - Phase 1 was squash-merged into `main` as PR #13 (`f9dc7f9`). Phases 2-7 run in the worktree `../epic-loop-visual` on branch `feature/visual-review` (`docs/delivery.md`).
 - Phase 2 (doorbell spike): done except the Codex end-to-end task, on hold for H3 (approval of a `danger-full-access` Codex run and quota). Claude Code mechanism proposed in D34.
-- Phase 3 (review engine) closed on 2026-10-20 (`aac1655`): server, runtime and components, static check, page builder and translator subagents, verified end to end on Claude Code and Codex (sandbox run 15).
-- Next: Phase 4 (human gates), first task "Gate lifecycle in the loop state". On Codex the review server cannot start inside `workspace-write`; Phase 4's doorbell server must start outside the sandbox (R5).
-- Open: H3; follow-up-02 (accept a stop without stdin); agent-made decisions D31, D32, D34, D35, D36 to confirm.
-- Tracker compacted at Phase 3 closure: the task lists of closed Phases 0, 1 and 3 are in `tracker.closed-phases.previous-layer-01.md`.
+- Phase 3 (review engine) closed on 2026-10-20 (`aac1655`).
+- Phase 4 (human gates): done except the Codex half of its verification, on hold for H4 (a `danger-full-access` Codex run; it can be approved together with H3).
+- Phase 5 (epic viewer) closed on 2026-10-20 (`98cd97c`): stable T ids, live home, activity feed and statistics, docs browser with id expansion, localization, verified in sandbox run 17.
+- Pull request for Phases 2–5: https://github.com/usulpro/epic-loop/pull/16 (open, mergeable, CI green). The human reviews and squash-merges it; the agent does not merge.
+- After the merge (`docs/delivery.md`): in the main checkout `git pull` and `pnpm run self-update`; Phases 6 and 7 continue on a new branch from `main`.
+- Open: H3, H4; follow-ups "accept a stop without stdin" and "viewer polish"; agent-made decisions D31, D32, D34–D40 to confirm.

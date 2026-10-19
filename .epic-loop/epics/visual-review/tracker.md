@@ -217,7 +217,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 5: Epic Viewer
 
-- Phase status: doing
+- Phase status: done
 - Intent: the epic home grows into the full overview, shared by shaping and implementation (D9, D10, D17, D24, D27, D28, D30):
   - loop state, what waits for the human, unconfirmed agent-made decisions, phases and tasks;
   - live activity and turn statistics;
@@ -292,7 +292,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Cleanup: stop servers, archive the runs.
   - Docs: `decision-log.md` (D30).
 
-- [ ] Kind: review | Status: todo | Open the visual-layer pull request and stop for the human's merge
+- [x] Kind: review | Status: done | Open the visual-layer pull request and stop for the human's merge
   - Outcome: a pull request from `feature/visual-review` to `main` covering Phases 2–5, with links to each phase's verification runs. Unit tests and `validate` pass on the branch. The loop stops so the human can review and merge.
   - Surface: git branch in the worktree, GitHub pull request, `state-of-epic.md`.
   - Acceptance: the PR URL is recorded in `state-of-epic.md` and `implementation-log.md`; the agent has not merged, pushed to `main`, or published.

@@ -667,3 +667,18 @@
   - pnpm run test:unit 272/272, validate, build, browser-check all passed
 - Residual risk: Method deviation: scripted CDP (D-19) instead of browser MCP; Claude spend about 5.67 USD over 5 attempts (diagnosis); minor findings tracked as the follow-up 'Viewer polish from the Phase 5 design and accessibility review'.
 - Commit: this task commit (fix(app): event stream survives atomic writes; viewer verification run 17)
+
+## 2026-10-19T22:31:29+00:00 - closed
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Phase 5 Task 7 - Open the visual-layer pull request and stop for the human's merge
+- Verdict: closed
+- Changed:
+  - Pushed feature/visual-review (new remote branch, 23 commits 2a533a9..98cd97c on top of origin/main f9dc7f9) and opened PR #16 https://github.com/usulpro/epic-loop/pull/16 'feat: visual layer for epic-loop: review pages, human gates and a live epic viewer' with per-phase summaries, verification run links, H3/H4, agent-made decisions D31, D32, D34-D40, after-merge steps, follow-ups and tests
+  - state-of-epic.md records the PR
+- Verification:
+  - Before the push: test:unit 272/272, validate, build and browser-check passed
+  - origin/main is an ancestor of HEAD
+  - PR state OPEN, MERGEABLE, merge state CLEAN, CI check 'skill' passed
+- Residual risk: The agent has not merged, pushed to main, force-pushed or published; this bookkeeping commit is pushed to the PR branch.
+- Commit: this task commit (docs(epic): record the visual-layer PR #16)
