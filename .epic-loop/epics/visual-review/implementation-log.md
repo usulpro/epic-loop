@@ -351,3 +351,18 @@
   - Techlead reran review-runtime + review-server (16/16) and browser-check.mjs (32/32: lightbox paging, panel controls moved and restored, digit saves, focus return, sandboxed frames report access blocked and origin null, Mermaid svg and theme re-render, compare modes, no request leaves 127.0.0.1). test:unit 172/172, validate passes
   - dist serves vendor/mermaid.min.js (5,494,801 bytes). Previous checkpoint commit: 92686ba
 - Residual risk: npm package +5.5 MB (agent-made decision); full-page screenshots show the sticky bar mid-page (capture artifact)
+
+## 2026-10-19T18:59:50+00:00 - done
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Static review check: schema, translation segments, safety
+- Verdict: done
+- Changed:
+  - packages/cli/src/review/html.mjs (built-in tolerant HTML parser with line numbers, inert template, raw text, entities, implied closing)
+  - review/check.mjs (controls, options, media, local files, network and unsafe markup, warnings, schema, segments via runtime i18n.mjs, translation gaps, atomic writes only on success)
+  - cli.mjs review check command
+  - docs/review-engine.md Check section with all codes and the schema shape
+- Verification:
+  - Techlead reran tests/unit/review-check.test.mjs (30/30: valid page, rerun stability, one fixture per error code, failing page keeps files, translation gaps and --lang, warnings, segment parity with the runtime fixture, parser cases). Engineer: test:unit 202/202, validate passes
+  - both browser-check fixture pages pass from source and through dist. Previous task commit: 752657e
+- Residual risk: Parser is not full HTML5 (no foreign content, adoption agency or foster parenting); unknown named entities stay literal

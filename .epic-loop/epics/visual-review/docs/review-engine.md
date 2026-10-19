@@ -120,13 +120,54 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
 
 ## Check (static, D21)
 
-`epic-loop review check <review>`:
-- control names unique and non-empty;
-- every referenced local file exists;
-- no network script sources, no forms posting elsewhere;
-- writes the derived answer schema into `review.json`;
-- extracts text segments into `i18n/source.json`;
-- reports missing or stale translations for the chosen second language.
+`epic-loop review check <slug>/<id> | <review folder> [--root <dir>] [--lang <code>] [--json]`
+
+- **Exit codes.** 0 when the page passes (warnings allowed); 1 on any error.
+- **`--json` output.** `{ ok, errors: [{ code, message, line? }], warnings, schema, segments: <count>, translations: { <lang>: { missing, stale } } }`.
+- **Parser.** A small built-in parser (`packages/cli/src/review/html.mjs`). Input it cannot parse reliably (an unterminated tag, comment or raw-text element) fails with `E_PARSE` and a line number.
+- **Writes only on a clean page.** It writes `review.json` and `i18n/source.json` atomically, and only when there are no errors; a failing page keeps its previous files.
+  - `review.json` keeps its existing fields (`id`, `title`, `kind`, `created`, `languages`, `status`) and gains `schema` and `checkedAt`.
+  - `schema` is `{ controls: [{ name, kind: choice|check|select|comment, optional, label?, options?: [{ value, label }], recommended?, rule?, card? }] }`, in document order. `card` is the enclosing card's `id` (or title).
+  - `i18n/source.json` is `{ segments: [...] }`: unique, in document order, stable across reruns.
+- **Segments** follow the Translations contract below and use the runtime's own functions:
+  - text nodes, plus the attributes `title`, `placeholder`, `aria-label`, `note`, `alt`, `label` and `caption`;
+  - nothing from the head, `script`, `style`, `textarea`, `code`, `pre`, `<template>` contents, `el-diagram` source, or `[data-i18n-skip]`;
+  - an `el-diagram` caption is a segment.
+
+### Errors
+
+- **Controls and options:**
+  - `E_NAME_MISSING`, `E_NAME_DUPLICATE`: an answer control without a name, or a name used twice.
+  - `E_OPTIONS_TOO_FEW`, `E_OPTION_DUPLICATE`, `E_RECOMMENDED_UNKNOWN`: a choice or select with fewer than two options, a repeated option value, or a `recommended` value that is not an option.
+- **Images:**
+  - `E_SHOT_NO_IMAGE`: an `el-shot` without an `img` or `src`.
+  - `E_COMPARE_TOO_FEW`, `E_COMPARE_LABEL`: an `el-compare` with fewer than two images, or an image without a `label`.
+- **Local files:** `E_FILE_MISSING`, `E_FILE_OUTSIDE`. A local reference must exist inside the review folder. `/_runtime/…` paths are checked against the runtime.
+  - The checked references are `img`, `source`, `audio`, `track`, `el-shot`, `el-iframe` and `script` `src`; `video` `src` and `poster`; and `a` and `link` `href`.
+  - Fragment links, `mailto:` and `data:` are fine.
+- **Network:**
+  - `E_NETWORK_SCRIPT`: a script from the network, including inside a `<template>`.
+  - `E_NETWORK_STYLESHEET`, `E_NETWORK_LINK`: a stylesheet or a resource-loading `link` from the network.
+  - `E_NETWORK_MEDIA`: images, video or audio from the network; save evidence next to the page.
+  - `E_NETWORK_FRAME`: an `el-iframe` with a URL that is not `https:`.
+  - `E_CSS_IMPORT`, `E_NETWORK_CSS`: `@import`, or a network `url()`, in a `style` element or a `style` attribute.
+  - Links (`a href`) to the network are allowed.
+- **Unsafe markup:**
+  - `E_IFRAME`: a plain `iframe`, `frame`, `object` or `embed`; use `el-iframe`.
+  - `E_FORM_ACTION`: a `form` with an `action`.
+  - `E_BASE`: a `<base>` element.
+  - `E_META_REFRESH`: `<meta http-equiv="refresh">`.
+- **Other:**
+  - `E_TRANSLATION_MISSING`: only with `--lang <code>`.
+  - `E_PARSE`, `E_NO_PAGE`: the page cannot be parsed reliably, or there is no `page.html`.
+
+### Warnings
+
+- `W_EVENT_HANDLER`: an inline `on…` attribute.
+- `W_IMG_ALT`: an image without `alt`.
+- `W_CARD_CHOICES`: more than one choice in a card.
+- `W_NO_CONTROLS`: no answer controls and no `registerControl` call; the page can only be acknowledged.
+- `W_TRANSLATION_MISSING`, `W_TRANSLATION_STALE`: for each language in `review.json` `languages`.
 
 ## Subagents (D4)
 

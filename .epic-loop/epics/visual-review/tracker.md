@@ -264,7 +264,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     Checked by tests where possible and by the phase verification otherwise.
   - Docs: `docs/review-engine.md`.
 
-- [ ] Kind: implementation | Status: todo | Static review check: schema, translation segments, safety
+- [x] Kind: implementation | Status: done | Static review check: schema, translation segments, safety
   - Outcome: `epic-loop review check <review>` validates a page (unique control names, local files exist, no network scripts or foreign form targets), writes the derived answer schema to `review.json`, extracts text segments to `i18n/source.json`, and reports missing or stale translations.
   - Surface: `packages/cli/src/review/check.mjs` (or similar), CLI command wiring, unit tests with good and broken fixture pages.
   - Acceptance:
