@@ -20,7 +20,12 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
 
 - One app per project with routes:
   - `/` lists the epics;
-  - `/<slug>` is the epic home: pending reviews as notifications with a count; Phase 5 grows it into the full overview;
+  - `/<slug>` is the epic home, the live overview (Phase 5 Task 2):
+    - **Sections:** title and intent; loop state (mode, status, phase, task, role with the elapsed turn time, iteration); gates and pending reviews; human-queue items grouped by hold kind and external waits; unconfirmed agent-made decisions; phases and tasks with progress and `<details>`; the inbox; answered reviews.
+    - **Data:** the CLI reads it with copies of the skill's parsers in `packages/cli/src/epic/`.
+    - **Live updates:** `GET /api/<slug>/events` is a `text/event-stream` with `event: change` and `data: {"file": "<path under the epic>"}`, debounced to about 300 ms, plus a heartbeat every 20 s; it watches the tracker, runtime state, queue, decision log, state, inbox, reviews and docs.
+    - **Fragment:** `GET /<slug>?fragment=main` returns the inner `<main>`, which `/_runtime/home.js` swaps in. The scroll position, open `<details>` and an inbox draft are kept.
+    - `/_health` reports the open watchers;
   - `/<slug>/reviews/<id>/` is a review page. The canonical URL ends with `/`, so relative assets in `page.html` resolve inside the review; the address without it redirects (301).
 - The manager gives deep links to review routes.
 

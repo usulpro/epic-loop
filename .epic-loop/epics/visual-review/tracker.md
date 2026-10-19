@@ -237,7 +237,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the index resolves every id kind, including the hyphenated form.
   - Docs: `decision-log.md` (D27).
 
-- [ ] Kind: implementation | Status: todo | Epic home as the live overview
+- [x] Kind: implementation | Status: done | Epic home as the live overview
   - Outcome: `/<slug>` shows the following, and updates live through server-sent events when epic files change:
     - the epic title and intent;
     - mode and loop state (running, waiting for the human, stopped);

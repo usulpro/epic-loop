@@ -1238,3 +1238,99 @@ body.el-lightbox-open {
 body.el-lightbox-open #el-problem {
   display: none;
 }
+
+/* ---------- Epic home (live overview) ---------- */
+.el-intent {
+  max-width: 68ch;
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+}
+.el-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+.el-kv dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+.el-kv dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.el-elapsed {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.el-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.el-list > li {
+  padding: var(--space-3) 0;
+  border-bottom: var(--rule-width) solid var(--color-rule);
+}
+.el-list > li:last-child {
+  border-bottom: 0;
+}
+.el-holds {
+  margin: var(--space-5) 0 0;
+}
+.el-holds h3 {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-muted);
+}
+.el-phase {
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  margin-bottom: var(--space-4);
+}
+.el-phase > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  cursor: pointer;
+}
+.el-phase__title {
+  font-weight: var(--fw-medium);
+}
+.el-phase > summary .el-progress {
+  margin-left: auto;
+}
+.el-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-5) var(--space-4);
+}
+.el-task {
+  padding: var(--space-2) 0;
+  border-top: var(--rule-width) solid var(--color-rule);
+}
+.el-task > details > summary {
+  cursor: pointer;
+}
+.el-task .el-kv {
+  margin: var(--space-3) 0 var(--space-2) var(--space-6);
+  font-size: var(--fs-sm);
+}
+.el-live[data-live="paused"] {
+  color: var(--color-danger);
+}
+@media (max-width: 40rem) {
+  .el-kv {
+    grid-template-columns: 1fr;
+  }
+  .el-phase > summary .el-progress {
+    margin-left: 0;
+  }
+}

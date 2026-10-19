@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { closeChrome, connect, createSession, launchChrome, serve } from "./cdp.mjs";
+import { closeChrome, connect, createSession, launchChrome, serve, sleep } from "./cdp.mjs";
 
 const args = process.argv.slice(2);
 const flag = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
@@ -280,6 +280,70 @@ async function checkVisual(s, server, project) {
   );
 }
 
+const HOME_TRACKER = `# Tracker
+
+Epic: Demo
+
+Next task id: T3
+
+## Active Roadmap
+
+### Phase 1: Build
+
+- Phase status: doing
+
+- [ ] Kind: implementation | Status: todo | T1 · Build the parser
+  - Outcome: parses.
+
+- [ ] Kind: verification | Status: todo | T2 · Verify the parser
+  - Method: run the fixtures.
+  - Acceptance: all pass.
+`;
+
+// The live epic home: changes on disk reach the open page through the event stream without a
+// reload, open <details> stay open, and the open turn's elapsed time ticks.
+async function checkHome(s, server, project) {
+  const { evaluate, waitFor, expect } = s;
+  const epicDir = path.join(project.root, ".epic-loop", "epics", "demo");
+  const runtimePath = path.join(epicDir, ".runtime", "runtime-state.json");
+  fs.writeFileSync(path.join(epicDir, "tracker.md"), HOME_TRACKER);
+  fs.writeFileSync(path.join(epicDir, "decision-log.md"), "# Decision Log\n\n## Active Decisions\n\n- None recorded yet.\n");
+  const loop = { active_turn_started_at: new Date(Date.now() - 61000).toISOString(), current_role: "engineer", iteration: 7, status: "running" };
+  fs.writeFileSync(runtimePath, JSON.stringify({ mode: "implementation", implementation_loop: loop }));
+  await s.send("Page.navigate", { url: `${server.url}demo` });
+  await waitFor("window.epicLoopHome && window.epicLoopHome.live === 'live'", "home live");
+  expect(await evaluate('!!document.querySelector(\'[data-task="T1"][data-status="todo"]\')'), "the home lists T1 as todo");
+  await evaluate("window.__homeMarker = 'kept'; document.getElementById('task-T2').open = true");
+  const elapsedBefore = await evaluate("document.querySelector('time.el-elapsed').textContent");
+  await sleep(1500);
+  expect((await evaluate("document.querySelector('time.el-elapsed').textContent")) !== elapsedBefore, `the open turn's elapsed time ticks (${elapsedBefore})`);
+  // The home has no theme switch of its own: force each theme for its screenshot.
+  await evaluate("document.documentElement.dataset.theme = 'light'");
+  await s.shot("home-light");
+
+  const started = Date.now();
+  fs.writeFileSync(path.join(epicDir, "tracker.md"), HOME_TRACKER.replace("Status: todo | T1", "Status: doing | T1"));
+  await waitFor('!!document.querySelector(\'[data-task="T1"][data-status="doing"]\')', "task status update", 3000);
+  expect(true, `a task status change reaches the page in ${Date.now() - started} ms`);
+  fs.writeFileSync(
+    runtimePath,
+    JSON.stringify({ mode: "implementation", implementation_loop: { ...loop, gates: [{ blocking: true, covers: [], review: "r1", status: "open" }] } }),
+  );
+  await waitFor("!!document.querySelector('[data-gate=\"r1\"]')", "gate update", 3000);
+  expect(true, "an opened gate reaches the page");
+  fs.writeFileSync(
+    path.join(epicDir, "decision-log.md"),
+    "# Decision Log\n\n## Active Decisions\n\n- **D1 — Parse with a hand-written lexer** (2026-10-20; agent-made, stop class C; unconfirmed).\n  - Default taken: no parser generator\n  - Why: no dependencies\n",
+  );
+  await waitFor("!!document.querySelector('[data-decision=\"D1\"]')", "decision update", 3000);
+  expect(true, "a new agent-made decision reaches the page");
+  expect((await evaluate("window.__homeMarker")) === "kept", "no reload: the window marker survives the updates");
+  expect(await evaluate("document.getElementById('task-T2').open"), "an open <details> stays open across updates");
+  expect((await evaluate("window.epicLoopHome.refreshes")) >= 3, "each change swapped in a fresh fragment");
+  await evaluate("document.documentElement.dataset.theme = 'dark'");
+  await s.shot("home-dark");
+}
+
 async function main() {
   const project = makeProject();
   const server = serve(project.root, "--detach");
@@ -291,6 +355,7 @@ async function main() {
     const s = await createSession(cdp, { failures, shots });
     await checkAnswers(s, server, project);
     await checkVisual(s, server, project);
+    await checkHome(s, server, project);
     s.expect(s.consoleErrors.length === 0, `no page errors (${s.consoleErrors.join(" | ") || "none"})`);
   } finally {
     await closeChrome(browser, cdp);

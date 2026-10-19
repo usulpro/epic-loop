@@ -551,3 +551,24 @@
   - techlead reran id tests 35/35
   - test:unit 246/246, validate passes
 - Residual risk: this epic's tracker migrates at the first run after the next self-update; an older runtime reading a migrated tracker derives different follow-up slugs
+
+## 2026-10-19T21:08:10+00:00 - done
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Epic home as the live overview
+- Verdict: done
+- Changed:
+  - CLI epic home: title and intent, loop state (mode, status, phase, task, role with ticking elapsed time, iteration), gates and pending reviews, human-queue items by hold kind (security-hold first, held tasks, review links), external waits, unconfirmed agent-made decisions, phases and tasks with progress and details, inbox, answered
+  - packages/cli/src/epic/ parser copies and overview model
+  - serve/home.mjs, serve/events.mjs (GET /api/<slug>/events SSE with debounced change events, heartbeat, per-client watcher, Origin guard), ?fragment=main, runtime home.js (swap keeping scroll, details and inbox draft
+  - paused marker with backoff)
+  - /_health watchers
+  - home styles
+  - review-engine.md routes
+- Verification:
+  - epic-home.test.mjs 3 tests (sections and fragment, change events for tracker, runtime state and agent-decision.mjs within 2 s, Origin guard, watcher cleanup)
+  - browser-check home section (task change in about 410 ms, gate and decision updates within 3 s, no reload, details kept, elapsed ticks
+  - light and dark screenshots checked)
+  - techlead reran home and server tests 13/13 and browser-check
+  - test:unit 249/249, validate passes
+- Residual risk: phone width not checked in a browser (CSS breakpoint at 40rem); parser copies in the CLI must follow skill format changes

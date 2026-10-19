@@ -7,7 +7,10 @@ import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answe
 import { ringDoorbell } from "./doorbell.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
-import { injectReview, renderEpicHome, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
+import { buildOverview } from "../epic/overview.mjs";
+import { streamEpicEvents, watcherCount } from "./events.mjs";
+import { renderEpicHome, renderHomeMain } from "./home.mjs";
+import { injectReview, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
 import { epicDir, epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
 const MAX_BODY = 1024 * 1024;
@@ -147,7 +150,7 @@ export function createReviewServer({ root, projectName = path.basename(root), on
 
     const url = new URL(req.url ?? "/", `http://${host}`);
     const raw = url.pathname;
-    if (raw === "/_health") return sendJson(res, 200, { ok: true, root, pid: process.pid });
+    if (raw === "/_health") return sendJson(res, 200, { ok: true, root, pid: process.pid, watchers: watcherCount() });
     if (raw.startsWith("/_runtime/vendor/")) {
       // Only names in the vendor allow-list are served, so no path from the URL reaches the disk.
       const file = reviewVendorFile(raw.slice("/_runtime/vendor/".length));
@@ -160,6 +163,13 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       return sendFile(res, file);
     }
 
+    const events = raw.match(/^\/api\/([^/]+)\/events$/u);
+    if (events) {
+      const slug = decode(events[1]);
+      if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+      if (req.headers.origin !== undefined && !origins.includes(req.headers.origin)) throw new HttpError(403, "Cross-origin request refused.");
+      return streamEpicEvents(req, res, epicDir(root, slug));
+    }
     const inbox = raw.match(/^\/api\/([^/]+)\/inbox$/u);
     if (inbox) return handleInbox(req, res, decode(inbox[1]));
     const api = raw.match(/^\/api\/([^/]+)\/reviews\/([^/]+)\/(answers|submit|problem)$/u);
@@ -174,7 +184,11 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       const slug = decode(home[1]);
       if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
       const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
-      return send(res, 200, renderEpicHome(projectName, epic, listReviews(root, slug), listOpenGates(root, slug), readInbox(epicDir(root, slug))), "text/html; charset=utf-8");
+      const gates = listOpenGates(root, slug);
+      const view = { epic, gates, inbox: readInbox(epicDir(root, slug)), overview: buildOverview(epicDir(root, slug), { gates }), reviews: listReviews(root, slug) };
+      // ?fragment=main is the inner <main> the live page swaps in after a change event.
+      if (url.searchParams.get("fragment") === "main") return send(res, 200, renderHomeMain(view), "text/html; charset=utf-8");
+      return send(res, 200, renderEpicHome(projectName, view), "text/html; charset=utf-8");
     }
     throw new HttpError(404, "There is no page at this address.");
   }

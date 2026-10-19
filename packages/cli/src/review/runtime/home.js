@@ -1,0 +1,88 @@
+// The live epic home (Phase 5): follows /api/<slug>/events and swaps in the fresh <main> from
+// /<slug>?fragment=main after each change, keeping the scroll position, the open state of every
+// <details id>, and an unsent inbox draft. Ticks the elapsed time of the open role turn. The page
+// works without this script; it is only current on reload then.
+const main = document.querySelector("main[data-live-main]");
+const marker = document.querySelector(".el-live");
+const slug = main?.dataset.epic;
+const state = { refreshes: 0, live: "connecting" };
+window.epicLoopHome = state;
+
+function formatElapsed(ms) {
+  const minutes = Math.floor(Math.max(0, ms) / 60000);
+  const seconds = Math.floor((Math.max(0, ms) % 60000) / 1000);
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m` : `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function tick() {
+  for (const node of document.querySelectorAll("time[data-since]")) node.textContent = formatElapsed(Date.now() - Date.parse(node.dataset.since));
+}
+
+function setLive(value) {
+  state.live = value;
+  if (!marker) return;
+  marker.dataset.live = value;
+  marker.textContent = value === "paused" ? "live updates paused" : "live";
+}
+
+let inFlight = null;
+let again = false;
+async function refresh() {
+  if (inFlight) {
+    again = true;
+    return inFlight;
+  }
+  inFlight = (async () => {
+    const response = await fetch(`/${encodeURIComponent(slug)}?fragment=main`, { cache: "no-store", headers: { accept: "text/html" } });
+    if (!response.ok) return;
+    const html = await response.text();
+    const openState = new Map([...main.querySelectorAll("details[id]")].map((node) => [node.id, node.open]));
+    const draft = main.querySelector("#el-inbox-text");
+    const draftValue = draft?.value ?? "";
+    const draftFocused = document.activeElement === draft;
+    const scroll = window.scrollY;
+    main.innerHTML = html;
+    for (const [id, open] of openState) {
+      const node = main.querySelector(`details[id="${CSS.escape(id)}"]`);
+      if (node) node.open = open;
+    }
+    const nextDraft = main.querySelector("#el-inbox-text");
+    if (nextDraft && draftValue) nextDraft.value = draftValue;
+    if (nextDraft && draftFocused) nextDraft.focus();
+    window.scrollTo(0, scroll);
+    tick();
+    state.refreshes += 1;
+    main.dispatchEvent(new CustomEvent("epic-loop:refreshed"));
+  })().finally(() => {
+    inFlight = null;
+    if (again) {
+      again = false;
+      refresh();
+    }
+  });
+  return inFlight;
+}
+
+let delay = 1000;
+function connect() {
+  const source = new EventSource(`/api/${encodeURIComponent(slug)}/events`);
+  source.addEventListener("open", () => {
+    const wasPaused = state.live === "paused";
+    delay = 1000;
+    setLive("live");
+    if (wasPaused) refresh();
+  });
+  source.addEventListener("change", () => refresh());
+  source.addEventListener("error", () => {
+    source.close();
+    setLive("paused");
+    setTimeout(connect, delay);
+    delay = Math.min(delay * 2, 30000);
+  });
+}
+
+if (main && slug) {
+  tick();
+  setInterval(tick, 1000);
+  connect();
+}
