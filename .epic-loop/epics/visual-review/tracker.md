@@ -274,7 +274,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the segments are stable across reruns.
   - Docs: `docs/review-engine.md`.
 
-- [ ] Kind: implementation | Status: doing | Page-builder and translator subagents for the manager
+- [x] Kind: implementation | Status: done | Page-builder and translator subagents for the manager
   - Outcome:
     - A skill reference gives the component catalog, the content rules and the proportionality ladder.
     - Two subagent briefs exist: a page builder on the main model, which takes a review request and returns a checked page plus a gate summary; and a translator on a cheap model, which fills `i18n/<lang>.json`.

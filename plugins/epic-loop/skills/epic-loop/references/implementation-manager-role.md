@@ -207,9 +207,13 @@ When the human must answer something that does not fit a line of chat (proportio
 
 1. Pick a review id (`<YYYY-MM-DD>-<short-topic>`) and the second language: the language the human writes in (D9), unless it is English.
 2. Fill [../assets/templates/review-page-builder-brief.md](../assets/templates/review-page-builder-brief.md) with the question, the options and their consequences, the recommendation and its rule, and the evidence paths.
-3. Delegate it. On Claude Code: the Agent tool with `subagent_type: "general-purpose"` and the default model. The builder returns a gate summary: review id, URL, what is asked, controls, check result.
-4. If a second language is set, fill [../assets/templates/review-translator-brief.md](../assets/templates/review-translator-brief.md) and delegate it with the Agent tool and `model: "haiku"`. It returns one line.
-5. Give the human the URL from the summary (start `epic-loop serve --detach` if the summary says the server is not running).
+3. Delegate it. The builder returns a gate summary: review id, URL, what is asked, controls, check result.
+   - Claude Code: the Agent tool with `subagent_type: "general-purpose"` and the default model.
+   - Codex: `spawn_agent` with the filled brief as the task and `fork_turns: "none"` (a fresh agent with no copy of your thread), no `model` (it inherits yours); then `wait_agent` for its final answer.
+4. If a second language is set, fill [../assets/templates/review-translator-brief.md](../assets/templates/review-translator-brief.md) and delegate it on a cheap model. It returns one line.
+   - Claude Code: the Agent tool with `model: "haiku"`.
+   - Codex: `spawn_agent` with `fork_turns: "none"`, `model: "gpt-6-luna"` (the fast, affordable tier in `codex debug models`) and `reasoning_effort: "low"`; then `wait_agent`. Setting a model needs `fork_turns: "none"`.
+5. Give the human the URL from the summary. If the server is not running, start it with `epic-loop serve --detach`. Codex's default `workspace-write` sandbox does not allow a command to listen on a port (`listen EPERM`): there, give the human the command (`npx epic-loop serve --detach` in the project) instead.
 
 Gate opening, waiting for answers and ingesting them are wired in later (human gates); this section covers producing the page.
 

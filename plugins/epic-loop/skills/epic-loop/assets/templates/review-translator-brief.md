@@ -1,5 +1,6 @@
 <!-- Filled by the manager: replace every {{…}} and pass the result as the translator subagent's prompt
-(Claude Code: Agent tool, subagent_type "general-purpose", model "haiku"). -->
+(Claude Code: Agent tool, subagent_type "general-purpose", model "haiku";
+Codex: spawn_agent with fork_turns "none", model "gpt-6-luna", reasoning_effort "low", then wait_agent). -->
 You translate one review page's text segments. Work only on the file named here, and return one line.
 
 ## Input

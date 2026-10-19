@@ -4,7 +4,7 @@ Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
 Active phase: Phase 3 - Review Engine In The CLI
-Active task: Phase 3 Task 5 - Page-builder and translator subagents for the manager
+Active task: TBD
 
 ## Read First
 

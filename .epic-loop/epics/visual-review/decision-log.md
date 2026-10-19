@@ -168,7 +168,7 @@
 - **Q8 — Shaping tools.** Phase 7 (D29). Whether it stays in this epic is decided after Phase 5.
 - **Q9 — Order and MVP.** Resolved by D18 and the phase order in `tracker.md`.
 
-- **Q10 — Subagents on Codex.** How does a Codex manager invoke a subagent on a cheaper model for translation? Confirm while building the subagent task in Phase 3.
+- **Q10 — Subagents on Codex.** Resolved (2026-10-20, sandbox run 14): the manager calls `spawn_agent` with `fork_turns: "none"`; the builder takes no `model` (it inherits the session model), and the translator takes `model: "gpt-6-luna"` and `reasoning_effort: "low"`; `wait_agent` collects each final answer. The `multi_agent` feature is stable and on by default, so no config is needed. The child rollouts record their model in `turn_context` and their parent in `session_meta.source.subagent`. Run log: `.claude/skills/sandbox-test/runs/2026-10-20-review-subagents-codex/log.md`.
 
 ## Historical Decisions
 

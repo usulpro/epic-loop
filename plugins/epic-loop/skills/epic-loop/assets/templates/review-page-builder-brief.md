@@ -1,5 +1,6 @@
 <!-- Filled by the manager: replace every {{…}}, delete lines that do not apply, and pass the result as the
-page builder subagent's prompt (Claude Code: Agent tool, subagent_type "general-purpose", default model). -->
+page builder subagent's prompt (Claude Code: Agent tool, subagent_type "general-purpose", default model;
+Codex: spawn_agent with fork_turns "none" and no model, then wait_agent). -->
 You build one review page for a human reviewer. Work only on the files named here, and return only the gate summary.
 
 Read first: `{{SkillDir}}/references/review-pages.md` (layout, components, content rules, the check loop, the summary format) and `{{SkillDir}}/references/review-design.md` (markup examples).

@@ -386,3 +386,25 @@
   - page passed review check --lang ru (0 missing, 0 stale) and rendered in Russian
   - about $0.43. Techlead checked the subagent metadata and reran review-check tests (30/30). test:unit 202/202, validate passes. Checkpoint reason: Codex slice follows. Previous task commit: ae37131
 - Residual risk: Runtime UI strings stay English on translated pages; Codex delegation (Q10) not yet done
+
+## 2026-10-19T19:13:17+00:00 - done (slice B completes the task)
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Page-builder and translator subagents for the manager
+- Verdict: done (slice B completes the task)
+- Changed:
+  - Manager role Review Pages: Codex delegation via spawn_agent (fork_turns none
+  - builder inherits the model, translator model gpt-6-luna with low effort) and wait_agent
+  - the server cannot start inside Codex workspace-write (give the human the command)
+  - both brief templates name the Codex call
+  - Q10 resolved in decision-log
+  - R5 updated
+  - sandbox run 14 log and driver
+  - LEARNINGS D-18
+- Verification:
+  - Sandbox run 14 (codex exec, workspace-write): spawn_agent calls with fork_turns none, translator model gpt-6-luna
+  - child rollouts show gpt-5.6-sol/low and gpt-6-luna/low
+  - main thread got 41-47 character tool results plus the two summaries
+  - review check --lang ru ok (16 segments, 0 missing)
+  - page renders in Russian. 761,056 tokens. Techlead checked the rollout model and the check output. test:unit 202/202, validate passes. Previous checkpoint commit: c955d3b
+- Residual risk: On Codex the review server must be started outside the sandbox (Phase 4 doorbell server)
