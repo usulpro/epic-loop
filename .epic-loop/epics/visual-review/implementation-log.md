@@ -529,3 +529,25 @@
   - techlead reran doorbell tests 12/12 and checked the five restore-tested bundles
   - test:unit 240/240, validate passes, browser-check passes
 - Residual risk: Codex half on hold (H4); a duplicate ring after each wake is ignored as synthetic; the turn after a problem ingest delays the next answers' ingest by one techlead turn (D23)
+
+## 2026-10-19T20:59:44+00:00 - done
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Stable task ids and canonical references
+- Verdict: done
+- Changed:
+  - lib/task-ids.mjs: T<n> · prefix in the task title (still matches the old TASK_LINE), Next task id header, ids never reused (max of header, tracker and archive layers), deterministic idempotent migration of tracker.md then archive layers on first roadmap use and in doctor's compatibility repair (assigned-task-ids, skill and CLI copy)
+  - task scripts accept T12/t12/T-12
+  - add-follow-up-task assigns the next id
+  - roadmap-state carries tid
+  - display 'Phase N Task k (T12) - title'
+  - lib/id-index.mjs and scripts/id-index.mjs (definitions per home file, aliases, duplicates, unknown mentions)
+  - artifact-model reference
+- Verification:
+  - task-ids.test.mjs 6 tests (fresh ids, no reuse after deletion and archiving, byte-stable migration, T/t/T- forms, doctor repair via CLI and skill, index of every kind)
+  - tracker-in-place and roadmap tests adapted
+  - old runtime copy read and patched a migrated copy of this epic (status only, prefix kept)
+  - index on a copy of this epic: T 35, D 38, H 4, R 8, Q 10
+  - techlead reran id tests 35/35
+  - test:unit 246/246, validate passes
+- Residual risk: this epic's tracker migrates at the first run after the next self-update; an older runtime reading a migrated tracker derives different follow-up slugs

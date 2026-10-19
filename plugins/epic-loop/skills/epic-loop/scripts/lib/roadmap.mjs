@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { ensureDir, epicRoot, nowIso, readJson, requireFlag, resolveRoot, roadmapStatePath, runtimeStatePath, writeJson } from "./common.mjs";
 import { HOLD_KINDS, readHumanQueue } from "./human-queue.mjs";
+import { archiveMaxTaskId, ensureTrackerTaskIds, formatTaskTitle, nextTaskIdNumber, normalizeTaskId } from "./task-ids.mjs";
 import { followUpId, patchTrackerText, scanTracker } from "./tracker-file.mjs";
 
 export const TASK_STATUSES = ["todo", "doing", "need-review", "blocked", "on-hold", "partially-satisfied", "deferred", "reset-required", "done"];
@@ -25,6 +26,7 @@ export function createInitialRoadmapState({ slug, title }) {
         tasks: [
           {
             id: "phase-1-task-1",
+            tid: "T1",
             title: "Capture problem framing, desired outcome, scope, non-scope, constraints, risks, and initial open questions.",
             kind: "documentation-only",
             status: "todo",
@@ -45,6 +47,8 @@ export function createInitialRoadmapState({ slug, title }) {
 // and roadmap-state.json is only a cache that keeps the explicitly chosen active ids.
 export function ensureRoadmapState(projectRoot, slug, { title } = {}) {
   const filePath = roadmapStatePath(projectRoot, slug);
+  // First use of a tracker without stable ids migrates it (D27); a current tracker is untouched.
+  ensureTrackerTaskIds(epicRoot(projectRoot, slug));
   const cached = normalizeRoadmap(readJson(filePath, null));
   const imported = importRoadmapFromTracker(projectRoot, slug, { title: title || cached?.title });
 
@@ -226,8 +230,12 @@ export function addFollowUpTask(flags = {}) {
   const roadmap = ensureRoadmapState(root, slug);
   const followUps = Array.isArray(roadmap.follow_ups) ? roadmap.follow_ups : [];
   const id = followUpId(followUps.length + 1, title);
+  const epicDir = epicRoot(root, slug);
+  const trackerPath = path.join(epicDir, "tracker.md");
+  const tid = `T${nextTaskIdNumber(fs.existsSync(trackerPath) ? fs.readFileSync(trackerPath, "utf8") : "", archiveMaxTaskId(epicDir))}`;
   followUps.push({
     id,
+    tid,
     title,
     kind: flags.kind || "follow-up",
     status: flags.status || "todo",
@@ -238,13 +246,14 @@ export function addFollowUpTask(flags = {}) {
   });
   roadmap.follow_ups = followUps;
   finalizeRoadmapMutation(root, slug, roadmap);
-  console.log(`Added follow-up task ${id}.`);
+  console.log(`Added follow-up task ${tid} (${id}).`);
 }
 
 export function renderTrackerMarkdown(projectRoot, slug, roadmap = ensureRoadmapState(projectRoot, slug)) {
   const trackerPath = path.join(epicRoot(projectRoot, slug), "tracker.md");
   ensureDir(path.dirname(trackerPath));
   fs.writeFileSync(trackerPath, trackerMarkdown(roadmap), "utf8");
+  ensureTrackerTaskIds(path.dirname(trackerPath));
 }
 
 // Patches tracker.md in place (task lines, phase status lines, Hold lines, appended follow-ups).
@@ -259,6 +268,8 @@ function finalizeRoadmapMutation(projectRoot, slug, roadmap) {
   } else {
     renderTrackerMarkdown(projectRoot, slug, roadmap);
   }
+  // Keeps `Next task id` current after a task was added.
+  ensureTrackerTaskIds(path.dirname(trackerPath));
   syncActiveState(projectRoot, slug, roadmap);
 }
 
@@ -353,7 +364,7 @@ function formatPhase(phase) {
 
 function formatTask(task) {
   const checked = task.status === "done" ? "x" : " ";
-  const lines = [`- [${checked}] Kind: ${task.kind} | Status: ${task.status} | ${task.title}`];
+  const lines = [`- [${checked}] Kind: ${task.kind} | Status: ${task.status} | ${formatTaskTitle(task)}`];
   if (task.hold) lines.push(`  - Hold: ${task.hold.kind} (${task.hold.item})`);
   if (task.outcome) lines.push(`  - Outcome: ${task.outcome}`);
   if (task.surface) lines.push(`  - Surface: ${task.surface}`);
@@ -380,11 +391,12 @@ function displayTask(roadmap, task) {
     return null;
   }
   const phase = findTaskPhase(roadmap, task.id);
+  const tid = task.tid ? ` (${task.tid})` : "";
   if (!phase) {
-    return `Follow-up - ${stripFinalPeriod(task.title)}`;
+    return `Follow-up${tid} - ${stripFinalPeriod(task.title)}`;
   }
   const taskNumber = taskNumberInPhase(phase, task.id);
-  return `Phase ${phaseNumber(phase)} Task ${taskNumber} - ${stripFinalPeriod(task.title)}`;
+  return `Phase ${phaseNumber(phase)} Task ${taskNumber}${tid} - ${stripFinalPeriod(task.title)}`;
 }
 
 function phaseNumber(phase) {
@@ -406,9 +418,15 @@ function findPhase(roadmap, phaseId) {
   return roadmap.phases.find((phase) => phase.id === phaseId) ?? null;
 }
 
+// A task is found by its positional id (phase-N-task-k, follow-up-NN-…) or its stable id
+// (T12, t12, T-12).
 function findTask(roadmap, taskId) {
   if (!taskId) {
     return null;
+  }
+  const tid = normalizeTaskId(taskId);
+  if (tid) {
+    return [...roadmap.phases.flatMap((phase) => phase.tasks), ...(roadmap.follow_ups ?? [])].find((item) => item.tid === tid) ?? null;
   }
   for (const phase of roadmap.phases) {
     const task = phase.tasks.find((item) => item.id === taskId);

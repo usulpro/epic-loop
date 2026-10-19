@@ -217,14 +217,14 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 5: Epic Viewer
 
-- Phase status: todo
+- Phase status: doing
 - Intent: the epic home grows into the full overview, shared by shaping and implementation (D9, D10, D17, D24, D27, D28, D30):
   - loop state, what waits for the human, unconfirmed agent-made decisions, phases and tasks;
   - live activity and turn statistics;
   - docs browsing with working links and expandable ids;
   - presentation-layer localization.
 
-- [ ] Kind: implementation | Status: todo | Stable task ids and canonical references
+- [x] Kind: implementation | Status: done | Stable task ids and canonical references
   - Outcome:
     - Every task in `tracker.md` carries a stable `T<n>` id; all roadmap scripts read and write it; existing epics are migrated deterministically on first use.
     - Decisions, queue items, risks and open questions follow the canonical `D<n>`/`H<n>`/`R<n>`/`Q<n>` form.

@@ -1,4 +1,5 @@
 import { slugify } from "./common.mjs";
+import { splitTaskTitle } from "./task-ids.mjs";
 
 // tracker.md is the source of truth for phases and tasks. scanTracker reads the roadmap model
 // out of it together with the line positions that task and phase scripts patch in place;
@@ -71,7 +72,7 @@ export function scanTracker(text) {
 
     const taskMatch = line.match(TASK_LINE);
     if (taskMatch && (phase || section === FOLLOW_UP_HEADING)) {
-      task = createTask(taskMatch, phase ? `${phase.id}-task-${++taskNumber}` : followUpId(scan.follow_ups.length + 1, taskMatch[4]));
+      task = createTask(taskMatch, phase ? `${phase.id}-task-${++taskNumber}` : followUpId(scan.follow_ups.length + 1, splitTaskTitle(taskMatch[4]).title));
       (phase ? phase.tasks : scan.follow_ups).push(task);
       scan.taskRefs.set(task.id, { holdIndex: null, lineIndex: index });
       return;
@@ -207,9 +208,11 @@ function readStatusListLine(statusList, line, index) {
 }
 
 function createTask(match, id) {
+  const { tid, title } = splitTaskTitle(match[4]);
   return {
     id,
-    title: (match[4] ?? "").trim(),
+    tid,
+    title,
     kind: (match[2] ?? "implementation").trim(),
     status: (match[3] ?? (match[1].toLowerCase() === "x" ? "done" : "todo")).trim(),
     outcome: null,

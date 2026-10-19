@@ -3,7 +3,7 @@
 Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
-Active phase: Phase 4 - Human Gates In The Loop
+Active phase: Phase 5 - Epic Viewer
 Active task: TBD
 
 ## Read First
