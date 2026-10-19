@@ -38,6 +38,8 @@ import {
 } from "./hook-config.mjs";
 import { inspectAndRepairEpicCompatibility } from "./hook-compatibility.mjs";
 import { maybeBuildImplementationContinuation } from "./loop.mjs";
+import { recordSubmittedGateAnswers } from "./loop-gates.mjs";
+import { recordDriverTranscript } from "./loop-transcript.mjs";
 import { handleDriverUserPrompt, isSyntheticUserPrompt } from "./loop-user-prompt.mjs";
 
 export { buildHookCommand };
@@ -394,6 +396,8 @@ export function handleHook(rawInput, flags = {}) {
   writeJson(path.join(sessionRoot(projectRoot), "last-hook-event.json"), eventRecord);
   updateSessionState(projectRoot, payload, eventPath);
   mirrorBoundEvent(projectRoot, payload, eventRecord, binding);
+  recordDriverTranscript(projectRoot, payload, binding);
+  recordSubmittedGateAnswers(projectRoot, payload, binding);
   const continuation =
     handleDriverUserPrompt(projectRoot, payload, binding) ??
     maybeBuildImplementationContinuation(projectRoot, payload, binding) ??

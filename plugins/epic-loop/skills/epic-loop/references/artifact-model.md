@@ -59,6 +59,7 @@ Keep it short:
 - active blockers
 - next intended action
 - important re-entry notes
+- `Second language: <code>|none`, written only by `set-second-language.mjs`; the epic app offers this language in its switch and keeps the files on disk English
 
 ### `tracker.md`
 
@@ -106,6 +107,11 @@ Temporary instrumentation is allowed when needed to make hidden behavior observa
 `tracker.md` is the source of truth for phases and tasks, and it may be shaped by hand: prose, extra phase lines (`Delivery:`, `Intent:`), nested bullets and extra task labels (`Method:`, `Evidence:`) are kept. Use task and phase scripts for mechanical status changes:
 
 - Every script re-reads `tracker.md`. Phase ids come from `### Phase N:` headings (`phase-N`), task ids from the order within the phase (`phase-N-task-k`), follow-up ids from their order and title (`follow-up-01-<slug>`). An explicit `- Phase status:` line wins over the status derived from the tasks.
+- **Stable task ids (D27).** Every task also has a stable id `T<n>` at the start of its title: `- [ ] Kind: implementation | Status: todo | T12 · Gate lifecycle in the loop state`.
+  - Ids run across the whole epic and are never reused or renumbered. New tasks get the number in the header line `Next task id: T<n>` (under `Epic:`), which never goes below the highest id in `tracker.md` and its archive layers (`tracker.*.previous-layer-*.md`).
+  - A tracker without ids is migrated on first use by any roadmap script and by `doctor`'s epic compatibility repair (`assigned-task-ids`). The migration numbers tasks in tracker order (phases, then follow-ups), then the archive layers, and is idempotent.
+  - Task scripts take either id: `--task-id T12` (also `t12`, `T-12`) or `--task-id phase-4-task-1`. `role-summary` and `state-of-epic.md` show `Phase 4 Task 1 (T12) - …`.
+- **Canonical references.** Decisions are `D<n>`, human-queue items `H<n>`, risks `R<n>`, open questions `Q<n>`, tasks `T<n>`; the canonical form has no hyphen, and readers accept `D-16` as an alias. `id-index.mjs --slug <slug> [--json]` lists where each id is defined (tasks in the tracker and its archive layers, `D`/`Q` entries in `decision-log.md`, `H` items in `human-queue.md`, `R` rows in `risk-register.md`), with hyphenated aliases, duplicate definitions and mentions of unknown ids.
 - Scripts patch only the lines they change: the task line (checkbox and `Status:`), the phase's `- Phase status:` line, and the task's `Hold:` line. `add-follow-up-task.mjs` appends to `## Follow-Up Tasks`, creating the section at the end of the file.
 - `set-task-status.mjs --status on-hold --hold-kind <kind> --hold-item H<n>` needs an open `human-queue.md` item. It writes `  - Hold: <kind> (H<n>)` as the task's first sub-bullet, adds `on-hold` to the `## Task Statuses` list, and does not start the task or its phase. Any other status removes the `Hold:` line.
 - `render-tracker.mjs` is the exception: it re-renders the whole file from the model and discards hand-written detail. Use it only for script-generated trackers.

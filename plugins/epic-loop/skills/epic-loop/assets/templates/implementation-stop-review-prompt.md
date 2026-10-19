@@ -60,9 +60,24 @@ When you accept, write a report for the human, measured against the epic's inten
 
 Take the human-queue items and agent-made decisions from `role-summary.mjs`. The copy you pass on stdin is always English; `review-stop.mjs` saves it under `stop-reports/` and refuses a report that misses a heading.
 
+## Stop Report Page
+
+When the human owes the loop something (open human-queue items or unconfirmed agent-made decisions), the report also becomes a review page the human answers; the loop then waits for it instead of going idle, and resumes on its own after the submit (D25). A stop with nothing to answer (for example a class A "phase done") keeps the plain flow: skip this section.
+
+Before `review-stop.mjs`:
+
+1. Have the page builder build a `stop-report` page and, with a second language, translate it, as "Review Pages" in `-<<*{{SkillDir}}*>>-/references/implementation-manager-role.md` says. Put in the brief:
+   - a short "where the epic stands" against the epic intent, and why the loop stopped;
+   - one card per open H item, with a control named `h<n>` that fits its kind: `human-action` a "done" check, `security-hold` an explicit confirmation check, decisions a choice;
+   - one card per unconfirmed agent-made decision, a confirm/reverse choice named `d<n>`;
+   - the check `<el-check name="continue-after-submit">Continue the loop after I submit</el-check>`; unanswered counts as on.
+2. Register it: `node -<<*{{SkillDir}}*>>-/scripts/gate.mjs open --slug "-<<*{{EpicSlug}}*>>-" --stop-report --review <review-id> --covers <every open H id>`. It refuses a page that misses an open H item, an unconfirmed decision or the switch.
+3. Add a line with the page path (`/<slug>/reviews/<review-id>/`) under "What You Need To Do Or Decide" in the English report, then accept with `review-stop.mjs` as above. The loop waits in `awaiting-review`.
+
 Then commit the saved report together with this review's `human-queue.md` and `decision-log.md` changes, in one commit, with the exact `git add …` / `git commit -m "docs(epic): stop report NN (class X)"` command that `review-stop.mjs` prints. Add only those files, never `git add -A`. This is the one commit a manager makes.
 
 Do not use `set-next-role.mjs` in this turn. Run `review-stop.mjs` as your last command, then stop after your final message:
 
-- accepted: your final chat message is the same report in the user's language (the language the user writes in this session);
+- accepted with a stop report page: one or two lines on why the loop stopped, then the page link (on the running server: `epic-loop serve --status`), in the user's language; the long report lives on the page and in `stop-reports/`;
+- accepted without a page: your final chat message is the same report in the user's language (the language the user writes in this session);
 - challenged: one or two lines on why the stop was challenged and what the techlead should do.

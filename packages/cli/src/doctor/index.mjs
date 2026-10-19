@@ -15,6 +15,7 @@ import { requireSkill, updateCommandFor } from "../skill.mjs";
 import { checkLatestVersion, isNewerVersion } from "../update-check.mjs";
 import { canReadPath, canWritePath, formatList, platformConfigPath, sessionRoot, writeRuntimePlatform } from "./common.mjs";
 import { inspectAndRepairEpicCompatibility } from "./hook-compatibility.mjs";
+import { inspectClaudeDoorbell, inspectCodexDoorbell } from "./doorbell.mjs";
 import { buildInstallHooksCommand, hookScriptPath, inspectClaudeHookConfig, inspectClaudeStopHookBlockCap, inspectCodexHooksFeature, inspectHookConfig } from "./hook-config.mjs";
 
 const PLATFORM_SETUP_COMMAND = "epic-loop doctor --platform codex|claude-code --json";
@@ -134,10 +135,12 @@ function doctorCodex(context) {
   const epicCompatibility = inspectAndRepairEpicCompatibility(root);
   const ready = hookConfig.ready && !hookConfig.invalid && feature.enabled === true && runtimeWritable.ok && scriptReadable.ok && epicCompatibility.ready;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
-  const warnings = versionWarnings(context);
+  const doorbell = inspectCodexDoorbell();
+  const warnings = [...versionWarnings(context), ...doorbell.warnings];
   const status = {
     ...sharedStatus(context),
     codexHooksFeature: feature,
+    doorbell,
     command: hookConfig.command,
     epicCompatibility,
     hookConfig: {
@@ -185,6 +188,7 @@ function doctorCodex(context) {
   console.log(`Epic compatibility: ${epicCompatibility.ready ? "ready" : "repair-required"}`);
   console.log(`Epic compatibility repairs: ${formatList(epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`))}`);
   console.log(`Epic compatibility invalid: ${formatList(epicCompatibility.invalid.map((issue) => `${issue.slug}:${issue.type}`))}`);
+  console.log(`Doorbell: ${doorbell.ready ? "ready" : `not ready (${doorbell.fix})`} [${doorbell.mechanism}]`);
   console.log(`Hook config writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
 
@@ -230,9 +234,11 @@ function doctorClaudeCode(context) {
   const epicCompatibility = inspectAndRepairEpicCompatibility(root);
   const ready = hookConfig.ready && !hookConfig.invalid && blockCap.ready && runtimeWritable.ok && scriptReadable.ok && epicCompatibility.ready;
   const setupPossible = !hookConfig.invalid && hookConfig.writable.ok;
-  const warnings = [...(blockCap.warning ? [blockCap.warning] : []), ...versionWarnings(context)];
+  const doorbell = inspectClaudeDoorbell(hookConfig.doorbell ?? { checked: false, missingEvents: [], ready: true, timeoutMissing: [] });
+  const warnings = [...(blockCap.warning ? [blockCap.warning] : []), ...versionWarnings(context), ...doorbell.warnings];
   const status = {
     ...sharedStatus(context),
+    doorbell,
     claudeCodeHookConfig: {
       error: hookConfig.error,
       exists: hookConfig.exists,
@@ -284,6 +290,7 @@ function doctorClaudeCode(context) {
   console.log(`Epic compatibility: ${epicCompatibility.ready ? "ready" : "repair-required"}`);
   console.log(`Epic compatibility repairs: ${formatList(epicCompatibility.repaired.map((repair) => `${repair.slug}:${repair.type}`))}`);
   console.log(`Epic compatibility invalid: ${formatList(epicCompatibility.invalid.map((issue) => `${issue.slug}:${issue.type}`))}`);
+  console.log(`Doorbell: ${doorbell.ready ? "ready" : "not ready"} [${doorbell.mechanism}; Claude Code ${doorbell.version ?? "version unknown"}]. ${doorbell.note}`);
   console.log(`Claude Code settings writable: ${hookConfig.writable.ok ? "yes" : `no (${hookConfig.writable.reason})`}`);
   console.log(`Runtime state writable: ${runtimeWritable.ok ? "yes" : `no (${runtimeWritable.reason})`}`);
   console.log(`Hook target exists: ${fs.existsSync(hookScript) ? "yes" : "no"}`);

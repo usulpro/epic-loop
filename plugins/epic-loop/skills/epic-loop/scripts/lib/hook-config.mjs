@@ -10,6 +10,12 @@ const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.dirname(LIB_DIR);
 
 export const HOOK_SCRIPT_PATH = path.join(SCRIPTS_DIR, "hook.mjs");
+export const DOORBELL_WAITER_SCRIPT_PATH = path.join(SCRIPTS_DIR, "doorbell-waiter.mjs");
+// The Claude Code doorbell waiter (D34): asyncRewake hooks on these events, with an explicit
+// timeout because the host default (600 s) kills the waiter. Keep in step with the CLI doctor copy.
+export const DOORBELL_WAITER_EVENTS = ["Stop", "SessionStart"];
+export const DOORBELL_WAITER_TIMEOUT_SECONDS = 86400;
+const DOORBELL_REWAKE_MESSAGE = "epic-loop:";
 const INSTALL_HOOKS_SCRIPT_PATH = path.join(SCRIPTS_DIR, "install-hooks.mjs");
 
 export function buildHookCommand() {
@@ -25,7 +31,71 @@ export function buildInstallHooksCommand(extraArgs = "") {
 }
 
 function isEpicLoopHookCommand(command) {
-  return typeof command === "string" && /epic[-_]loop/u.test(command) && /hook\.mjs|epic-loop\.mjs|epic_loop\.py|\bhook\b/u.test(command);
+  return typeof command === "string" && !isDoorbellWaiterCommand(command) && /epic[-_]loop/u.test(command) && /hook\.mjs|epic-loop\.mjs|epic_loop\.py|\bhook\b/u.test(command);
+}
+
+function isDoorbellWaiterCommand(command) {
+  return typeof command === "string" && command.includes("doorbell-waiter.mjs");
+}
+
+function buildDoorbellWaiterCommand(root) {
+  return `node ${shellQuote(DOORBELL_WAITER_SCRIPT_PATH)} --root ${shellQuote(root)}`;
+}
+
+function doorbellWaiterHook(root) {
+  return { asyncRewake: true, command: buildDoorbellWaiterCommand(root), rewakeMessage: DOORBELL_REWAKE_MESSAGE, timeout: DOORBELL_WAITER_TIMEOUT_SECONDS, type: "command" };
+}
+
+const sameWaiterHook = (hook, expected) =>
+  hook?.command === expected.command && hook.asyncRewake === true && hook.timeout === expected.timeout && hook.rewakeMessage === expected.rewakeMessage && hook.type === "command";
+
+// Keeps exactly one current waiter hook on each waiter event: stale or duplicate waiter entries
+// are dropped (with their group when it empties) and the current one is added.
+function installDoorbellWaiter(hooks, root, changes) {
+  const expected = doorbellWaiterHook(root);
+  for (const eventName of DOORBELL_WAITER_EVENTS) {
+    const entries = Array.isArray(hooks[eventName]) ? hooks[eventName] : [];
+    let kept = false;
+    let changed = false;
+    const next = [];
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object" || !Array.isArray(entry.hooks)) {
+        next.push(entry);
+        continue;
+      }
+      const remaining = entry.hooks.filter((hook) => {
+        if (!isDoorbellWaiterCommand(hook?.command)) return true;
+        if (!kept && sameWaiterHook(hook, expected)) {
+          kept = true;
+          return true;
+        }
+        changed = true;
+        return false;
+      });
+      if (remaining.length > 0 || entry.hooks.length === 0) next.push({ ...entry, hooks: remaining });
+    }
+    if (!kept) {
+      next.push({ matcher: "", hooks: [expected] });
+      changed = true;
+    }
+    if (changed && !changes.includes(eventName)) changes.push(eventName);
+    hooks[eventName] = next;
+  }
+}
+
+// Whether the waiter hooks are installed with the fields the doorbell needs.
+function inspectDoorbellWaiter(hooks, root) {
+  const expected = doorbellWaiterHook(root);
+  const missingEvents = [];
+  const timeoutMissing = [];
+  for (const eventName of DOORBELL_WAITER_EVENTS) {
+    const waiterHooks = (Array.isArray(hooks[eventName]) ? hooks[eventName] : [])
+      .flatMap((entry) => (Array.isArray(entry?.hooks) ? entry.hooks : []))
+      .filter((hook) => isDoorbellWaiterCommand(hook?.command));
+    if (!waiterHooks.some((hook) => sameWaiterHook(hook, expected))) missingEvents.push(eventName);
+    if (waiterHooks.some((hook) => hook.asyncRewake === true && !Number.isFinite(hook.timeout))) timeoutMissing.push(eventName);
+  }
+  return { command: expected.command, missingEvents, ready: missingEvents.length === 0, timeoutMissing, timeoutSeconds: DOORBELL_WAITER_TIMEOUT_SECONDS };
 }
 
 function parseCodexHooksFeature(configPath) {
@@ -267,6 +337,7 @@ export function buildClaudeSettingsDocument(existingDocument, root) {
     hooks[eventName] = normalizedEntries;
   }
 
+  installDoorbellWaiter(hooks, root, changes);
   normalizedDocument.hooks = hooks;
 
   return {
@@ -373,14 +444,17 @@ export function inspectClaudeHookConfig(root) {
     }
   }
 
+  const doorbell = inspectDoorbellWaiter(hooks, root);
+
   return {
     command,
+    doorbell,
     error: null,
     exists: strict.exists,
     invalid: false,
     missingEvents,
     path: settingsPath,
-    ready: missingEvents.length === 0 && staleEvents.length === 0,
+    ready: missingEvents.length === 0 && staleEvents.length === 0 && doorbell.ready,
     staleEvents,
     writable,
   };

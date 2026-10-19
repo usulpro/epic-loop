@@ -130,7 +130,13 @@ function resolveItem(root, slug, flags) {
     throw new Error(`Human-queue item ${id} is already resolved.`);
   }
 
-  Object.assign(item, { resolution, resolved: today(), status: "resolved" });
+  // A security hold is never resolved by a plain answer (D26): it needs the explicit confirmation.
+  const confirmation = typeof flags.confirmation === "string" && flags.confirmation.trim() ? oneLine(flags.confirmation) : null;
+  if (item.kind === "security-hold" && !confirmation) {
+    throw new Error(`${id} is a security-hold: resolve it only with the human's explicit confirmation, passed as --confirmation "<the confirming answer>".`);
+  }
+
+  Object.assign(item, { resolution: confirmation ? `${resolution} (confirmed: "${confirmation}")` : resolution, resolved: today(), status: "resolved" });
   writeQueue(root, slug, items);
   console.log(`Resolved ${id}.`);
 }

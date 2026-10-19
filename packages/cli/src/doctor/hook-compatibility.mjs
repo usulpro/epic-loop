@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { MODES, epicsRoot, nowIso, readJson, readJsonStrict, roadmapStatePath, runtimeStatePath, sessionRoot, writeJson } from "./common.mjs";
 import { createInitialRoadmapState } from "./roadmap.mjs";
+import { ensureTrackerTaskIds } from "./task-ids.mjs";
 
 export function inspectAndRepairEpicCompatibility(root) {
   const epicsDir = epicsRoot(root);
@@ -29,6 +30,10 @@ export function inspectAndRepairEpicCompatibility(root) {
 
     const slug = entry.name;
     result.checked += 1;
+    // Stable task ids (D27): a tracker without them is migrated once, deterministically.
+    if (ensureTrackerTaskIds(path.join(epicsDir, slug))) {
+      result.repaired.push({ path: path.join(epicsDir, slug, "tracker.md"), slug, type: "assigned-task-ids" });
+    }
     const roadmap = inspectAndRepairRoadmapState(root, slug, result);
     inspectAndRepairRuntimeState(root, slug, roadmap, bindingModes.get(slug), result);
   }

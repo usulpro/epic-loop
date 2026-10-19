@@ -35,7 +35,7 @@ test("roadmap helpers create and transition task state in an isolated epic", () 
 
     let runtime = readJson(runtimeStatePath(root, slug), null);
     assert.equal(runtime.active_phase, "Phase 1 - Shape The Epic");
-    assert.equal(runtime.active_task, "Phase 1 Task 1 - Capture problem framing, desired outcome, scope, non-scope, constraints, risks, and initial open questions");
+    assert.equal(runtime.active_task, "Phase 1 Task 1 (T1) - Capture problem framing, desired outcome, scope, non-scope, constraints, risks, and initial open questions");
 
     const trackerText = fs.readFileSync(path.join(root, ".epic-loop", "epics", slug, "tracker.md"), "utf8");
     assert.match(trackerText, /Phase status: doing/u);

@@ -4,6 +4,9 @@ import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { isWaitingForBackgroundTasks, waitedMs, waitingTurnGuidance } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
+import { AWAITING_REVIEW, openGates, reviewPath } from "./loop-gates.mjs";
+import { isDoorbellWake } from "./loop-doorbell.mjs";
+import { describePendingInput, hasInput, pendingHumanInput } from "./loop-ingest.mjs";
 import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
 // A user message never stops the implementation loop by itself. The loop stops only on an
@@ -29,8 +32,39 @@ export function isStopLoopCommand(prompt) {
 }
 
 // Routes a UserPromptSubmit from the implementation driver session. Returns hook output
-// (additionalContext for the agent) or null.
+// (additionalContext for the agent) or null. A human message also names any pending human input
+// (the fallback when no doorbell rang, D34).
 export function handleDriverUserPrompt(projectRoot, payload, binding) {
+  const output = routeDriverUserPrompt(projectRoot, payload, binding);
+  if (payload.hook_event_name !== "UserPromptSubmit" || isSyntheticUserPrompt(payload.prompt)) {
+    return output;
+  }
+  const slug = binding.epic_slug;
+  const runtime = normalizeObject(readJson(runtimeStatePath(projectRoot, slug), {}));
+  const loop = normalizeObject(runtime.implementation_loop);
+  if (runtime.mode !== "implementation" || loop.driver_session_id !== payload.session_id || loop.status === AWAITING_REVIEW) {
+    return output;
+  }
+  const note = pendingInputNote(projectRoot, slug, loop);
+  if (!note) {
+    return output;
+  }
+  const context = output?.hookSpecificOutput?.additionalContext;
+  return userPromptContext(context ? `${context} ${note}` : `[epic-loop] epic=${slug} mode=implementation — ${note}`);
+}
+
+function pendingInputNote(projectRoot, slug, loop) {
+  const pending = pendingHumanInput(projectRoot, slug, loop);
+  if (!hasInput(pending)) {
+    return null;
+  }
+  const parts = [describePendingInput(pending)];
+  return loop.status === "running"
+    ? `Pending human input (${parts.join("; ")}) is picked up by a manager ingest turn at the next role transition.`
+    : `Pending human input (${parts.join("; ")}) waits until the loop is resumed: ${resumeCommand(slug)}`;
+}
+
+function routeDriverUserPrompt(projectRoot, payload, binding) {
   if (payload.hook_event_name !== "UserPromptSubmit") {
     return null;
   }
@@ -47,11 +81,27 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
   const logBase = { iteration: Number.isFinite(loop.iteration) ? loop.iteration : null, role: loop.current_role ?? null, session_id: payload.session_id ?? null, slug, timestamp };
 
   if (isSyntheticUserPrompt(payload.prompt)) {
+    if (!hasOpenTurn(loop) && loop.status === AWAITING_REVIEW && isDoorbellWake(payload.prompt)) {
+      return doorbellWake(projectRoot, slug, loop, logBase);
+    }
     return hasOpenTurn(loop) ? continueOpenTurn(projectRoot, slug, runtime, loop, payload, { logBase, timestamp }) : null;
   }
 
   if (loop.status === "interrupted") {
     return userPromptContext(`[epic-loop] epic=${slug} mode=implementation — loop stopped. If the user asks to resume it, run: ${resumeCommand(slug)}`);
+  }
+
+  if (loop.status === AWAITING_REVIEW) {
+    if (isStopLoopCommand(payload.prompt)) {
+      stopLoop(projectRoot, slug, { reason: "user-stop-command", sessionId: payload.session_id ?? null, timestamp, turnId: turnKeyOf(payload) });
+      return userPromptContext(
+        `[epic-loop] epic=${slug} mode=implementation — the user stopped the loop while it awaited a review. Confirm the loop is stopped and that it resumes with: ${resumeCommand(slug)}`,
+      );
+    }
+    if (isDoorbellWake(payload.prompt)) {
+      return doorbellWake(projectRoot, slug, loop, logBase);
+    }
+    return userPromptContext(awaitingReviewNote(projectRoot, slug, loop));
   }
 
   if (loop.status !== "running") {
@@ -162,7 +212,7 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
   const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
 
-  if (loop.status !== "running") {
+  if (loop.status !== "running" && loop.status !== AWAITING_REVIEW) {
     return false;
   }
 
@@ -185,6 +235,34 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
 
   appendLoopLog(projectRoot, { action: "loop-stopped", reason, role: loop.current_role ?? null, session_id: stoppingSessionId, slug, timestamp });
   return { reportRole };
+}
+
+// The doorbell woke the idle session (Claude Code asyncRewake waiter, or a Codex queued message):
+// the human's input arrived, and the next Stop resumes the loop with the ingest turn.
+function doorbellWake(projectRoot, slug, loop, logBase) {
+  const pending = pendingHumanInput(projectRoot, slug, loop);
+  appendLoopLog(projectRoot, {
+    action: "doorbell-wake",
+    inbox_ids: pending.inbox.map((entry) => entry.id),
+    problem_reviews: pending.problems.map((entry) => entry.review),
+    reviews: pending.gates.map((gate) => gate.review),
+    ...logBase,
+  });
+  return userPromptContext(
+    `[epic-loop] epic=${slug} mode=implementation — the doorbell rang: the human's input arrived on the review page or in the inbox. Reply in one line and end the turn; the loop then runs a manager ingest turn and continues. Do not run any loop script yourself.`,
+  );
+}
+
+// A blocking gate ended the manager's turn: nothing runs until the human answers the page or
+// the loop is resumed explicitly.
+function awaitingReviewNote(projectRoot, slug, loop) {
+  const waiting = openGates(loop).filter((gate) => gate.blocking);
+  const reviews = (waiting.length > 0 ? waiting : openGates(loop)).map((gate) => `${gate.review} (${reviewPath(slug, gate.review)})`);
+  const pending = pendingHumanInput(projectRoot, slug, loop);
+  if (hasInput(pending)) {
+    return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. The human's input has arrived; answer the user briefly and end your reply: the loop then runs a manager ingest turn and continues. ${stopHint(slug)}`;
+  }
+  return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. Nothing runs after this reply. Answer the user; the human answers that page in the epic-loop app (epic-loop serve). Only if the user asks to continue the loop now, resume it: ${resumeCommand(slug)}. ${stopHint(slug)}`;
 }
 
 function stoppedTurnReportNote(role) {

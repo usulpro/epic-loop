@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>epic-loop design specimen</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="base.css" />
+    <style>
+      /* Specimen-only layout helpers */
+      .sw { display: inline-block; width: 2.5rem; height: 1.5rem; border: var(--rule-width) solid var(--color-rule); border-radius: var(--radius-1); vertical-align: middle; }
+      .el-table code { white-space: nowrap; }
+      .bar { display: inline-block; height: 0.75rem; background: var(--color-accent); }
+      .w6 { display: inline-block; width: 6rem; }
+      .w8 { display: inline-block; width: 9rem; }
+      .grid2 > * { min-width: 0; }
+      .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-6); }
+      .states .el-row { margin-bottom: var(--space-3); }
+      .shot { display: grid; place-items: center; height: 12rem; background: var(--color-sunken); border: var(--rule-width) dashed var(--color-rule-strong); color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--fs-sm); }
+      .shot--alt { background: repeating-linear-gradient(45deg, var(--color-sunken) 0 10px, var(--color-surface) 10px 20px); }
+      .lb-media { width: min(30rem, 100%); height: 16rem; background: var(--color-sunken); border: var(--rule-width) solid var(--color-rule); display: grid; place-items: center; color: var(--color-text-muted); font-family: var(--font-mono); }
+    </style>
+  </head>
+  <body>
+    <div class="el-shell">
+      <header class="el-header">
+        <a class="el-brand" href="#">epic-loop</a>
+        <nav class="el-nav" aria-label="Breadcrumb">
+          <a href="#">projects</a><span class="el-nav__sep">/</span><a href="#">visual-review</a><span class="el-nav__sep">/</span><a href="#" aria-current="page">design specimen</a>
+        </nav>
+        <div class="el-header__end">
+          <a class="el-nav" href="#" style="text-decoration: none">reviews <span class="el-badge">3</span></a>
+          <div class="el-seg" role="group" aria-label="Theme">
+            <button type="button" data-theme-set="auto" aria-pressed="true">auto</button>
+            <button type="button" data-theme-set="light" aria-pressed="false">light</button>
+            <button type="button" data-theme-set="dark" aria-pressed="false">dark</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="el-main">
+        <div class="el-page-head">
+          <div class="el-label">specimen</div>
+          <h1>Design language for review pages</h1>
+          <p class="el-meta">tokens.css · base.css · <span class="el-id">D30</span> elegant, minimal, restrained TUI feel; dark and light from the OS</p>
+        </div>
+
+        <section class="el-section" aria-labelledby="s-color">
+          <div class="el-section__head"><h2 id="s-color">Colour</h2><span class="el-meta">light / dark values</span></div>
+          <div class="el-table-wrap"><table class="el-table">
+            <thead><tr><th>swatch</th><th>token</th><th class="num">light</th><th class="num">dark</th><th>use</th></tr></thead>
+            <tbody>
+          <tr><td><span class="sw" style="background: var(--color-bg)"></span></td><td><code>--color-bg</code></td><td class="num">#f5f4ef</td><td class="num">#121210</td><td>page</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-surface)"></span></td><td><code>--color-surface</code></td><td class="num">#fbfaf6</td><td class="num">#181816</td><td>cards, sections</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-raised)"></span></td><td><code>--color-raised</code></td><td class="num">#ffffff</td><td class="num">#1f1f1c</td><td>controls, panels, overlay content</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-sunken)"></span></td><td><code>--color-sunken</code></td><td class="num">#ecebe4</td><td class="num">#0d0d0c</td><td>code, table header, inset areas</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-rule)"></span></td><td><code>--color-rule</code></td><td class="num">#d6d3c8</td><td class="num">#34332e</td><td>dividers, card borders</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-rule-strong)"></span></td><td><code>--color-rule-strong</code></td><td class="num">#8d897c</td><td class="num">#77746a</td><td>control borders (3:1 on raised)</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-text)"></span></td><td><code>--color-text</code></td><td class="num">#1c1b18</td><td class="num">#e9e7df</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-text-muted)"></span></td><td><code>--color-text-muted</code></td><td class="num">#5b584f</td><td class="num">#a7a397</td><td>secondary text</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-text-faint)"></span></td><td><code>--color-text-faint</code></td><td class="num">#77736a</td><td class="num">#8c897e</td><td>metadata only, never body copy</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-accent)"></span></td><td><code>--color-accent</code></td><td class="num">#1d6b47</td><td class="num">#74c99a</td><td>primary action, link, selection</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-accent-fg)"></span></td><td><code>--color-accent-fg</code></td><td class="num">#ffffff</td><td class="num">#0c1a12</td><td>text on accent</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-accent-tint)"></span></td><td><code>--color-accent-tint</code></td><td class="num">#e3efe7</td><td class="num">#1a2a21</td><td>selected row, saved status</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-recommended)"></span></td><td><code>--color-recommended</code></td><td class="num">#8a5300</td><td class="num">#e2b45a</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-recommended-tint)"></span></td><td><code>--color-recommended-tint</code></td><td class="num">#f6ecd9</td><td class="num">#2b2416</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-danger)"></span></td><td><code>--color-danger</code></td><td class="num">#a8261c</td><td class="num">#f08b80</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-danger-tint)"></span></td><td><code>--color-danger-tint</code></td><td class="num">#f8e5e2</td><td class="num">#2e1a18</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-info)"></span></td><td><code>--color-info</code></td><td class="num">#1f5f8a</td><td class="num">#86b8e0</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-focus)"></span></td><td><code>--color-focus</code></td><td class="num">#1d6b47</td><td class="num">#74c99a</td><td></td></tr>
+          <tr><td><span class="sw" style="background: var(--color-scrim)"></span></td><td><code>--color-scrim</code></td><td class="num">rgb(20 19 16 / 0.72)</td><td class="num">rgb(0 0 0 / 0.78)</td><td>lightbox backdrop</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-on-scrim)"></span></td><td><code>--color-on-scrim</code></td><td class="num">#f2f0e9</td><td class="num">#f2f0e9</td><td>text on the lightbox scrim</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-embed-canvas)"></span></td><td><code>--color-embed-canvas</code></td><td class="num">#ffffff</td><td class="num">#ffffff</td><td>canvas behind embedded pages</td></tr>
+            </tbody>
+          </table></div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-type">
+          <div class="el-section__head"><h2 id="s-type">Type</h2><span class="el-meta">--font-sans for text, --font-mono for ids, keys and metadata</span></div>
+          <div class="el-stack">
+          <div class="el-row"><code class="w8">--fs-xs</code><span class="el-meta w6">0.75rem</span><span style="font-size: var(--fs-xs)">Decide once, record it, move on</span></div>
+          <div class="el-row"><code class="w8">--fs-sm</code><span class="el-meta w6">0.8125rem</span><span style="font-size: var(--fs-sm)">Decide once, record it, move on</span></div>
+          <div class="el-row"><code class="w8">--fs-md</code><span class="el-meta w6">0.9375rem</span><span style="font-size: var(--fs-md)">Decide once, record it, move on</span></div>
+          <div class="el-row"><code class="w8">--fs-lg</code><span class="el-meta w6">1.125rem</span><span style="font-size: var(--fs-lg)">Decide once, record it, move on</span></div>
+          <div class="el-row"><code class="w8">--fs-xl</code><span class="el-meta w6">1.375rem</span><span style="font-size: var(--fs-xl)">Decide once, record it, move on</span></div>
+          <div class="el-row"><code class="w8">--fs-2xl</code><span class="el-meta w6">1.75rem</span><span style="font-size: var(--fs-2xl)">Decide once, record it, move on</span></div>
+          </div>
+          <p style="margin-top: var(--space-5)"><span class="el-label">label</span> &nbsp; <span class="el-meta">meta 2026-10-20 14:02</span> &nbsp; <span class="el-id">H3</span> <span class="el-id">D34</span> &nbsp; <span class="el-kbd">1</span> <span class="el-kbd">esc</span> &nbsp; <code>inline code</code> &nbsp; <a href="#">a link</a></p>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-space">
+          <div class="el-section__head"><h2 id="s-space">Space</h2><span class="el-meta">4px grid</span></div>
+          <div class="el-stack">
+          <div class="el-row"><code class="w8">--space-1</code><span class="el-meta w6">0.125rem</span><span class="bar" style="width: var(--space-1)"></span></div>
+          <div class="el-row"><code class="w8">--space-2</code><span class="el-meta w6">0.25rem</span><span class="bar" style="width: var(--space-2)"></span></div>
+          <div class="el-row"><code class="w8">--space-3</code><span class="el-meta w6">0.5rem</span><span class="bar" style="width: var(--space-3)"></span></div>
+          <div class="el-row"><code class="w8">--space-4</code><span class="el-meta w6">0.75rem</span><span class="bar" style="width: var(--space-4)"></span></div>
+          <div class="el-row"><code class="w8">--space-5</code><span class="el-meta w6">1rem</span><span class="bar" style="width: var(--space-5)"></span></div>
+          <div class="el-row"><code class="w8">--space-6</code><span class="el-meta w6">1.5rem</span><span class="bar" style="width: var(--space-6)"></span></div>
+          <div class="el-row"><code class="w8">--space-7</code><span class="el-meta w6">2rem</span><span class="bar" style="width: var(--space-7)"></span></div>
+          <div class="el-row"><code class="w8">--space-8</code><span class="el-meta w6">3rem</span><span class="bar" style="width: var(--space-8)"></span></div>
+          <div class="el-row"><code class="w8">--space-9</code><span class="el-meta w6">4rem</span><span class="bar" style="width: var(--space-9)"></span></div>
+          </div>
+        </section>
+
+        <section class="el-section grid2" aria-labelledby="s-motion">
+          <div>
+            <div class="el-section__head"><h2 id="s-motion">Motion</h2><span class="el-meta">zeroed under prefers-reduced-motion</span></div>
+            <div class="el-table-wrap"><table class="el-table"><thead><tr><th>token</th><th class="num">value</th></tr></thead><tbody>
+          <tr><td><code>--dur-fast</code></td><td class="num">80ms</td></tr>
+          <tr><td><code>--dur-base</code></td><td class="num">140ms</td></tr>
+          <tr><td><code>--dur-slow</code></td><td class="num">220ms</td></tr>
+          <tr><td><code>--ease-standard</code></td><td class="num">cubic-bezier(0.2, 0, 0, 1)</td></tr>
+          <tr><td><code>--ease-exit</code></td><td class="num">cubic-bezier(0.4, 0, 1, 1)</td></tr>
+            </tbody></table></div>
+          </div>
+          <div>
+            <div class="el-section__head"><h2>Shape, type metrics, layers</h2></div>
+            <div class="el-table-wrap"><table class="el-table"><thead><tr><th>token</th><th class="num">value</th></tr></thead><tbody>
+          <tr><td><code>--font-sans</code></td><td class="num">ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif</td></tr>
+          <tr><td><code>--font-mono</code></td><td class="num">ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace</td></tr>
+          <tr><td><code>--lh-tight</code></td><td class="num">1.25</td></tr>
+          <tr><td><code>--lh-body</code></td><td class="num">1.55</td></tr>
+          <tr><td><code>--fw-regular</code></td><td class="num">400</td></tr>
+          <tr><td><code>--fw-medium</code></td><td class="num">500</td></tr>
+          <tr><td><code>--fw-bold</code></td><td class="num">650</td></tr>
+          <tr><td><code>--tracking-label</code></td><td class="num">0.06em</td></tr>
+          <tr><td><code>--measure</code></td><td class="num">72ch</td></tr>
+          <tr><td><code>--page-max</code></td><td class="num">72rem</td></tr>
+          <tr><td><code>--radius-0</code></td><td class="num">0</td></tr>
+          <tr><td><code>--radius-1</code></td><td class="num">2px</td></tr>
+          <tr><td><code>--radius-2</code></td><td class="num">4px</td></tr>
+          <tr><td><code>--rule-width</code></td><td class="num">1px</td></tr>
+          <tr><td><code>--focus-width</code></td><td class="num">2px</td></tr>
+          <tr><td><code>--focus-offset</code></td><td class="num">2px</td></tr>
+          <tr><td><code>--z-bar</code></td><td class="num">20</td></tr>
+          <tr><td><code>--z-overlay</code></td><td class="num">40</td></tr>
+            </tbody></table></div>
+          </div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-buttons">
+          <div class="el-section__head"><h2 id="s-buttons">Buttons</h2><span class="el-meta">default · hover · focus-visible · disabled</span></div>
+          <div class="states">
+            <div class="el-row"><span class="el-meta w8">secondary</span><button class="el-btn" type="button">Open page</button><button class="el-btn is-hover" type="button">hover</button><button class="el-btn is-focus" type="button">focus</button><button class="el-btn" type="button" disabled>disabled</button></div>
+            <div class="el-row"><span class="el-meta w8">primary</span><button class="el-btn el-btn--primary" type="button">Submit answers</button><button class="el-btn el-btn--primary is-hover" type="button">hover</button><button class="el-btn el-btn--primary is-focus" type="button">focus</button><button class="el-btn el-btn--primary" type="button" disabled>disabled</button></div>
+            <div class="el-row"><span class="el-meta w8">ghost</span><button class="el-btn el-btn--ghost" type="button">Skip</button><button class="el-btn el-btn--ghost is-hover" type="button">hover</button><button class="el-btn el-btn--ghost is-focus" type="button">focus</button><button class="el-btn el-btn--ghost" type="button" disabled>disabled</button></div>
+            <div class="el-row"><span class="el-meta w8">danger</span><button class="el-btn el-btn--danger" type="button">Something is wrong with this page</button><span class="el-tag">tag</span><span class="el-tag el-tag--accent">accent</span><span class="el-tag el-tag--recommended">recommended</span><span class="el-tag el-tag--danger">error</span></div>
+          </div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-card">
+          <div class="el-section__head"><h2 id="s-card">Card with a decision</h2><span class="el-meta">one decision per card</span></div>
+          <article class="el-card">
+            <div class="el-card__head"><span class="el-id">Q1</span><h3>Which doorbell should Claude Code use?</h3></div>
+            <p>Evidence sits on the card. Each option says what happens if you pick it.</p>
+            <fieldset class="el-choice-group">
+              <legend>Mechanism</legend>
+              <label class="el-choice el-choice--recommended"><input type="radio" name="q1" checked /><span class="el-choice__body"><span class="el-choice__title">asyncRewake waiter hook <span class="el-tag el-tag--recommended">recommended</span></span><span class="el-choice__note">Wakes an idle session in about 0.2 s; follows rule D16 (prefer the default that keeps the loop running).</span></span><span class="el-kbd">1</span></label>
+              <label class="el-choice is-hover"><input type="radio" name="q1" /><span class="el-choice__body"><span class="el-choice__title">Background waiter in the role (hover)</span><span class="el-choice__note">Holds the role turn open; cannot serve a manager gate.</span></span><span class="el-kbd">2</span></label>
+              <label class="el-choice is-focus"><input type="radio" name="q1" /><span class="el-choice__body"><span class="el-choice__title">Fallback only (focus-visible)</span><span class="el-choice__note">The loop moves on without the answers.</span></span><span class="el-kbd">3</span></label>
+              <label class="el-choice"><input type="radio" name="q1" disabled /><span class="el-choice__body"><span class="el-choice__title">Channels (disabled)</span><span class="el-choice__note">Research preview; not available here.</span></span><span class="el-kbd">4</span></label>
+            </fieldset>
+            <fieldset class="el-choice-group is-error" aria-invalid="true">
+              <legend>Error state (no option chosen)</legend>
+              <label class="el-choice"><input type="radio" name="q2" /><span class="el-choice__body"><span class="el-choice__title">Keep</span></span><span class="el-kbd">1</span></label>
+              <label class="el-choice"><input type="radio" name="q2" /><span class="el-choice__body"><span class="el-choice__title">Reverse</span></span><span class="el-kbd">2</span></label>
+              <span class="el-field__error">Pick one option before submitting.</span>
+            </fieldset>
+            <div class="grid2">
+              <div class="el-stack">
+                <label class="el-check"><input type="checkbox" checked /><span class="el-choice__body"><span class="el-choice__title">Confirm D31 (checked)</span></span><span></span></label>
+                <label class="el-check"><input type="checkbox" /><span class="el-choice__body"><span class="el-choice__title">Confirm D32 (default)</span></span><span></span></label>
+                <label class="el-check is-hover"><input type="checkbox" /><span class="el-choice__body"><span class="el-choice__title">Hover</span></span><span></span></label>
+                <label class="el-check is-focus"><input type="checkbox" /><span class="el-choice__body"><span class="el-choice__title">Focus-visible</span></span><span></span></label>
+                <label class="el-check"><input type="checkbox" disabled /><span class="el-choice__body"><span class="el-choice__title">Disabled</span></span><span></span></label>
+                <label class="el-check is-error"><input type="checkbox" /><span class="el-choice__body"><span class="el-choice__title">Error</span></span><span></span></label>
+              </div>
+              <div>
+                <div class="el-field"><label class="el-field__label" for="sel1">Second language</label><select id="sel1" class="el-select"><option>Russian</option><option>German</option></select></div>
+                <div class="el-field"><label class="el-field__label" for="sel2">Select, hover</label><select id="sel2" class="el-select is-hover"><option>Option</option></select></div>
+                <div class="el-field"><label class="el-field__label" for="sel3">Select, focus-visible</label><select id="sel3" class="el-select is-focus"><option>Option</option></select></div>
+                <div class="el-field"><label class="el-field__label" for="sel4">Select, disabled</label><select id="sel4" class="el-select" disabled><option>Option</option></select></div>
+                <div class="el-field"><label class="el-field__label" for="sel5">Select, error</label><select id="sel5" class="el-select" aria-invalid="true"><option>Choose…</option></select><span class="el-field__error">Required.</span></div>
+              </div>
+            </div>
+            <div class="grid2">
+              <div class="el-field"><label class="el-field__label" for="c1">Comment</label><textarea id="c1" class="el-comment" placeholder="Anything the loop should know"></textarea><span class="el-field__hint">Optional. Saved as you type.</span></div>
+              <div class="el-field"><label class="el-field__label" for="c2">Comment, focus-visible</label><textarea id="c2" class="el-comment is-focus">The second option looks fine too.</textarea></div>
+              <div class="el-field"><label class="el-field__label" for="c3">Comment, disabled</label><textarea id="c3" class="el-comment" disabled>Submitted.</textarea></div>
+              <div class="el-field"><label class="el-field__label" for="c4">Comment, error</label><textarea id="c4" class="el-comment" aria-invalid="true"></textarea><span class="el-field__error">Say why you reversed the decision.</span></div>
+            </div>
+            <div class="el-card__foot">Recommendation follows D16. Answers save automatically.</div>
+          </article>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-notices">
+          <div class="el-section__head"><h2 id="s-notices">Notifications</h2><span class="el-badge">3</span><span class="el-badge el-badge--quiet">12</span></div>
+          <div class="el-notice el-notice--action"><span class="el-id">R2</span><div><div class="el-notice__title">Review waiting: doorbell mechanism</div><p class="el-notice__text">Blocking gate. The loop is paused until you answer.</p></div><a class="el-btn el-btn--primary" href="#">Open</a></div>
+          <div class="el-notice el-notice--recommended"><span class="el-id">D34</span><div><div class="el-notice__title">Agent-made decision to confirm</div><p class="el-notice__text">Default taken; the loop keeps running.</p></div><a href="#">Review</a></div>
+          <div class="el-notice"><span class="el-id">H3</span><div><div class="el-notice__title">Approval needed for a Codex sandbox run</div><p class="el-notice__text">Not blocking: other work continues.</p></div><a href="#">Details</a></div>
+          <div class="el-notice el-notice--danger"><span class="el-id">P1</span><div><div class="el-notice__title">Problem reported on a page</div><p class="el-notice__text">The page builder is fixing it.</p></div><a href="#">See report</a></div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-table">
+          <div class="el-section__head"><h2 id="s-table">Table</h2></div>
+          <div class="el-table-wrap"><table class="el-table">
+            <thead><tr><th>cell</th><th>mechanism</th><th>result</th><th class="num">pickup</th></tr></thead>
+            <tbody>
+              <tr><td><span class="el-id">1A</span></td><td>asyncRewake on Stop</td><td><span class="el-tag el-tag--accent">works</span></td><td class="num">3.8 s</td></tr>
+              <tr class="is-hover"><td><span class="el-id">1E0</span></td><td>asyncRewake, default timeout (hover row)</td><td><span class="el-tag el-tag--danger">fails</span></td><td class="num">—</td></tr>
+              <tr aria-selected="true"><td><span class="el-id">2F</span></td><td>asyncRewake on SessionStart (selected row)</td><td><span class="el-tag el-tag--accent">works</span></td><td class="num">11.3 s</td></tr>
+            </tbody>
+          </table></div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-compare">
+          <div class="el-section__head"><h2 id="s-compare">Comparison frame</h2></div>
+          <div class="el-compare">
+            <div class="el-compare__bar"><span class="el-label">before / after</span><div class="el-seg" role="group" aria-label="Mode"><button type="button" aria-pressed="true">side</button><button type="button" aria-pressed="false">overlay</button><button type="button" aria-pressed="false">flip</button></div><div class="el-seg" role="group" aria-label="Width"><button type="button" aria-pressed="false">375</button><button type="button" aria-pressed="true">1280</button></div></div>
+            <div class="el-compare__panes">
+              <div class="el-compare__pane"><span class="el-compare__caption">before</span><div class="shot">render A</div></div>
+              <div class="el-compare__pane"><span class="el-compare__caption">after</span><div class="shot shot--alt">render B</div></div>
+            </div>
+          </div>
+          <p class="el-meta" style="margin-top: var(--space-5)">overlay mode (second pane at --overlay-opacity: 0.5)</p>
+          <div class="el-compare el-compare--overlay">
+            <div class="el-compare__bar"><span class="el-label">overlay</span><div class="el-seg" role="group" aria-label="Mode"><button type="button" aria-pressed="false">side</button><button type="button" aria-pressed="true">overlay</button><button type="button" aria-pressed="false">flip</button></div></div>
+            <div class="el-compare__panes">
+              <div class="el-compare__pane"><div class="shot">render A</div></div>
+              <div class="el-compare__pane"><div class="shot shot--alt">render B</div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-evidence">
+          <div class="el-section__head"><h2 id="s-evidence">Evidence: shot, live page, diagram</h2><span class="el-meta">el-shot · el-iframe · el-diagram</span></div>
+          <div class="grid2">
+            <figure class="el-shot"><button type="button" class="el-shot__open" aria-label="Open the home page full size"><span class="shot" style="display:grid;width:20rem">screenshot</span></button><figcaption class="el-shot__caption">Home page at 1280 px</figcaption></figure>
+            <div class="el-iframe"><div class="el-iframe__bar"><span class="el-label">Live demo</span><a class="el-meta" href="#">open ↗</a><button type="button" class="el-btn el-btn--ghost">reload</button></div><div class="el-iframe__frame" style="height:8rem"></div></div>
+          </div>
+          <figure class="el-diagram" style="margin-top: var(--space-5)"><div class="el-diagram__canvas"><pre>graph LR
+  A[Submit] --&gt; B[Ring]   (rendered by Mermaid on a page)</pre></div><figcaption class="el-shot__caption">Doorbell flow</figcaption></figure>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-lightbox">
+          <div class="el-section__head"><h2 id="s-lightbox">Lightbox with side panel</h2><span class="el-meta">shown inline; on a page it covers the viewport</span></div>
+          <div class="el-lightbox el-lightbox--inline" role="dialog" aria-label="Screenshot 2 of 5">
+            <div class="el-lightbox__stage"><span class="el-lightbox__counter">2 / 5</span><div class="lb-media">screenshot</div></div>
+            <aside class="el-lightbox__panel">
+              <button class="el-btn el-btn--ghost el-lightbox__close" type="button">close <span class="el-kbd">esc</span></button>
+              <div class="el-label">card caption</div>
+              <h3>Home page at 1280 px</h3>
+              <p class="el-muted">The caption and the card's controls move here.</p>
+              <fieldset class="el-choice-group">
+                <legend>Looks right?</legend>
+                <label class="el-choice"><input type="radio" name="lb" checked /><span class="el-choice__body"><span class="el-choice__title">Yes</span></span><span class="el-kbd">1</span></label>
+                <label class="el-choice"><input type="radio" name="lb" /><span class="el-choice__body"><span class="el-choice__title">No</span></span><span class="el-kbd">2</span></label>
+              </fieldset>
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <footer class="el-submitbar">
+        <div class="el-submitbar__progress"><span>3 / 5 answered</span><span class="el-progress" style="--value: 0.6" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="Answered"></span></div>
+        <div class="el-submitbar__end">
+          <span class="el-save" data-state="saving">saving…</span>
+          <span class="el-save" data-state="saved">saved 14:02</span>
+          <span class="el-save" data-state="error">not saved, retrying</span>
+          <button class="el-btn el-btn--primary" type="button">Submit answers</button>
+        </div>
+      </footer>
+    </div>
+    <script>
+      // Specimen only: theme toggle. Pages get theme handling from the runtime later.
+      for (const button of document.querySelectorAll("[data-theme-set]")) {
+        button.addEventListener("click", () => {
+          const value = button.dataset.themeSet;
+          if (value === "auto") document.documentElement.removeAttribute("data-theme");
+          else document.documentElement.dataset.theme = value;
+          for (const other of document.querySelectorAll("[data-theme-set]")) other.setAttribute("aria-pressed", String(other === button));
+        });
+      }
+      const forced = new URLSearchParams(location.search).get("theme");
+      if (forced === "light" || forced === "dark") document.documentElement.dataset.theme = forced;
+    </script>
+  </body>
+</html>

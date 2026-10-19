@@ -337,3 +337,12 @@ The next turn is a manager stop review. If it accepts, the loop goes idle. If it
 - **E:** fix the order or the bookkeeping in `tracker.md`, then continue with the named task.
 
 Re-file the same stop only with new evidence that the instruction cannot be followed; the manager accepts a repeated request.
+
+### Human Input Ingested
+
+A manager ingest turn recorded the human's answers or inbox requests before your turn (D23: the manager records, you plan). Your prompt starts with "Human Input Ingested": the manager's report and the inbox requests verbatim.
+
+- **Plan from it.** Add follow-up tasks with `add-follow-up-task.mjs`, reorder, or rewrite the brief. A reversed agent-made decision means rework: add a follow-up task that undoes or changes what the default built.
+- **An engineer turn you chose was not run** when the note says so: hand the same brief over again only if the input does not change it.
+- **Hold kinds:** a resolved `human-action` item still needs its effect checked (for example, that the package is published) before you rely on it. An `external-wait` item is never resolved by ingest: recheck the condition yourself and take the task off hold when it holds.
+

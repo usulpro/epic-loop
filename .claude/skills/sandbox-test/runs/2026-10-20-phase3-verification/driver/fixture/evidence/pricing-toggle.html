@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pricing toggle prototype</title>
+    <style>
+      body { font-family: sans-serif; margin: 16px; color: #1c1b18; background: #f5f4ef; }
+      .toggle button { padding: 6px 14px; border: 1px solid #1d6b47; background: #fff; cursor: pointer; }
+      .toggle button[aria-pressed="true"] { background: #1d6b47; color: #fff; }
+      .plans { display: flex; gap: 12px; margin-top: 16px; }
+      .plan { flex: 1; background: #fff; border: 1px solid #c9c6bb; padding: 12px; text-align: center; }
+      .price { font-size: 24px; }
+    </style>
+  </head>
+  <body>
+    <div class="toggle"><button type="button" data-period="monthly" aria-pressed="true">Monthly</button><button type="button" data-period="yearly" aria-pressed="false">Yearly (save 17%)</button></div>
+    <div class="plans">
+      <div class="plan"><div>Free</div><div class="price" data-monthly="$0" data-yearly="$0">$0</div></div>
+      <div class="plan"><div>Team</div><div class="price" data-monthly="$12" data-yearly="$10">$12</div></div>
+      <div class="plan"><div>Business</div><div class="price" data-monthly="$40" data-yearly="$33">$40</div></div>
+    </div>
+    <script>
+      for (const button of document.querySelectorAll(".toggle button"))
+        button.addEventListener("click", () => {
+          for (const other of document.querySelectorAll(".toggle button")) other.setAttribute("aria-pressed", String(other === button));
+          for (const price of document.querySelectorAll(".price")) price.textContent = price.dataset[button.dataset.period];
+        });
+    </script>
+  </body>
+</html>

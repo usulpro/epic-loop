@@ -3,7 +3,7 @@
 Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
-Active phase: Phase 1 - Manager Stop Gate And Human-Readable Stop Reports
+Active phase: Phase 5 - Epic Viewer
 Active task: TBD
 
 ## Read First
@@ -29,11 +29,15 @@ Active task: TBD
 
 ## Blockers
 
-- None. Waiting for the human merge of PR #13.
+- None.
 
 ## Next Action
 
-- Phase 1 is complete and closed. Pull request: https://github.com/usulpro/epic-loop/pull/13 (`feature/manager-stop-gate` → `main`), waiting for Oleg's review and squash-merge. The agent does not merge.
-- After the merge (per `docs/delivery.md`): `git checkout main && git pull`, then `pnpm run self-update`; then create the Phase 2-7 worktree (`../epic-loop-visual`, branch `feature/visual-review`) and start Phase 2 there.
-- Agent-made decisions to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
-- Follow-ups recorded in the PR: challenge-path real-run evidence for C and E; the agent-decision prompt fix on Codex; closure notes written after the last task commit stay uncommitted at a stop; one stop request covers several classes but records one.
+- Phase 1 was squash-merged into `main` as PR #13 (`f9dc7f9`). Phases 2-7 run in the worktree `../epic-loop-visual` on branch `feature/visual-review` (`docs/delivery.md`).
+- Phase 2 (doorbell spike): done except the Codex end-to-end task, on hold for H3 (approval of a `danger-full-access` Codex run and quota). Claude Code mechanism proposed in D34.
+- Phase 3 (review engine) closed on 2026-10-20 (`aac1655`).
+- Phase 4 (human gates): done except the Codex half of its verification, on hold for H4 (a `danger-full-access` Codex run; it can be approved together with H3).
+- Phase 5 (epic viewer) closed on 2026-10-20 (`98cd97c`): stable T ids, live home, activity feed and statistics, docs browser with id expansion, localization, verified in sandbox run 17.
+- Pull request for Phases 2–5: https://github.com/usulpro/epic-loop/pull/16 (open, mergeable, CI green). The human reviews and squash-merges it; the agent does not merge.
+- After the merge (`docs/delivery.md`): in the main checkout `git pull` and `pnpm run self-update`; Phases 6 and 7 continue on a new branch from `main`.
+- Open: H3, H4; follow-ups "accept a stop without stdin" and "viewer polish"; agent-made decisions D31, D32, D34–D40 to confirm.

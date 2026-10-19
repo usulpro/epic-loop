@@ -146,6 +146,27 @@
   - The Codex half of the Phase 1 verification is one minimal mechanics run (run 8: 3 tasks, one session, low reasoning effort, no user config, a 14-turn watchdog), not the full Claude scenario.
   - If it cannot be completed, Phase 1 is merged anyway and the Codex verification is recorded as tech debt.
   - Why: run 7 used the whole Codex quota (11.3 M tokens) on the full 9-task scenario; Codex only needs the role mechanics checked.
+- **D34 — Claude Code doorbell mechanism: an epic-loop asyncRewake waiter hook on Stop and SessionStart** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: epic-loop installs asyncRewake waiter hooks on Stop and SessionStart with an explicit timeout, active only while a blocking gate is open (loop status awaiting-review); the role background waiter stays the pattern for role-level waits; UserPromptSubmit stays the fallback and never holds a gate alone
+  - Why: Runs 10 and 12: the hook wakes an idle session in about 0.2 s, covers idle, mid-turn, after Esc, 15 min idle and resume (SessionStart re-arm), and epic-loop already treats the wake as synthetic; the fallback alone lets the loop move on without the answers (E2); details in docs/doorbell.md Choice
+- **D35 — Ship bundled Mermaid 12.2.0 inside the epic-loop npm package** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: mermaid is an exact-pinned devDependency; its single-file build (5.5 MB unpacked) is copied into dist/review/runtime/vendor/ and served only to pages with an el-diagram
+  - Why: Diagrams must render offline with no network (review-engine.md, D12); a CDN would break the local-only rule. Cost: the npm package grows by about 5.5 MB unpacked. Reverse by dropping el-diagram or making Mermaid an optional download
+- **D36 — Claude Code subagents are invoked through the host's Agent tool, not installed agent files** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: the manager runs the page builder as a general-purpose subagent on the main model and the translator with model haiku, each with a filled brief template from assets/templates/; no .claude/agents files are installed
+  - Why: Works for copy installs and plugin installs alike with no install or manifest changes; the Agent tool already takes a model per call. Reverse by shipping .claude/agents definitions if the brief-in-prompt approach proves unreliable
+- **D37 — Codex doorbell adapter: the server rings the driver thread with codex queue, pending the H3 end-to-end run** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: the review server runs codex queue --thread <driver session id> --message <pointer> on a submit or inbox entry while the loop awaits a review; the UserPromptSubmit fallback covers the rest; the Codex mechanism stays provisional until the H3 run confirms it
+  - Why: The Codex matrix (run 11) shows codex queue delivering idle, mid-turn (held to turn end), 15 min idle and after resume; only the running-loop cell and after-Esc are open, and the loop is idle while awaiting a review; building the adapter now unblocks Phase 4 and H3 only verifies it
+- **D38 — Auto-continue after a stop report: the techlead judges whether the answers unblock work** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: with continue-after-submit on (the default, unanswered counts as on), the submit resumes the loop into a manager ingest turn and then the techlead, which continues or files a new stop; with it off, the ingest turn records the answers and the loop returns to idle without a techlead turn
+  - Why: D25 leaves open who decides that work is unblocked; the techlead already owns planning after ingest (D23), and a hook cannot judge partial answers; a still-blocked techlead files a repeated stop that the manager accepts
+- **D39 — Render epic markdown with markdown-it bundled into the CLI** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: markdown-it 14.1.0 pinned as a CLI devDependency, bundled into dist by esbuild like the rest of the CLI, with html: false so raw HTML in docs is escaped
+  - Why: The docs browser needs tables, nested lists and code fences rendered correctly; a hand-written renderer would be a long tail of edge cases, and the CLI already bundles its npm dependencies at build time
+- **D40 — The epic's second language lives in state-of-epic.md, set by a script** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: A 'Second language: <code>' line in state-of-epic.md, written only by a new set-second-language.mjs script that the manager runs from the language the human writes in (none when it is English); the app reads that line
+  - Why: There is no epic config file yet; the state file is already human-facing, read on every re-entry and parsed by the app, and a script keeps the change deterministic
 
 ## Open Questions
 
@@ -159,7 +180,7 @@
 - **Q8 — Shaping tools.** Phase 7 (D29). Whether it stays in this epic is decided after Phase 5.
 - **Q9 — Order and MVP.** Resolved by D18 and the phase order in `tracker.md`.
 
-- **Q10 — Subagents on Codex.** How does a Codex manager invoke a subagent on a cheaper model for translation? Confirm while building the subagent task in Phase 3.
+- **Q10 — Subagents on Codex.** Resolved (2026-10-20, sandbox run 14): the manager calls `spawn_agent` with `fork_turns: "none"`; the builder takes no `model` (it inherits the session model), and the translator takes `model: "gpt-6-luna"` and `reasoning_effort: "low"`; `wait_agent` collects each final answer. The `multi_agent` feature is stable and on by default, so no config is needed. The child rollouts record their model in `turn_context` and their parent in `session_meta.source.subagent`. Run log: `.claude/skills/sandbox-test/runs/2026-10-20-review-subagents-codex/log.md`.
 
 ## Historical Decisions
 

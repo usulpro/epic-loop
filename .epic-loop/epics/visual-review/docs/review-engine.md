@@ -20,8 +20,36 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
 
 - One app per project with routes:
   - `/` lists the epics;
-  - `/<slug>` is the epic home: pending reviews as notifications with a count; Phase 5 grows it into the full overview;
-  - `/<slug>/reviews/<id>` is a review page.
+  - `/<slug>` is the epic home, the live overview (Phase 5 Task 2):
+    - **Sections:** title and intent; loop state (mode, status, phase, task, role with the elapsed turn time, iteration); gates and pending reviews; human-queue items grouped by hold kind and external waits; unconfirmed agent-made decisions; phases and tasks with progress and `<details>`; the inbox; answered reviews.
+    - **Data:** the CLI reads it with copies of the skill's parsers in `packages/cli/src/epic/`.
+    - **Live updates:** `GET /api/<slug>/events` is a `text/event-stream` with `event: change` and `data: {"file": "<path under the epic>"}`, debounced to about 300 ms, plus a heartbeat every 20 s; it watches every top-level artifact (tracker and archive layers, queue, logs, registers, state), the runtime state, progress log, inbox, reviews, `docs/` and `stop-reports/`. It also watches the driver's transcript (`implementation_loop.driver_transcript_path`, re-armed when the runtime state names another path) and sends `event: activity` with `data: {}` when it grows.
+    - **Fragment:** `GET /<slug>?fragment=main` returns the inner `<main>`, which `/_runtime/home.js` swaps in. The scroll position, open `<details>` and an inbox draft are kept. `GET /<slug>?fragment=activity` returns only the activity section, which the page swaps in on `event: activity`.
+    - **Activity and statistics:** the activity feed reads the tail (256 KB, last 30 items) of the driver's Claude Code transcript or Codex rollout, per `.epic-loop/.runtime/platform.json`, with items `{ at, kind: "tool" | "message" | "result" | "turn", role?, name?, summary }`; thinking and reasoning are never shown. A role prompt from the Stop hook (Claude's "Stop hook feedback", Codex's `<hook_prompt>` user message) shows as a `turn` item, and paths inside the project show relative to its root. Turn statistics come from `.runtime/progress-log.jsonl` with the aggregation of `progress-report.md`, plus background waits and time awaiting a review.
+    - **Sections, continued:** activity, turn statistics and a Docs list (artifacts, docs, stop reports).
+    - `/_health` reports the open watchers;
+  - `/<slug>/docs/` lists the epic's files, and `/<slug>/docs/<path>` is the docs browser (Phase 5 Task 4):
+    - **Scope:** top-level `*.md` artifacts, `docs/**` and `stop-reports/**`. Hidden paths (`.runtime/`), `reviews/`, `..` in any encoding and symlinks that leave the epic are 404.
+    - **Rendering:** markdown-it with raw HTML off (D39). Headings get GitHub-style ids. Tables use `.el-table`.
+    - **Links:** a relative link to an epic file goes to its docs page, resolved against the doc's folder and then the epic root, with the anchor kept (an id anchor such as `#d16` becomes `#D16`). A link that leaves the epic or names a missing file becomes plain text with the path shown. `http(s)` links get `rel="noopener noreferrer"`. An inline code span naming an epic `.md` file links to it. Non-markdown files under `docs/` are served with their type.
+    - **Live:** `?fragment=main` returns the inner `<main>`. The page swaps it in when a change event names its own file (`data-live-file`).
+  - `GET /api/<slug>/ids` returns `{ ids, aliases }` from a copy of the skill's id index (D27): each id with its kind, title, status, file and line.
+  - **Id references:**
+    - On the home and doc pages the server wraps known `D/H/T/R/Q` mentions (and the hyphenated form) in `<a class="el-ref" data-ref="D16" href="/<slug>/docs/<file>#D16">`. Code, existing links and unknown ids stay plain.
+    - The defining line gets an anchor (`<span class="el-anchor" id="D16">`) instead of a self-link.
+    - `/_runtime/refs.js` shows the entry in a popover on hover and focus (`role="tooltip"`, `aria-describedby`); Escape closes it, and a click goes to the definition.
+    - On review pages the same script wraps ids in the text of `<main>`, skipping code, links, labels and form controls.
+  - **Language (Phase 5 Task 5, D9, D28, D40):**
+    - **Switch:** the second language is the `Second language:` line of `state-of-epic.md` (written by `set-second-language.mjs`). With one set, the home and doc pages show an `EN | <CODE>` switch. Its links `?lang=<en|code>` set an `el-lang` cookie (`Path=/; SameSite=Strict`) and redirect back (303); `?lang=` with another code is 400. Full pages and fragments honor the cookie, and `<html lang>` follows the served language.
+    - **Docs:** a doc page in the second language renders the cached translation of its markdown source through the same renderer, with the English heading ids. On a miss it renders English with a "Translating…" note (`data-translating`) and queues a job; after a rejection it renders English with "Translation unavailable".
+    - **Home:** the home translates its own text as segments (titles, intent, asks, UI labels; not ids, times, code or the activity feed), batched into one job per refresh for the missing ones.
+    - **Runner:** one headless process at a time per server, deduplicated, in a scratch directory, with a 120 s timeout (`EPIC_LOOP_TRANSLATE_TIMEOUT_MS`) that kills its process group.
+      - Claude Code: `claude -p --model haiku --tools "" --output-format text --no-session-persistence --strict-mcp-config --disable-slash-commands` (prompt on stdin).
+      - Codex: `codex exec -m gpt-6-luna -c model_reasoning_effort="low" -s read-only --skip-git-repo-check --ephemeral --color never -C <scratch> -o <scratch>/last-message.txt -`.
+      - `EPIC_LOOP_CLAUDE_BIN`, `EPIC_LOOP_CODEX_BIN`, `EPIC_LOOP_TRANSLATE_CLAUDE_MODEL` and `EPIC_LOOP_TRANSLATE_CODEX_MODEL` override them.
+    - **Validation:** a doc translation must keep the same code, link and image targets, id mentions and heading count, and a segment the same ids. Otherwise it is rejected, logged and not retried.
+    - **Cache:** `.runtime/translations/<lang>/`: `docs/<sha256(prompt version, lang, source)>.md` or `.rejected`, `segments.json` keyed per segment hash, and `jobs.jsonl` (at, kind, key, platform, model, ms, ok, reason). Editing a doc misses only that doc. The event stream turns a new `jobs.jsonl` line into `event: translated`, and the page swaps in its fragment; a page still translating also checks when the stream connects and every 15 s.
+  - `/<slug>/reviews/<id>/` is a review page. The canonical URL ends with `/`, so relative assets in `page.html` resolve inside the review; the address without it redirects (301).
 - The manager gives deep links to review routes.
 
 ## Server (npm CLI)
@@ -33,13 +61,14 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - a dynamic port by default.
 - **API:**
   - static files of a review;
-  - `GET`/`PATCH` answers, a per-control merge so two tabs do not overwrite each other;
+  - `GET`/`PATCH /api/<slug>/reviews/<id>/answers`: the body is `{ controls: { name: value } }`, merged per control so two tabs do not overwrite each other; `answers.json` holds `{ controls, savedAt, submittedAt }`;
   - `POST submit` sets `submittedAt`;
   - `POST problem` appends to `problems.jsonl`.
 
   All writes are atomic.
 - Submit and problem reports are the doorbell events of Phase 4. Phase 3 only writes them to disk.
-- Host is `127.0.0.1`; local machine only (D12).
+- Host is `127.0.0.1`; local machine only (D12). The server refuses a foreign `Host` header (DNS rebinding) and cross-origin writes, and caps bodies at 1 MB.
+- Pages carry `<meta name="epic-loop-review" content="<slug>/<id>">`; the page runtime builds its API URLs from it.
 
 ## Runtime And Components
 
@@ -60,17 +89,113 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - `links`;
   - `card`/`section` helpers for the one-decision-per-card pattern.
 - **Custom blocks:** page JS may read and write answers only through the runtime API, so the derived schema and autosave still hold.
+- **Runtime files** (`packages/cli/src/review/runtime/`, served under `/_runtime/`):
+  - `runtime.js` is an ES module, injected as `<script type="module">`;
+  - `components.mjs` holds the elements;
+  - `answer-store.mjs`, `progress.mjs` and `i18n.mjs` are pure modules, also used by unit tests and the check.
+- **Component markup (v1, slice A).** Light-DOM custom elements; every answer control has a `name` and takes its options from child markup, so the check can derive the schema from the HTML alone.
+  - `<el-card id="q1" title="…">…</el-card>`: one decision.
+  - `<el-section title="…">…</el-section>`: a group.
+  - `<el-choice name="…" [label] [recommended="<value>"] [rule="D16"] [optional]><el-option value="…" [note="…"]>Label</el-option>…</el-choice>`: radio options; the value is the option value.
+  - `<el-check name="…" [optional]>Label</el-check>`: a confirmation; its value is `true` or `false`, and it counts as answered only when checked.
+  - `<el-select name="…" [label] [placeholder] [optional]><el-option value="…">…</el-option></el-select>`.
+  - `<el-comment name="…" [label] [placeholder] [rows] [optional]></el-comment>`: free text.
+  - `<el-links><a href="…">…</a></el-links>` and `<el-table><table>…</table></el-table>`.
+  - Controls are required unless marked `optional`. Progress counts required controls.
+- **Visual elements (v1, slice B).** None of them is an answer control.
+  - `<el-shot caption="…" [group="g1"] [width]><img src="assets/x.png" alt="…" /></el-shot>`, or `<el-shot src="…" alt="…">` (that form shows nothing without JS).
+    - A click, Enter or Space opens the lightbox.
+    - The counter and ←/→ page through shots of the same `group`, or through all ungrouped shots. Esc closes it and focus returns to the shot.
+    - The side panel shows the caption and the shot's card. While the panel is open, the card's answer controls are moved into it (not cloned), and digits pick an option there.
+    - The injected problem control is hidden while the lightbox is open.
+  - `<el-iframe src="https://…|assets/page.html" [title] [height]>` shows a live page; inline HTML goes in `<el-iframe title="…"><template>…</template></el-iframe>` (or a `srcdoc` attribute).
+    - A `<template>` keeps the inline markup inert in the page; inline scripts must not run in the review page itself.
+    - Inline pages and same-origin assets get `sandbox="allow-scripts"`, an opaque origin with no access to `window.epicLoop` or the API. Only a cross-origin URL also gets `allow-same-origin allow-forms allow-popups`.
+    - Put a fallback `<a>` inside for readers without JS.
+  - `<el-diagram [caption]>` holds the Mermaid source as text content (escape `<`).
+    - It is rendered by bundled Mermaid, with `securityLevel: "strict"` and no network.
+    - Mermaid loads only when the page has a diagram, and the diagram re-renders when the theme changes.
+    - If rendering fails, the source is shown with an error note.
+  - `<el-compare [mode="side|overlay|flip"] [widths="375,1280"] [caption]>` takes two or more `el-shot` or `img` children, each with a `label`.
+    - Modes: side by side, overlay with an opacity slider, or flip (button or Space).
+    - The width presets constrain the panes.
+- **Mermaid.** `mermaid` is an exact-pinned devDependency of `packages/cli`, and its single-file build is served from `/_runtime/vendor/mermaid.min.js`.
+  - The build copies it into `dist/review/runtime/vendor/`; from source it is read from `node_modules`.
+  - Only allow-listed vendor names are served (`REVIEW_VENDOR_FILES` in `paths.mjs`).
+- **Local files the check must verify:**
+  - `el-shot` `src` and its `img` `src`;
+  - `img` `src` inside `el-compare`;
+  - `el-iframe` `src` when relative;
+  - plain `img`, `a` and `link` targets.
+
+  `el-iframe` `src` may be an external `https:` URL; any other network reference in a page (scripts, styles) is refused.
+  - Without JS the elements still render as readable blocks, and options show as a list.
+- **`window.epicLoop`:**
+  - `get(name)`, `set(name, value)`, `onChange((name, value, { local }) => …)`;
+  - `registerControl(name, { optional, kind })` for custom blocks;
+  - `review` (`slug`, `id`, `apiBase`, `pageBase`).
+- **Saving.** Changes are debounced (400 ms) into one `PATCH` of only the changed controls. A failed save retries with backoff (1 s → 30 s) and warns before unload. When the tab becomes visible again, answers are re-fetched, unless a local edit is pending.
+
+## Translations (contract shared by the runtime and the check)
+
+- **Segments.** A segment is a visible text node, or the value of a `title`, `placeholder`, `aria-label`, `note` or `alt` attribute. Its key is the English text normalized by `normalizeSegment` in `i18n.mjs`: runs of whitespace collapse to one space, and the ends are trimmed. Segments without a letter (numbers, punctuation) are not translated.
+- **Never translated:** text inside `script`, `style`, `textarea`, `code`, `pre` and `[data-i18n-skip]`, and the runtime's own UI.
+- **Source file.** `i18n/source.json` (written by the check) lists the segments.
+- **Translation file.** `i18n/<lang>.json` is `{ "lang": "<code>", "segments": { "<normalized English>": "<translation>" } }`.
+- **Available languages.** They come from `review.json` (`"languages": ["ru"]`); with none listed, the switch is hidden.
+- **Switching.** The runtime replaces each segment that has a translation and keeps the original's surrounding whitespace. Switching back to English restores the original text and attributes exactly. The choice is remembered per review.
 - **"Something is wrong with this page"** (D21): injected by the server outside the page's DOM tree, with no dependency on page code. It works when the page is broken.
 
 ## Check (static, D21)
 
-`epic-loop review check <review>`:
-- control names unique and non-empty;
-- every referenced local file exists;
-- no network script sources, no forms posting elsewhere;
-- writes the derived answer schema into `review.json`;
-- extracts text segments into `i18n/source.json`;
-- reports missing or stale translations for the chosen second language.
+`epic-loop review check <slug>/<id> | <review folder> [--root <dir>] [--lang <code>] [--json]`
+
+- **Exit codes.** 0 when the page passes (warnings allowed); 1 on any error.
+- **`--json` output.** `{ ok, errors: [{ code, message, line? }], warnings, schema, segments: <count>, translations: { <lang>: { missing, stale } } }`.
+- **Parser.** A small built-in parser (`packages/cli/src/review/html.mjs`). Input it cannot parse reliably (an unterminated tag, comment or raw-text element) fails with `E_PARSE` and a line number.
+- **Writes only on a clean page.** It writes `review.json` and `i18n/source.json` atomically, and only when there are no errors; a failing page keeps its previous files.
+  - `review.json` keeps its existing fields (`id`, `title`, `kind`, `created`, `languages`, `status`) and gains `schema` and `checkedAt`.
+  - `schema` is `{ controls: [{ name, kind: choice|check|select|comment, optional, label?, options?: [{ value, label }], recommended?, rule?, card? }] }`, in document order. `card` is the enclosing card's `id` (or title).
+  - `i18n/source.json` is `{ segments: [...] }`: unique, in document order, stable across reruns.
+- **Segments** follow the Translations contract below and use the runtime's own functions:
+  - text nodes, plus the attributes `title`, `placeholder`, `aria-label`, `note`, `alt`, `label` and `caption`;
+  - nothing from the head, `script`, `style`, `textarea`, `code`, `pre`, `<template>` contents, `el-diagram` source, or `[data-i18n-skip]`;
+  - an `el-diagram` caption is a segment.
+
+### Errors
+
+- **Controls and options:**
+  - `E_NAME_MISSING`, `E_NAME_DUPLICATE`: an answer control without a name, or a name used twice.
+  - `E_OPTIONS_TOO_FEW`, `E_OPTION_DUPLICATE`, `E_RECOMMENDED_UNKNOWN`: a choice or select with fewer than two options, a repeated option value, or a `recommended` value that is not an option.
+- **Images:**
+  - `E_SHOT_NO_IMAGE`: an `el-shot` without an `img` or `src`.
+  - `E_COMPARE_TOO_FEW`, `E_COMPARE_LABEL`: an `el-compare` with fewer than two images, or an image without a `label`.
+- **Local files:** `E_FILE_MISSING`, `E_FILE_OUTSIDE`. A local reference must exist inside the review folder. `/_runtime/…` paths are checked against the runtime.
+  - The checked references are `img`, `source`, `audio`, `track`, `el-shot`, `el-iframe` and `script` `src`; `video` `src` and `poster`; and `a` and `link` `href`.
+  - Fragment links, `mailto:` and `data:` are fine.
+- **Network:**
+  - `E_NETWORK_SCRIPT`: a script from the network, including inside a `<template>`.
+  - `E_NETWORK_STYLESHEET`, `E_NETWORK_LINK`: a stylesheet or a resource-loading `link` from the network.
+  - `E_NETWORK_MEDIA`: images, video or audio from the network; save evidence next to the page.
+  - `E_NETWORK_FRAME`: an `el-iframe` with a URL that is not `https:`.
+  - `E_CSS_IMPORT`, `E_NETWORK_CSS`: `@import`, or a network `url()`, in a `style` element or a `style` attribute.
+  - Links (`a href`) to the network are allowed.
+- **Unsafe markup:**
+  - `E_IFRAME`: a plain `iframe`, `frame`, `object` or `embed`; use `el-iframe`.
+  - `E_FORM_ACTION`: a `form` with an `action`.
+  - `E_BASE`: a `<base>` element.
+  - `E_META_REFRESH`: `<meta http-equiv="refresh">`.
+- **Other:**
+  - `E_TRANSLATION_MISSING`: only with `--lang <code>`.
+  - `E_PARSE`, `E_NO_PAGE`: the page cannot be parsed reliably, or there is no `page.html`.
+
+### Warnings
+
+- `W_EVENT_HANDLER`: an inline `on…` attribute.
+- `W_IMG_ALT`: an image without `alt`.
+- `W_CARD_CHOICES`: more than one choice in a card.
+- `W_NO_CONTROLS`: no answer controls and no `registerControl` call; the page can only be acknowledged.
+- `W_TRANSLATION_MISSING`, `W_TRANSLATION_STALE`: for each language in `review.json` `languages`.
 
 ## Subagents (D4)
 

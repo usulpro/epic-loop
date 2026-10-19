@@ -12,6 +12,13 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
 - **Non-blocking gate.** Independent work remains, so the loop continues. The gate shows on the epic home as a notification.
 - **Blocking gate.** Nothing independent remains. The loop status becomes `awaiting-review` and the turn ends.
 - **Every step is logged as a progress event:** `gate-opened`, `answers-submitted`, `gate-ingested`, `gate-closed`.
+- **Script and state (Phase 4 Task 1).**
+  - The command is `scripts/gate.mjs open|ingested|close|list`; `open`, `ingested` and `close` run only in an open manager turn.
+  - `open` requires a review with a `schema` (it passed `review check`) and open H ids in `--covers`. Reopening a review updates its entry.
+  - The record lives in `implementation_loop.gates`: `{ review, covers, blocking, status: open|submitted|ingested|closed, opened_at, opened_iteration, submitted_at?, ingested_at?, closed_at?, close_reason? }`.
+  - The Stop of the manager turn that opened an unanswered blocking gate sets `implementation_loop.status = "awaiting-review"` and logs `awaiting-review` with the review ids. No continuation follows. Resuming uses `bind-session --mode implementation`, and `stop-loop` stops the loop. An accepted stop in the same turn wins.
+  - The hook logs `answers-submitted` (`review`, `submitted_at`) on any hook event of the driver session, once per `submittedAt`. It does not route yet; that is Task 2.
+  - `role-summary` lists open gates, and the epic home shows a Gates section ("the loop waits for this review" or "the loop keeps working").
 
 ## Pickup At Role Transitions
 
@@ -27,11 +34,29 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
   - then it writes a "what changed" note and hands over to the techlead.
 - **The techlead plans:** follow-ups, rework after a reversed decision, reordering.
 - **Ingest is idempotent.** A second ring or a re-check finds nothing new and changes nothing.
+- **Implementation (Phase 4 Task 2).**
+  - **Inbox:** `POST /api/<slug>/inbox` (JSON `{ text }` or the no-JS form on the epic home) appends `{ id: "I<n>", text, createdAt }` to `.epic-loop/epics/<slug>/inbox.jsonl`.
+  - **What counts as pending:**
+    - a gate (not closed) whose `answers.json` `submittedAt` differs from its `ingested_submitted_at`;
+    - an inbox entry numbered above `implementation_loop.inbox_through`.
+  - **When the ingest turn runs:**
+    - Pending input routes a manager ingest turn (prompt template `implementation-manager-ingest-prompt.md`) before a techlead or engineer turn.
+    - On `awaiting-review` it resumes the loop first (`review-answered`).
+    - A pending stop review keeps its turn.
+  - **Snapshot and events:**
+    - The snapshot is `implementation_loop.ingest = { iteration, gates: [{ review, submitted_at }], inbox_ids, inbox_through, skipped_role }`.
+    - Its Stop logs `gate-ingested` (`by: "ingest-turn"`) and `inbox-ingested` (`ids`, `through`).
+    - It leaves `ingest_note` for the techlead's one-time "Human Input Ingested" section.
+  - **`security-hold`:** `human-queue.mjs resolve` refuses it without `--confirmation`.
 
 ## Doorbell
 
 - A blocking gate leaves the session idle. A submit (or a problem report, or an inbox entry) makes the server ring the session with the mechanism chosen in Phase 2. The waking turn routes to manager ingest.
 - Fallback: `UserPromptSubmit` injects pending answers on the human's next message. The page says so when no doorbell is available for the platform.
+- **Implementation (Phase 4 Task 3):**
+  - The waiter hook (Claude Code) and `codex queue` from the server (Codex) are described in `doorbell.md` "Implemented".
+  - The submit response carries `doorbell`: `waiter`, `codex-queue`, `loop-running` or `none`. The page shows "picks your answers up now", "at its next step" or "send any message in the agent session to continue".
+  - Problem reports do not ring yet (Task 4).
 
 ## Stop Report Page And Auto-Continue
 
@@ -41,6 +66,11 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
   - the agent-made decisions with confirm/reverse;
   - the "continue after submit" switch, on by default (D25).
 - On submit: ring, then manager ingest, then the techlead. If the answers unblock work and the switch is on, the loop resumes without a chat message. If the switch is off, the answers are recorded and the loop stays paused.
+- **Implementation (Phase 4 Task 4).**
+  - **Opening the gate:** in the stop-review turn, `gate.mjs open --stop-report --review <id> --covers <every open H id>` registers the page as a blocking gate with `kind: "stop-report"`.
+    - It refuses a page that misses an open H item (in `--covers`, with a control `h<n>`), an unconfirmed agent-made decision (a control `d<n>`), or the `continue-after-submit` check.
+    - `review-stop --outcome accepted` then sets the loop to `awaiting-review` instead of `idle`. The gate keeps `stop_class` and `report_path`, and the `stop-gate` event carries `review`.
+  - **The switch:** it is read when the ingest turn stops. Unanswered or true means the loop continues to the techlead (`stop-report-continue`, D38). Only an explicit false sets the loop `idle` (`stop-report-paused`).
 
 ## Hold Kinds In The Loop (D26)
 
@@ -53,3 +83,9 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
 
 - The "something is wrong" button (D21) rings like a submit.
 - The manager has the page builder fix the page, re-checks it, and notifies the human with the deep link.
+- **Implementation (Phase 4 Task 4).**
+  - New lines in a gate review's `problems.jsonl` after the gate's `problems_through` are pending input:
+    - the waiter rings for them, and the server rings Codex with `reason: "problem"`;
+    - the ingest turn lists them verbatim with the fix steps;
+    - its Stop advances `problems_through` and logs `problems-ingested`.
+  - Reopening a gate keeps `problems_through` and the last ingested answers.

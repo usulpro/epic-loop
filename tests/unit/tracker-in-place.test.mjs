@@ -9,7 +9,7 @@ const SLUG = "shaped";
 
 // Shaped by hand, the way trackers look after shaping: prose, extra phase lines, nested bullets
 // and verification labels that the roadmap model does not know about.
-const SHAPED_TRACKER = `# Tracker
+const UNMIGRATED_TRACKER = `# Tracker
 
 Epic: Shaped Epic
 
@@ -59,6 +59,14 @@ Order agreed in shaping: Phase 1 first, then Phase 2.
   - Outcome: a PR exists.
 `;
 
+// The same tracker after the stable-id migration (D27): T1-T3 in tracker order and the
+// next-id header. The in-place tests below start from it, so they see only their own change.
+const SHAPED_TRACKER = UNMIGRATED_TRACKER.replace("Epic: Shaped Epic\n", "Epic: Shaped Epic\n\nNext task id: T4\n")
+  .replace("| Build the parser", "| T1 · Build the parser")
+  .replace("| Verify the parser end to end", "| T2 · Verify the parser end to end")
+  .replace("| Open the pull request", "| T3 · Open the pull request");
+const shapedWithNext = (next) => SHAPED_TRACKER.replace("Next task id: T4", `Next task id: ${next}`);
+
 function setupShaped(prefix) {
   const root = makeTempRoot(prefix);
   assertSuccess(runNodeScript("init-epic.mjs", ["--root", root, "--description", "Shaped epic", "--slug", SLUG, "--no-gitignore"]));
@@ -84,8 +92,8 @@ function changedLines(before, after) {
 const line = (text) => SHAPED_TRACKER.split("\n").indexOf(text);
 const PHASE_1_STATUS = line("- Phase status: todo");
 const PHASE_2_STATUS = SHAPED_TRACKER.split("\n").lastIndexOf("- Phase status: todo");
-const TASK_1 = line("- [ ] Kind: implementation | Status: todo | Build the parser");
-const TASK_2 = line("- [ ] Kind: verification | Status: todo | Verify the parser end to end");
+const TASK_1 = line("- [ ] Kind: implementation | Status: todo | T1 · Build the parser");
+const TASK_2 = line("- [ ] Kind: verification | Status: todo | T2 · Verify the parser end to end");
 
 test("task and phase scripts change only the intended tracker lines", () => {
   const cases = [
@@ -93,7 +101,7 @@ test("task and phase scripts change only the intended tracker lines", () => {
       args: ["--task-id", "phase-1-task-1", "--status", "doing"],
       expected: {
         [PHASE_1_STATUS]: ["- Phase status: todo", "- Phase status: doing"],
-        [TASK_1]: ["- [ ] Kind: implementation | Status: todo | Build the parser", "- [ ] Kind: implementation | Status: doing | Build the parser"],
+        [TASK_1]: ["- [ ] Kind: implementation | Status: todo | T1 · Build the parser", "- [ ] Kind: implementation | Status: doing | T1 · Build the parser"],
       },
       script: "set-task-status.mjs",
     },
@@ -101,13 +109,13 @@ test("task and phase scripts change only the intended tracker lines", () => {
       args: ["--task-id", "phase-1-task-2"],
       expected: {
         [PHASE_1_STATUS]: ["- Phase status: todo", "- Phase status: doing"],
-        [TASK_2]: ["- [ ] Kind: verification | Status: todo | Verify the parser end to end", "- [ ] Kind: verification | Status: doing | Verify the parser end to end"],
+        [TASK_2]: ["- [ ] Kind: verification | Status: todo | T2 · Verify the parser end to end", "- [ ] Kind: verification | Status: doing | T2 · Verify the parser end to end"],
       },
       script: "start-task.mjs",
     },
     {
       args: ["--task-id", "phase-1-task-1"],
-      expected: { [TASK_1]: ["- [ ] Kind: implementation | Status: todo | Build the parser", "- [x] Kind: implementation | Status: done | Build the parser"] },
+      expected: { [TASK_1]: ["- [ ] Kind: implementation | Status: todo | T1 · Build the parser", "- [x] Kind: implementation | Status: done | T1 · Build the parser"] },
       script: "close-task.mjs",
     },
     { args: ["--phase-id", "phase-2"], expected: { [PHASE_2_STATUS]: ["- Phase status: todo", "- Phase status: doing"] }, script: "start-phase.mjs" },
@@ -139,9 +147,13 @@ test("hand edits to tracker.md are respected after the roadmap cache exists", ()
     const started = ctx.run("start-task.mjs", ["--task-id", "phase-1-task-3"]);
     assertSuccess(started);
     const after = ctx.tracker();
-    assert.match(after, /- \[ \] Kind: follow-up \| Status: doing \| Hand-added task\n {2}- Outcome:\n {4}- written after the cache existed\.\n/u);
-    assert.deepEqual(Object.keys(changedLines(before, after)).length, 1);
-    assert.match(ctx.run("role-summary.mjs").stdout, /Active task: Phase 1 Task 3 - Hand-added task/u);
+    // The hand-added task line gets the next stable id, and the header moves on.
+    assert.match(after, /- \[ \] Kind: follow-up \| Status: doing \| T4 · Hand-added task\n {2}- Outcome:\n {4}- written after the cache existed\.\n/u);
+    assert.deepEqual(
+      Object.values(changedLines(before, after)).map(([, right]) => right),
+      ["Next task id: T5", "- [ ] Kind: follow-up | Status: doing | T4 · Hand-added task"],
+    );
+    assert.match(ctx.run("role-summary.mjs").stdout, /Active task: Phase 1 Task 3 \(T4\) - Hand-added task/u);
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
@@ -178,7 +190,7 @@ test("on-hold needs an open human-queue item and writes, then clears, the Hold l
     assert.match(held, /- blocked\n- on-hold\n- partially-satisfied/u);
     assert.match(
       held,
-      /- \[ \] Kind: verification \| Status: on-hold \| Verify the parser end to end\n {2}- Hold: human-action \(H1\)\n {2}- Method: run the CLI on fixtures\.\n {2}- Tools: node test runner\.\n {2}- Evidence:\n {4}- stdout of each fixture run;\n {4}- exit codes\.\n {2}- Cleanup: remove the temp fixtures\.\n/u,
+      /- \[ \] Kind: verification \| Status: on-hold \| T2 · Verify the parser end to end\n {2}- Hold: human-action \(H1\)\n {2}- Method: run the CLI on fixtures\.\n {2}- Tools: node test runner\.\n {2}- Evidence:\n {4}- stdout of each fixture run;\n {4}- exit codes\.\n {2}- Cleanup: remove the temp fixtures\.\n/u,
     );
     assert.match(held, /### Phase 1: Build\n\n- Phase status: todo\n/u, "on-hold does not start the phase");
     assert.doesNotMatch(ctx.run("role-summary.mjs").stdout, /Active task: Phase 1 Task 2/u);
@@ -188,7 +200,7 @@ test("on-hold needs an open human-queue item and writes, then clears, the Hold l
     assert.doesNotMatch(resumed, /Hold:/u);
     assert.deepEqual(changedLines(SHAPED_TRACKER.replace("- blocked\n", "- blocked\n- on-hold\n"), resumed), {
       [PHASE_1_STATUS + 1]: ["- Phase status: todo", "- Phase status: doing"],
-      [TASK_2 + 1]: ["- [ ] Kind: verification | Status: todo | Verify the parser end to end", "- [ ] Kind: verification | Status: doing | Verify the parser end to end"],
+      [TASK_2 + 1]: ["- [ ] Kind: verification | Status: todo | T2 · Verify the parser end to end", "- [ ] Kind: verification | Status: doing | T2 · Verify the parser end to end"],
     });
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
@@ -201,18 +213,18 @@ test("add-follow-up-task appends under Follow-Up Tasks and changes nothing else"
   try {
     assertSuccess(ctx.run("add-follow-up-task.mjs", ["--title", "Document the parser", "--outcome", "Docs exist."]));
     const first = ctx.tracker();
-    assert.ok(first.startsWith(SHAPED_TRACKER));
-    assert.equal(first.slice(SHAPED_TRACKER.length), "\n## Follow-Up Tasks\n\n- [ ] Kind: follow-up | Status: todo | Document the parser\n  - Outcome: Docs exist.\n");
+    assert.ok(first.startsWith(shapedWithNext("T5")));
+    assert.equal(first.slice(SHAPED_TRACKER.length), "\n## Follow-Up Tasks\n\n- [ ] Kind: follow-up | Status: todo | T4 · Document the parser\n  - Outcome: Docs exist.\n");
 
     const second = ctx.run("add-follow-up-task.mjs", ["--title", "Benchmark the parser"]);
     assertSuccess(second);
-    assert.match(second.stdout, /follow-up-02-benchmark-the-parser/u);
-    assert.equal(ctx.tracker(), `${first}\n- [ ] Kind: follow-up | Status: todo | Benchmark the parser\n`);
+    assert.match(second.stdout, /T5 \(follow-up-02-benchmark-the-parser\)/u);
+    assert.equal(ctx.tracker(), `${first.replace("Next task id: T5", "Next task id: T6")}\n- [ ] Kind: follow-up | Status: todo | T5 · Benchmark the parser\n`);
 
     assertSuccess(ctx.run("set-task-status.mjs", ["--task-id", "follow-up-01-document-the-parser", "--status", "doing"]));
-    assert.match(ctx.tracker(), /Status: doing \| Document the parser/u);
-    assert.match(ctx.run("role-summary.mjs").stdout, /Active task: Follow-up - Document the parser/u);
-    assert.ok(ctx.tracker().startsWith(SHAPED_TRACKER));
+    assert.match(ctx.tracker(), /Status: doing \| T4 · Document the parser/u);
+    assert.match(ctx.run("role-summary.mjs").stdout, /Active task: Follow-up \(T4\) - Document the parser/u);
+    assert.ok(ctx.tracker().startsWith(shapedWithNext("T6")));
   } finally {
     fs.rmSync(ctx.root, { force: true, recursive: true });
   }
@@ -224,7 +236,10 @@ test("render-tracker still re-renders the full model and drops hand-written deta
   try {
     assertSuccess(ctx.run("render-tracker.mjs"));
     const rendered = ctx.tracker();
-    assert.match(rendered, /### Phase 1: Build\n\n- Phase status: todo\n\n- \[ \] Kind: implementation \| Status: todo \| Build the parser\n {2}- Surface: `src\/parser\.mjs`/u);
+    assert.match(
+      rendered,
+      /### Phase 1: Build\n\n- Phase status: todo\n\n- \[ \] Kind: implementation \| Status: todo \| T1 · Build the parser\n {2}- Surface: `src\/parser\.mjs`/u,
+    );
     assert.match(rendered, /- on-hold/u);
     assert.doesNotMatch(rendered, /Intent: hand-written phase intent|Order agreed in shaping|Method: run the CLI/u);
   } finally {

@@ -4,6 +4,8 @@ import path from "node:path";
 import { epicRoot, epicRuntimeRoot, readJson, requireFlag, resolveRoot, runtimeStatePath } from "./common.mjs";
 import { readAgentDecisions } from "./agent-decisions.mjs";
 import { readHumanQueue } from "./human-queue.mjs";
+import { AWAITING_REVIEW, describeGate, openGates, reviewPath } from "./loop-gates.mjs";
+import { pendingHumanInput } from "./loop-ingest.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 export function roleSummary(flags = {}) {
@@ -15,6 +17,7 @@ export function roleSummary(flags = {}) {
   const latestManagerReportPath = path.join(epicRuntimeRoot(root, slug), "latest-manager-report.md");
   const statePath = path.join(epicRoot(root, slug), "state-of-epic.md");
 
+  const pending = pendingHumanInput(root, slug, runtime.implementation_loop ?? {});
   const summary = {
     slug,
     mode: runtime.mode ?? null,
@@ -30,6 +33,18 @@ export function roleSummary(flags = {}) {
     open_human_queue: readHumanQueue(root, slug)
       .filter((item) => item.status === "open")
       .map(({ ask, blocks, id, kind }) => ({ ask, blocks, id, kind })),
+    open_gates: openGates(runtime.implementation_loop).map(({ blocking, covers, review, status }) => ({
+      blocking,
+      covers: covers ?? [],
+      path: reviewPath(slug, review),
+      review,
+      status,
+    })),
+    pending_human_input: {
+      inbox: pending.inbox.map((entry) => entry.id),
+      problems: pending.problems.map((entry) => entry.review),
+      reviews: pending.gates.map((gate) => gate.review),
+    },
     unconfirmed_agent_decisions: readAgentDecisions(root, slug)
       .filter((decision) => decision.state === "unconfirmed")
       .map(({ id, title }) => ({ id, title })),
@@ -46,11 +61,29 @@ export function roleSummary(flags = {}) {
   console.log(`Active task: ${summary.active_task ?? "none"}`);
   console.log(`State: ${summary.state_path}`);
   console.log(`Tracker: ${summary.tracker_path}`);
+  if (summary.implementation_loop?.status === AWAITING_REVIEW) {
+    console.log(`Loop: ${AWAITING_REVIEW} (a blocking gate ended the last manager turn)`);
+  }
   if (summary.open_human_queue.length > 0) {
     console.log("");
     console.log(`Open human-queue items (.epic-loop/epics/${slug}/human-queue.md):`);
     for (const item of summary.open_human_queue) {
       console.log(`- ${item.id} ${item.kind}: ${item.ask} (blocks: ${item.blocks})`);
+    }
+  }
+  const { inbox: pendingInbox, problems: pendingProblems, reviews: pendingReviews } = summary.pending_human_input;
+  if (pendingInbox.length + pendingReviews.length + pendingProblems.length > 0) {
+    console.log("");
+    console.log(
+      `Pending human input (ingested by a manager turn at the next role transition): ${pendingReviews.length} answered review(s)${pendingReviews.length ? ` (${pendingReviews.join(", ")})` : ""}, ${pendingInbox.length} inbox entr${pendingInbox.length === 1 ? "y" : "ies"}${pendingInbox.length ? ` (${pendingInbox.join(", ")})` : ""}${pendingProblems.length ? `, problem reports on ${pendingProblems.join(", ")}` : ""}.`,
+    );
+  }
+  const gates = openGates(runtime.implementation_loop);
+  if (gates.length > 0) {
+    console.log("");
+    console.log("Open gates (review pages the human answers):");
+    for (const gate of gates) {
+      console.log(`- ${describeGate(slug, gate)}`);
     }
   }
   if (summary.unconfirmed_agent_decisions.length > 0) {

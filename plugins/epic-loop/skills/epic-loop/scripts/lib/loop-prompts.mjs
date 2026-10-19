@@ -19,7 +19,7 @@ const CLAUDE_MANUAL_CONTINUE_NOTE = [
   "Tell the user that when they are ready to resume they should send: `continue loop mode`.",
 ].join("\n");
 
-export function buildTechleadPrompt(slug, iteration, stopChallenge = null) {
+export function buildTechleadPrompt(slug, iteration, stopChallenge = null, ingestNote = null) {
   const promptPath = `.epic-loop/epics/${slug}/.runtime/current-engineer-prompt.md`;
   const latestEngineerReportPath = `.epic-loop/epics/${slug}/${LATEST_ENGINEER_REPORT_RELATIVE_PATH}`;
 
@@ -31,13 +31,14 @@ export function buildTechleadPrompt(slug, iteration, stopChallenge = null) {
     SkillDir: SKILL_DIR,
   });
 
-  if (!stopChallenge) {
+  // One-time notes go right under the header line, so they frame the whole turn.
+  const notes = [ingestNote, stopChallenge ? formatStopChallenge(stopChallenge) : null].filter(Boolean);
+  if (notes.length === 0) {
     return prompt;
   }
 
-  // Right under the header line, so the challenge frames the whole turn.
   const [header, ...rest] = prompt.split("\n");
-  return [header, "", formatStopChallenge(stopChallenge), ...rest].join("\n");
+  return [header, ...notes.flatMap((note) => ["", note]), ...rest].join("\n");
 }
 
 // Stop-review rules by class (D16): what the manager does with each kind of stop request.
@@ -190,7 +191,7 @@ export function appendClaudeManualContinueNote(prompt) {
   return `${prompt.trim()}\n${CLAUDE_MANUAL_CONTINUE_NOTE}`;
 }
 
-function renderTemplate(template, values) {
+export function renderTemplate(template, values) {
   return Object.entries(values)
     .reduce((result, [key, value]) => result.replaceAll(`-<<*{{${key}}}*>>-`, value), template)
     .trim();

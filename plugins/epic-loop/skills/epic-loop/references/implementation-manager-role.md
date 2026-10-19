@@ -14,6 +14,7 @@ Counterpart role: [implementation-techlead-role.md](implementation-techlead-role
 - [Stop Review](#stop-review)
 - [Rules By Class](#rules-by-class)
 - [Stop Report](#stop-report)
+- [Review Pages](#review-pages)
 - [Handoff Constraint](#handoff-constraint)
 
 ## Identity
@@ -93,6 +94,7 @@ For `implementation-start-housekeeping`, the manager must:
 - run the applicable baseline checks named by local project instructions
 - classify obvious supporting artifacts so techlead can fold task-related cleanup into the appropriate task commit
 - surface ambiguities to techlead when pending files cannot be safely classified
+- record the epic's second language for the app's language switch (D9): `node <skill-dir>/scripts/set-second-language.mjs --slug "<epic-slug>" --lang <code>`, with the language the human writes in, or `--lang none` when it is English
 
 The manager must not create standalone commits only for epic tracker/docs updates, logs, compaction stubs, or other housekeeping-support artifacts. If artifact changes are clearly tied to a task, report that classification to techlead so they can be included in the task commit. If there is ambiguity, report it to techlead instead of guessing.
 
@@ -199,6 +201,51 @@ Saving contract:
 - The saved copy becomes the manager report (`.runtime/latest-manager-report.md`); the `stop-gate` event and `implementation_loop.last_stop_report_path` record its path.
 - The manager then commits the report with that review's `human-queue.md` and `decision-log.md` changes, in one commit (`docs(epic): stop report NN (class X)`), using the command `review-stop.mjs` prints; only those files, never `git add -A` (decision D32). It is the one commit a manager makes, an exception to "no standalone housekeeping commits": the report is the loop's message to the human, not housekeeping.
 - The final chat message is the same report in the user's language (D9: artifacts on disk stay English).
+
+**Stop report page (D25).** When the human owes the loop something (open H items, unconfirmed agent-made decisions), the report is also a review page:
+
+- The page builder builds a `stop-report` page: where the epic stands, one card per open H item (control `h<n>`: "done" for `human-action`, an explicit confirmation for `security-hold`, a choice for decisions), one card per unconfirmed agent-made decision (confirm/reverse choice `d<n>`), and the `continue-after-submit` check (unanswered counts as on).
+- `gate.mjs open --stop-report --review <id> --covers <every open H id>` registers it inside the stop-review turn; it refuses a page that misses an open H item, an unconfirmed decision or the switch.
+- `review-stop.mjs --outcome accepted` then leaves the loop `awaiting-review` instead of `idle`. The chat message is short: why the loop stopped and the page link.
+- On submit the doorbell wakes the session and an ingest turn records the answers. Switch on: the techlead continues or files the stop again (D38). Switch off: the loop goes `idle` after the ingest (`stop-report-paused`).
+- A stop with nothing to answer keeps the plain report.
+
+## Review Pages
+
+When the human must answer something that does not fit a line of chat (proportionality levels 2 and 3 in [review-pages.md](review-pages.md)), the manager has a review page built. It never writes the page or a translation in its own context; it keeps only the subagents' summaries.
+
+1. Pick a review id (`<YYYY-MM-DD>-<short-topic>`) and the second language: the language the human writes in (D9), unless it is English. If `state-of-epic.md` has no `Second language:` line yet or it differs, record it with `set-second-language.mjs`.
+2. Fill [../assets/templates/review-page-builder-brief.md](../assets/templates/review-page-builder-brief.md) with the question, the options and their consequences, the recommendation and its rule, and the evidence paths.
+3. Delegate it. The builder returns a gate summary: review id, URL, what is asked, controls, check result.
+   - Claude Code: the Agent tool with `subagent_type: "general-purpose"` and the default model.
+   - Codex: `spawn_agent` with the filled brief as the task and `fork_turns: "none"` (a fresh agent with no copy of your thread), no `model` (it inherits yours); then `wait_agent` for its final answer.
+4. If a second language is set, fill [../assets/templates/review-translator-brief.md](../assets/templates/review-translator-brief.md) and delegate it on a cheap model. It returns one line.
+   - Claude Code: the Agent tool with `model: "haiku"`.
+   - Codex: `spawn_agent` with `fork_turns: "none"`, `model: "gpt-6-luna"` (the fast, affordable tier in `codex debug models`) and `reasoning_effort: "low"`; then `wait_agent`. Setting a model needs `fork_turns: "none"`.
+5. Give the human the URL from the summary. If the server is not running, start it with `epic-loop serve --detach`. Codex's default `workspace-write` sandbox does not allow a command to listen on a port (`listen EPERM`): there, give the human the command (`npx epic-loop serve --detach` in the project) instead.
+
+### Gates
+
+Only the manager opens a gate (D1): it registers a checked review page as something the loop is waiting on.
+
+1. After the builder's summary (and the translator's, if any), register the page:
+   `node <skill-dir>/scripts/gate.mjs open --slug "<slug>" --review <review-id> [--covers H3,H4] [--blocking]`.
+   `--covers` names the open human-queue items the page answers. The review must have passed `review check`.
+2. Make the gate `--blocking` only when no independent work remains. Then this manager turn ends with the loop in `awaiting-review`: no techlead turn follows until the loop resumes. Without `--blocking` the loop keeps working and hands over to the techlead as usual.
+3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server). When the human submits, the doorbell wakes the idle session (Claude Code waiter hook, or `codex queue` from the server) and the loop resumes with an ingest turn; the page tells the human when they need to send a message instead.
+4. Settle gates in a later manager turn: `gate.mjs ingested --review <id>` once the answers are recorded, `gate.mjs close --review <id> [--reason …]` when the gate is done. `gate.mjs list` shows them; `role-summary.mjs` lists open gates.
+
+A problem report on a gate's page ("something is wrong") rings like a submit; the ingest turn lists it, and you have the page builder fix that page (same review id), re-run `review check`, reopen the gate with `gate.mjs open` and give the human the link again.
+
+Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Submitted answers come back to you in an ingest turn (below).
+
+### Ingest
+
+At every role transition the loop looks for human input: answers submitted on a gate's page and not yet ingested, and new entries in the epic inbox (`inbox.jsonl`, written from the epic home). If there is any, the next turn is a **manager ingest turn** (`assets/templates/implementation-manager-ingest-prompt.md`) before the techlead or engineer turn that would run. It also resumes a loop that is `awaiting-review`.
+
+- Record, do not plan (D23): decisions into `decision-log.md`, answered H items with `human-queue.mjs resolve`, agent-made decisions with `agent-decision.mjs confirm` (`--reversed` to reverse), inbox requests where they belong, and `gate.mjs close` for gates whose questions are all answered.
+- Hold kinds (D26): a `security-hold` resolves only from an explicit confirmation control answered true, passed as `--confirmation`; `human-action` resolves on "done"; `external-wait` never resolves here.
+- End with a short "what changed" report. The hook marks exactly the input the turn was given as ingested (`gate-ingested`, `inbox-ingested`), and the techlead's next prompt carries the report as "Human Input Ingested". Input that arrives during the turn waits for the next pickup.
 
 ## Handoff Constraint
 

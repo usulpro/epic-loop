@@ -1,0 +1,12 @@
+You are working in a disposable sandbox project. Act as the epic-loop manager of the epic `demo` (the skill is at .codex/skills/epic-loop). Everything below is the human's explicit instruction; do not ask questions.
+
+1. Read the "Review Pages" section of .codex/skills/epic-loop/references/implementation-manager-role.md and follow it exactly.
+2. Open a level-2 review with review id 2026-10-20-header-layout for this decision. The site header must be chosen before the landing page is built.
+   - Option "compact" (evidence: evidence/header-compact.svg): one-line header, logo left and navigation right; fits a 375 px screen without wrapping.
+   - Option "stacked" (evidence: evidence/header-stacked.svg): logo above the navigation; more room for navigation items, but 48 px more height on mobile.
+   - Recommend "compact", following the convention "mobile first: no extra height above the fold".
+   - Also give the human an optional comment field for anything else.
+3. The human writes in Russian, so the second language is ru (Russian).
+4. Build the page with the page builder subagent and then translate it with the translator subagent on the cheap model, using spawn_agent and wait_agent exactly as the section says for Codex, each with its brief template filled. Never write the page or the translation yourself.
+5. Run shell commands one at a time: no pipes, no ";" and no "&&".
+6. End with only the two subagent summaries.
