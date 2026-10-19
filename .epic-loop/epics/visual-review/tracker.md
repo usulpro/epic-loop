@@ -190,8 +190,8 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - the report page passes the static check and covers every open H item and unconfirmed agent decision.
   - Docs: `docs/human-gates.md`, `docs/stop-gate.md`.
 
-- [ ] Kind: verification | Status: todo | Human gates end to end on Claude Code and Codex
-  - Method: a sandbox fixture epic runs the loop unattended on each platform. The human side is played by browser MCP from the verifying session. Scenarios:
+- [x] Kind: verification | Status: done | Human gates end to end on Claude Code
+  - Method: a sandbox fixture epic runs the loop unattended in an interactive Claude Code session (the asyncRewake doorbell needs an interactive session). The human side is played from the verifying session by a browser script (CDP, as in sandbox run 15) or browser MCP. Scenarios:
     1. a non-blocking gate answered while the loop keeps working;
     2. a blocking gate whose submit rings the idle session and the loop resumes;
     3. a stop report page submitted with the switch on (resumes) and off (stays paused);
@@ -207,6 +207,13 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - screenshots of the pages.
   - Cleanup: stop servers, archive the runs.
   - Docs: `docs/human-gates.md`.
+
+- [ ] Kind: verification | Status: on-hold | Human gates end to end on Codex
+  - Hold: human-action (H4)
+  - Method: the same sandbox fixture and the seven scenarios as the Claude Code verification, run unattended in a Codex session with `danger-full-access` (the loop commits; sandbox-test D-7, D-17) and the review server started outside the sandbox; the doorbell is `codex queue` from the server (D37).
+  - Evidence: as for Claude Code, plus `doorbell.jsonl` ring records and the rollout's queued turns.
+  - Cleanup: stop servers, archive the runs.
+  - Docs: `docs/human-gates.md`, `docs/doorbell.md`.
 
 ### Phase 5: Epic Viewer
 

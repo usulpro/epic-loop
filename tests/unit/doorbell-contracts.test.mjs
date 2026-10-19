@@ -71,9 +71,9 @@ const cleanup = (...contexts) => {
 };
 
 // Starts the waiter as Claude Code would (payload on stdin) and resolves with its exit and stderr.
-function startWaiter(ctx, sessionId = SESSION) {
+function startWaiter(ctx, sessionId = SESSION, graceMs = "300") {
   const child = spawn(process.execPath, [scriptPath("doorbell-waiter.mjs"), "--root", ctx.root], {
-    env: { ...process.env, EPIC_LOOP_DOORBELL_POLL_MS: "50" },
+    env: { ...process.env, EPIC_LOOP_DOORBELL_GRACE_MS: graceMs, EPIC_LOOP_DOORBELL_POLL_MS: "50" },
     stdio: ["pipe", "ignore", "pipe"],
   });
   started.add(child.pid);
@@ -152,6 +152,39 @@ test("the waiter rings for an inbox entry, leaves when the loop moves on, and ta
     ctx.setStatus("running");
     assert.equal((await waiting.done).code, 0);
     assert.equal(fs.existsSync(lockPath(ctx)), false);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("a waiter started by the Stop of the manager turn that opened a blocking gate waits for awaiting-review instead of leaving", { timeout: 30000 }, async () => {
+  // Regression (sandbox run 16): the waiter and the main Stop hook run on the same event; the main
+  // hook sets awaiting-review a moment after the waiter reads the state.
+  const ctx = setupProject("bell-waiter-race", "claude-code", "running");
+  try {
+    const waiter = startWaiter(ctx, SESSION, "5000");
+    await sleep(300);
+    assert.equal(waiter.child.exitCode, null, "the waiter is still there during the grace");
+    ctx.setStatus("awaiting-review");
+    await waitForLock(ctx, waiter.child.pid);
+    ctx.submit("2026-10-20T10:00:00.000Z");
+    const rung = await waiter.done;
+    assert.equal(rung.code, 2);
+    assert.match(rung.stderr, /answered reviews 2026-10-20-header/u);
+  } finally {
+    cleanup(ctx);
+  }
+});
+
+test("a waiter with no blocking gate about to wait leaves at once", { timeout: 30000 }, async () => {
+  const ctx = setupProject("bell-waiter-nogate", "claude-code", "running");
+  try {
+    const runtimePath = path.join(ctx.epicDir, ".runtime", "runtime-state.json");
+    const runtime = readJsonFile(runtimePath);
+    fs.writeFileSync(runtimePath, JSON.stringify({ ...runtime, implementation_loop: { ...runtime.implementation_loop, gates: [] } }));
+    const started = Date.now();
+    assert.equal((await startWaiter(ctx, SESSION, "5000").done).code, 0);
+    assert.ok(Date.now() - started < 3000, "no grace wait without a blocking gate opened in this turn");
   } finally {
     cleanup(ctx);
   }

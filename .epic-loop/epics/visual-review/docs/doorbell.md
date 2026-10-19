@@ -159,7 +159,7 @@ Keep the role's background waiter (run 12 E1) as the pattern for a **role-level*
 
 - **Claude Code:**
   - The waiter is `scripts/doorbell-waiter.mjs`, installed on `Stop` and `SessionStart` with `asyncRewake`, `timeout: 86400` and `rewakeMessage: "epic-loop:"`.
-  - It holds a per-epic lock and polls about once per second for pending input. It rings by exiting 2 with a pointer carrying `[epic-loop doorbell]`.
+  - It holds a per-epic lock and polls about once per second for pending input. It rings by exiting 2 with a pointer carrying `[epic-loop doorbell]`. Sandbox run 16 found that a waiter started by the same `Stop` that sets `awaiting-review` could read the state too early and leave. It now waits up to 15 s when the session's manager turn opened a blocking gate. Run 16 also measured 1–2 s from submit to wake, unattended, on Claude Code.
 - **Codex (D37, provisional):** the review server runs `codex queue --thread <driver session id>`. The hook `session_id` equals the thread id: run 11's QD rollout and its registered thread id match. Rings are logged to `.runtime/doorbell.jsonl`.
 - **Both:**
   - The wake logs `doorbell-wake`, and the next `Stop` resumes the loop into the ingest turn.

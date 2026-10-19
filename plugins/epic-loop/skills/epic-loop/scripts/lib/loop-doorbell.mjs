@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { epicRuntimeRoot, readJson, resolveRoot, runtimeStatePath, sessionRoot } from "./common.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
-import { AWAITING_REVIEW } from "./loop-gates.mjs";
+import { AWAITING_REVIEW, readGates } from "./loop-gates.mjs";
 import { describePendingInput, hasInput, pendingHumanInput } from "./loop-ingest.mjs";
 
 // The Claude Code doorbell (D34 of the visual-review epic). An asyncRewake hook on Stop and
@@ -51,22 +51,54 @@ function readLockPid(lockPath) {
   }
 }
 
-// The epic whose loop this session drives while it awaits a review, or null.
-export function awaitingEpicFor(root, sessionId) {
+const DEFAULT_GRACE_MS = 15000;
+
+function boundEpic(root, sessionId) {
   const sessions = readJson(path.join(sessionRoot(root), "session-bindings.json"), {})?.sessions ?? {};
   const binding = sessions[sessionId];
-  if (!binding || binding.active !== true || !binding.epic_slug) return null;
-  const loop = readJson(runtimeStatePath(root, binding.epic_slug), {})?.implementation_loop ?? {};
-  return loop.status === AWAITING_REVIEW && loop.driver_session_id === sessionId ? binding.epic_slug : null;
+  return binding && binding.active === true && binding.epic_slug ? binding.epic_slug : null;
+}
+
+const readLoopState = (root, slug) => readJson(runtimeStatePath(root, slug), {})?.implementation_loop ?? {};
+
+// The epic whose loop this session drives while it awaits a review, or null.
+export function awaitingEpicFor(root, sessionId) {
+  const slug = boundEpic(root, sessionId);
+  if (!slug) return null;
+  const loop = readLoopState(root, slug);
+  return loop.status === AWAITING_REVIEW && loop.driver_session_id === sessionId ? slug : null;
+}
+
+// The Stop of the manager turn that opened a blocking gate starts this waiter while the main hook,
+// on the same event, is still setting `awaiting-review`: wait a moment for it instead of leaving.
+function aboutToAwait(loop, sessionId) {
+  return (
+    loop.driver_session_id === sessionId &&
+    loop.status === "running" &&
+    loop.current_role === "manager" &&
+    readGates(loop).some((gate) => gate.blocking && gate.status === "open" && gate.opened_iteration === loop.iteration)
+  );
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForAwaitingEpic(root, sessionId, env) {
+  const slug = boundEpic(root, sessionId);
+  if (!slug) return null;
+  const graceMs = Number(env.EPIC_LOOP_DOORBELL_GRACE_MS) >= 0 && env.EPIC_LOOP_DOORBELL_GRACE_MS !== undefined ? Number(env.EPIC_LOOP_DOORBELL_GRACE_MS) : DEFAULT_GRACE_MS;
+  const deadline = Date.now() + graceMs;
+  for (;;) {
+    if (awaitingEpicFor(root, sessionId)) return slug;
+    if (Date.now() >= deadline || !aboutToAwait(readLoopState(root, slug), sessionId)) return null;
+    await sleep(100);
+  }
+}
 
 // Returns the exit code: 0 (nothing to do, another waiter, the loop moved on, lock lost) or 2 (rang).
 export async function runDoorbellWaiter({ payload, root: rootFlag, env = process.env, stderr = process.stderr }) {
   const root = resolveRoot(rootFlag ?? payload?.cwd);
   const sessionId = payload?.session_id ? String(payload.session_id) : null;
-  const slug = sessionId ? awaitingEpicFor(root, sessionId) : null;
+  const slug = sessionId ? await waitForAwaitingEpic(root, sessionId, env) : null;
   if (!slug) return 0;
 
   const lockPath = waiterLockPath(root, slug);

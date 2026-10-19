@@ -508,3 +508,24 @@
   - techlead reran stop-report, stop-gate, ingest and doorbell tests 42/42
   - test:unit 238/238, validate passes, browser-check passes
 - Residual risk: the manager page-building step inside a stop review is only prompt-driven and unproven on a real host; Codex variants wait for H3
+
+## 2026-10-19T20:51:31+00:00 - done (Codex half split into phase-4-task-6, on hold for H4)
+
+- Phase: Phase 4 - Human Gates In The Loop
+- Task: Human gates end to end on Claude Code
+- Verdict: done (Codex half split into phase-4-task-6, on hold for H4)
+- Changed:
+  - sandbox run 16 (runs/2026-10-20-human-gates-claude: log, driver with human.mjs CDP/inbox/problem steps)
+  - fix: the doorbell waiter waits up to 15 s for awaiting-review when the driver's manager turn opened a blocking gate (it raced the main Stop hook and exited), with two waiter tests
+  - hooks reference and docs/doorbell.md note
+  - LEARNINGS D-20 and three needs-tuning entries
+  - tracker split of the verification (Claude Code / Codex) and H4 queued by the manager
+- Verification:
+  - Run 16, unattended interactive Claude Code, no human chat message: G (non-blocking gate + inbox ingested, problem report rang 1 s after the POST and led to a reworded page and reopened gate, blocking gate woke the idle session and resumed via ingest, security-hold H3 stayed open), SON (stop report page, switch on: resumed
+  - reversed D1 became D2 and rework), SOFF (switch off: stop-report-paused, no further turns)
+  - submit to wake 1-2 s
+  - about $12.1
+  - reruns: G after the waiter fix, SON after a dontAsk give-up (prompt rule)
+  - techlead reran doorbell tests 12/12 and checked the five restore-tested bundles
+  - test:unit 240/240, validate passes, browser-check passes
+- Residual risk: Codex half on hold (H4); a duplicate ring after each wake is ignored as synthetic; the turn after a problem ingest delays the next answers' ingest by one techlead turn (D23)

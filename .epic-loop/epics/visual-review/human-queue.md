@@ -11,6 +11,13 @@ What the implementation loop needs from the human without stopping for it. Writt
   - Default: none
   - Blocks: the Codex end-to-end doorbell check (queued message during a running loop) and the Codex mechanism choice in Phase 2
   - Raised: 2026-10-19
+- **H4**
+  - Kind: human-action
+  - Ask: Approve one Codex sandbox run of the Phase 4 human-gates verification with -s danger-full-access -a never (the loop commits task work; sandbox-test D-7), and confirm Codex quota for about 3-5 M tokens
+  - Why: workspace-write keeps .git read-only (sandbox-test D-17), so an unattended Codex loop cannot commit; running dangerous sandbox modes needs the human's explicit per-run approval
+  - Default: none
+  - Blocks: the Codex half of the Phase 4 verification and Phase 4 closure; can be approved together with H3
+  - Raised: 2026-10-19
 
 ## Resolved
 
