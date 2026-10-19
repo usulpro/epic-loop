@@ -40,7 +40,11 @@ export function roleSummary(flags = {}) {
       review,
       status,
     })),
-    pending_human_input: { inbox: pending.inbox.map((entry) => entry.id), reviews: pending.gates.map((gate) => gate.review) },
+    pending_human_input: {
+      inbox: pending.inbox.map((entry) => entry.id),
+      problems: pending.problems.map((entry) => entry.review),
+      reviews: pending.gates.map((gate) => gate.review),
+    },
     unconfirmed_agent_decisions: readAgentDecisions(root, slug)
       .filter((decision) => decision.state === "unconfirmed")
       .map(({ id, title }) => ({ id, title })),
@@ -67,11 +71,11 @@ export function roleSummary(flags = {}) {
       console.log(`- ${item.id} ${item.kind}: ${item.ask} (blocks: ${item.blocks})`);
     }
   }
-  const { inbox: pendingInbox, reviews: pendingReviews } = summary.pending_human_input;
-  if (pendingInbox.length + pendingReviews.length > 0) {
+  const { inbox: pendingInbox, problems: pendingProblems, reviews: pendingReviews } = summary.pending_human_input;
+  if (pendingInbox.length + pendingReviews.length + pendingProblems.length > 0) {
     console.log("");
     console.log(
-      `Pending human input (ingested by a manager turn at the next role transition): ${pendingReviews.length} answered review(s)${pendingReviews.length ? ` (${pendingReviews.join(", ")})` : ""}, ${pendingInbox.length} inbox entr${pendingInbox.length === 1 ? "y" : "ies"}${pendingInbox.length ? ` (${pendingInbox.join(", ")})` : ""}.`,
+      `Pending human input (ingested by a manager turn at the next role transition): ${pendingReviews.length} answered review(s)${pendingReviews.length ? ` (${pendingReviews.join(", ")})` : ""}, ${pendingInbox.length} inbox entr${pendingInbox.length === 1 ? "y" : "ies"}${pendingInbox.length ? ` (${pendingInbox.join(", ")})` : ""}${pendingProblems.length ? `, problem reports on ${pendingProblems.join(", ")}` : ""}.`,
     );
   }
   const gates = openGates(runtime.implementation_loop);

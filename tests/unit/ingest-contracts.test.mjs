@@ -101,6 +101,7 @@ for (const platform of PLATFORMS) {
         inbox_ids: [],
         inbox_through: null,
         iteration: 4,
+        problems: [],
         skipped_role: "engineer",
       });
       const [start] = ctx.events("ingest-start");

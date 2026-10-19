@@ -487,3 +487,24 @@
   - techlead reran doorbell, cli-package, gate and ingest tests 41/41 and found no leftover processes
   - test:unit 233/233, validate passes
 - Residual risk: real hosts unproven: asyncRewake wake and rewakeMessage on a real idle session, a duplicate ring racing the resume, codex queue into an awaiting thread (H3); problem reports do not ring (Task 4)
+
+## 2026-10-19T20:13:03+00:00 - done
+
+- Phase: Phase 4 - Human Gates In The Loop
+- Task: Stop report and human queue on a page, with auto-continue
+- Verdict: done
+- Changed:
+  - gate.mjs open --stop-report (stop-review turn only, always blocking, refuses a page that misses an open H item, a d<n> control for an unconfirmed agent decision or the continue-after-submit check)
+  - accepted stop with that gate goes awaiting-review with report_path and the review on the stop-gate event
+  - continue-after-submit read at the ingest Stop (unanswered = on -> techlead with the auto-continue note, stop-report-continue
+  - false -> idle, stop-report-paused)
+  - problem reports as pending input with problems_through, waiter and Codex ring (reason problem), ingest prompt with fix steps, problems-ingested
+  - stop-review prompt Stop Report Page section and short chat message
+  - manager role, review-pages h<n>/d<n> naming, ingest prompt problem step
+  - role-summary and epic home stop-report label
+  - docs/human-gates.md
+- Verification:
+  - stop-report-contracts.test.mjs 5 tests (awaiting after accept, coverage refusals and stop-review-only, switch on resumes, switch off pauses, problem report rings/ingests once), Codex ring on a problem and the epic home label in doorbell and review-server tests
+  - techlead reran stop-report, stop-gate, ingest and doorbell tests 42/42
+  - test:unit 238/238, validate passes, browser-check passes
+- Residual risk: the manager page-building step inside a stop review is only prompt-driven and unproven on a real host; Codex variants wait for H3

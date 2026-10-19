@@ -66,6 +66,11 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
   - the agent-made decisions with confirm/reverse;
   - the "continue after submit" switch, on by default (D25).
 - On submit: ring, then manager ingest, then the techlead. If the answers unblock work and the switch is on, the loop resumes without a chat message. If the switch is off, the answers are recorded and the loop stays paused.
+- **Implementation (Phase 4 Task 4).**
+  - **Opening the gate:** in the stop-review turn, `gate.mjs open --stop-report --review <id> --covers <every open H id>` registers the page as a blocking gate with `kind: "stop-report"`.
+    - It refuses a page that misses an open H item (in `--covers`, with a control `h<n>`), an unconfirmed agent-made decision (a control `d<n>`), or the `continue-after-submit` check.
+    - `review-stop --outcome accepted` then sets the loop to `awaiting-review` instead of `idle`. The gate keeps `stop_class` and `report_path`, and the `stop-gate` event carries `review`.
+  - **The switch:** it is read when the ingest turn stops. Unanswered or true means the loop continues to the techlead (`stop-report-continue`, D38). Only an explicit false sets the loop `idle` (`stop-report-paused`).
 
 ## Hold Kinds In The Loop (D26)
 
@@ -78,3 +83,9 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
 
 - The "something is wrong" button (D21) rings like a submit.
 - The manager has the page builder fix the page, re-checks it, and notifies the human with the deep link.
+- **Implementation (Phase 4 Task 4).**
+  - New lines in a gate review's `problems.jsonl` after the gate's `problems_through` are pending input:
+    - the waiter rings for them, and the server rings Codex with `reason: "problem"`;
+    - the ingest turn lists them verbatim with the fix steps;
+    - its Stop advances `problems_through` and logs `problems-ingested`.
+  - Reopening a gate keeps `problems_through` and the last ingested answers.

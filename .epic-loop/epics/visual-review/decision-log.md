@@ -158,6 +158,9 @@
 - **D37 — Codex doorbell adapter: the server rings the driver thread with codex queue, pending the H3 end-to-end run** (2026-10-19; agent-made, stop class C; unconfirmed).
   - Default taken: the review server runs codex queue --thread <driver session id> --message <pointer> on a submit or inbox entry while the loop awaits a review; the UserPromptSubmit fallback covers the rest; the Codex mechanism stays provisional until the H3 run confirms it
   - Why: The Codex matrix (run 11) shows codex queue delivering idle, mid-turn (held to turn end), 15 min idle and after resume; only the running-loop cell and after-Esc are open, and the loop is idle while awaiting a review; building the adapter now unblocks Phase 4 and H3 only verifies it
+- **D38 — Auto-continue after a stop report: the techlead judges whether the answers unblock work** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: with continue-after-submit on (the default, unanswered counts as on), the submit resumes the loop into a manager ingest turn and then the techlead, which continues or files a new stop; with it off, the ingest turn records the answers and the loop returns to idle without a techlead turn
+  - Why: D25 leaves open who decides that work is unblocked; the techlead already owns planning after ingest (D23), and a hook cannot judge partial answers; a still-blocked techlead files a repeated stop that the manager accepts
 
 ## Open Questions
 

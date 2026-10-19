@@ -84,9 +84,14 @@ function gateNotices(epic, reviews, gates) {
   const items = gates
     .map((gate) => {
       const href = `/${encodeURIComponent(epic.slug)}/reviews/${encodeURIComponent(gate.review)}/`;
-      const text = gate.blocking ? "The loop waits for this review." : "The loop keeps working; answer when you can.";
+      const text =
+        gate.kind === "stop-report"
+          ? "The loop stopped and waits for this report to be answered."
+          : gate.blocking
+            ? "The loop waits for this review."
+            : "The loop keeps working; answer when you can.";
       return `          <div class="el-notice ${gate.blocking ? "el-notice--danger" : "el-notice--action"}" data-gate="${escapeHtml(gate.review)}" data-blocking="${gate.blocking}">
-            <span class="el-tag ${gate.blocking ? "el-tag--danger" : "el-tag--accent"}">${gate.blocking ? "blocking gate" : "gate"}</span>
+            <span class="el-tag ${gate.blocking ? "el-tag--danger" : "el-tag--accent"}">${gate.kind === "stop-report" ? "stop report" : gate.blocking ? "blocking gate" : "gate"}</span>
             <div><div class="el-notice__title">${escapeHtml(titleOf(gate.review))}</div><p class="el-notice__text">${text}${gate.status === "open" ? "" : ` · ${escapeHtml(gate.status)}`}</p></div>
             <a class="el-btn el-btn--primary" href="${href}">Open</a>
           </div>`;

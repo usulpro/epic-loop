@@ -18,8 +18,12 @@ function readJson(file) {
   }
 }
 
-export function doorbellPointer(slug, { inbox = [], reviews = [] } = {}) {
-  const parts = [reviews.length ? `answered reviews ${reviews.join(", ")}` : null, inbox.length ? `inbox ${inbox.join(", ")}` : null].filter(Boolean);
+export function doorbellPointer(slug, { inbox = [], problems = [], reviews = [] } = {}) {
+  const parts = [
+    reviews.length ? `answered reviews ${reviews.join(", ")}` : null,
+    problems.length ? `problem reports on ${problems.join(", ")}` : null,
+    inbox.length ? `inbox ${inbox.join(", ")}` : null,
+  ].filter(Boolean);
   return `${DOORBELL_MARKER} epic ${slug}: the human's input arrived (${parts.join("; ") || "new input"}). Reply in one line and end the turn; the loop ingests it now.`;
 }
 
@@ -66,7 +70,8 @@ export function ringDoorbell(root, slug, { inbox, reason, review }) {
   }
 
   const bin = process.env.EPIC_LOOP_CODEX_BIN || "codex";
-  const message = doorbellPointer(slug, { inbox: inbox ? [inbox] : [], reviews: review ? [review] : [] });
+  const target = review ? [review] : [];
+  const message = doorbellPointer(slug, { inbox: inbox ? [inbox] : [], problems: reason === "problem" ? target : [], reviews: reason === "problem" ? [] : target });
   const args = ["queue", "--thread", driver, "--message", message];
   const command = [bin, ...args];
   let settled = false;

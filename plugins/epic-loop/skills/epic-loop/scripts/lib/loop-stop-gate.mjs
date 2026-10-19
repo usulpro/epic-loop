@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { epicRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
+import { AWAITING_REVIEW, readGates, reviewPath } from "./loop-gates.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject } from "./loop.mjs";
 import { missingStopReportHeadings, saveStopReport } from "./stop-reports.mjs";
 
@@ -104,6 +105,10 @@ export function reviewStop(flags = {}) {
   // Accepting requires the English stop report; it is checked before anything changes.
   const reportBody = accepted ? readStopReport(flags) : null;
   const reportPath = accepted ? saveStopReport(root, slug, { body: reportBody, reason: request.reason, stopClass: request.class }) : null;
+  // An accepted stop with a stop-report page (gate.mjs open --stop-report in this turn) waits for
+  // the human's answers on that page instead of going idle (D25).
+  const reportGate = accepted ? readGates(loop).find((gate) => gate.kind === "stop-report" && gate.status === "open" && gate.opened_iteration === loop.iteration) : null;
+  const gates = reportGate ? readGates(loop).map((gate) => (gate === reportGate ? { ...gate, report_path: reportPath, stop_class: request.class } : gate)) : loop.gates;
 
   writeJson(runtimePath, {
     ...runtime,
@@ -114,7 +119,8 @@ export function reviewStop(flags = {}) {
       last_transition_by: "review-stop",
       next_role: nextRole,
       next_role_set_iteration: loop.iteration,
-      status: accepted ? "idle" : "running",
+      status: reportGate ? AWAITING_REVIEW : accepted ? "idle" : "running",
+      ...(gates ? { gates } : {}),
       ...(accepted ? { last_stop_report_path: reportPath, stop_report_copy_iteration: loop.iteration } : {}),
       stop_challenge: accepted ? null : { blocks: request.blocks, class: request.class, instruction, reason: request.reason, round: request.round },
       stop_request: null,
@@ -133,6 +139,7 @@ export function reviewStop(flags = {}) {
     outcome,
     reason: request.reason,
     ...(reportPath ? { report_path: reportPath } : {}),
+    ...(reportGate ? { review: reportGate.review } : {}),
     round: request.round,
     slug,
     timestamp,
@@ -147,6 +154,12 @@ export function reviewStop(flags = {}) {
   console.log("Commit the report with this review's queue and decision changes (only these files):");
   for (const line of stopReportCommitCommand(root, slug, reportPath, request.class)) {
     console.log(`  ${line}`);
+  }
+  if (reportGate) {
+    console.log(
+      `The loop waits for the stop report page ${reviewPath(slug, reportGate.review)}; end the turn with a short summary (why the loop stopped) and that link, in the user's language.`,
+    );
+    return;
   }
   console.log("The loop goes idle; end the turn with the same report in the user's language.");
 }

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { epicRoot, nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson } from "./common.mjs";
+import { readAgentDecisions } from "./agent-decisions.mjs";
 import { readHumanQueue } from "./human-queue.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject } from "./loop.mjs";
@@ -10,10 +11,13 @@ import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject } from "./loop.
 // review page the human answers. Only a manager turn opens one (D1). A blocking gate ends the
 // manager's turn with the loop in `awaiting-review`; a non-blocking one leaves the loop running.
 // Gates live in `implementation_loop.gates`:
-//   { review, covers: ["H3"], blocking, status: open|submitted|ingested|closed, opened_at,
-//     opened_iteration, submitted_at?, ingested_at?, closed_at?, close_reason? }
+//   { review, covers: ["H3"], blocking, kind?: "stop-report", status: open|submitted|ingested|closed,
+//     opened_at, opened_iteration, submitted_at?, ingested_at?, problems_through, closed_at?, close_reason? }
+// A stop-report gate (D25) carries the accepted stop's report page and its
+// `continue-after-submit` switch; it opens only in a manager stop-review turn.
 export const AWAITING_REVIEW = "awaiting-review";
 const OPEN_STATUSES = ["open", "submitted", "ingested"];
+export const CONTINUE_CONTROL = "continue-after-submit";
 
 export function gateCommand(flags = {}, positionals = []) {
   const root = resolveRoot(flags.root);
@@ -42,9 +46,13 @@ export function reviewPath(slug, review) {
 function openGate(root, slug, flags) {
   const review = requireReviewId(flags);
   const covers = parseCovers(flags.covers);
-  const blocking = flags.blocking === true;
+  const stopReport = flags["stop-report"] === true;
+  const blocking = stopReport || flags.blocking === true;
   const { loop, runtime, runtimePath } = readLoop(root, slug);
   requireManagerTurn(loop, "open");
+  if (stopReport && !(loop.stop_request && loop.stop_review_iteration === loop.iteration)) {
+    throw new Error("gate open --stop-report runs only inside a manager stop-review turn, before review-stop.mjs.");
+  }
 
   const reviewJson = readJson(path.join(epicRoot(root, slug), "reviews", review, "review.json"), null);
   if (!reviewJson || typeof reviewJson !== "object") {
@@ -64,21 +72,27 @@ function openGate(root, slug, flags) {
     throw new Error(`--covers names ${unknown.join(", ")}, which ${unknown.length === 1 ? "is not an open item" : "are not open items"} in human-queue.md.`);
   }
 
+  if (stopReport) requireStopReportCoverage(root, slug, covers, openItems, reviewJson.schema);
+
   const timestamp = nowIso();
   const previous = readGates(loop).find((item) => item.review === review);
-  // Reopening keeps the last submittedAt seen, so the same answers are not reported twice.
+  // Reopening keeps the last submittedAt seen and the problem reports already ingested, so
+  // neither is reported twice; a new gate starts after the problems already on disk.
   const gate = {
     blocking,
     covers,
+    ...(stopReport ? { kind: "stop-report", stop_class: loop.stop_request.class } : previous?.kind ? { kind: previous.kind, stop_class: previous.stop_class } : {}),
     opened_at: timestamp,
     opened_iteration: loop.iteration,
+    problems_through: Number.isFinite(previous?.problems_through) ? previous.problems_through : countProblems(root, slug, review),
     review,
     status: "open",
     ...(previous?.submitted_at ? { submitted_at: previous.submitted_at } : {}),
+    ...(previous?.ingested_submitted_at ? { ingested_submitted_at: previous.ingested_submitted_at } : {}),
   };
   const others = readGates(loop).filter((item) => item.review !== review);
   writeLoop(runtimePath, runtime, { ...loop, gates: [...others, gate] }, timestamp);
-  logGate(root, slug, loop, "gate-opened", timestamp, { blocking, covers, review });
+  logGate(root, slug, loop, "gate-opened", timestamp, { blocking, covers, review, ...(gate.kind ? { kind: gate.kind } : {}) });
   console.log(`Opened ${blocking ? "a blocking" : "a non-blocking"} gate for review ${review}: ${reviewPath(slug, review)}`);
   if (blocking) console.log("The loop waits in awaiting-review when this manager turn ends.");
 }
@@ -127,7 +141,40 @@ function listGates(root, slug, flags) {
 
 export function describeGate(slug, gate) {
   const covers = gate.covers?.length ? `covers ${gate.covers.join(", ")}` : "covers no H item";
-  return `${gate.review} [${gate.status}] ${gate.blocking ? "blocking" : "non-blocking"}, ${covers}: ${reviewPath(slug, gate.review)}`;
+  const kind = gate.kind === "stop-report" ? `stop report (class ${gate.stop_class ?? "?"})` : gate.blocking ? "blocking" : "non-blocking";
+  return `${gate.review} [${gate.status}] ${kind}, ${covers}: ${reviewPath(slug, gate.review)}`;
+}
+
+// A stop-report page answers everything the human owes the loop: every open H item (in
+// --covers, with a control named h<n>), every unconfirmed agent-made decision (a control named
+// d<n>), and the continue-after-submit switch.
+function requireStopReportCoverage(root, slug, covers, openItems, schema) {
+  const names = (Array.isArray(schema.controls) ? schema.controls : []).map((control) => String(control.name ?? "").toLowerCase());
+  const named = (id) => names.some((name) => name === id.toLowerCase() || name.startsWith(`${id.toLowerCase()}-`));
+  const missingCovers = [...openItems].filter((id) => !covers.includes(id));
+  const missingH = covers.filter((id) => !named(id));
+  const missingD = readAgentDecisions(root, slug)
+    .filter((decision) => decision.state === "unconfirmed")
+    .map((decision) => decision.id)
+    .filter((id) => !named(id));
+  const problems = [
+    missingCovers.length ? `--covers misses open human-queue items ${missingCovers.join(", ")}` : null,
+    missingH.length ? `the page has no control named ${missingH.map((id) => id.toLowerCase()).join(", ")}` : null,
+    missingD.length ? `the page has no control for unconfirmed agent-made decisions ${missingD.join(", ")} (name it d<n>)` : null,
+    names.includes(CONTINUE_CONTROL) ? null : `the page has no ${CONTINUE_CONTROL} check`,
+  ].filter(Boolean);
+  if (problems.length > 0) throw new Error(`The stop-report page does not cover what the human owes the loop: ${problems.join("; ")}.`);
+}
+
+export function countProblems(root, slug, review) {
+  try {
+    return fs
+      .readFileSync(path.join(epicRoot(root, slug), "reviews", review, "problems.jsonl"), "utf8")
+      .split("\n")
+      .filter((line) => line.trim()).length;
+  } catch {
+    return 0;
+  }
 }
 
 // Stop path: a manager turn that opened a blocking gate (still unanswered) ends here, with no

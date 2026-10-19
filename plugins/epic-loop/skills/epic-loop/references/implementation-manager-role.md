@@ -201,6 +201,14 @@ Saving contract:
 - The manager then commits the report with that review's `human-queue.md` and `decision-log.md` changes, in one commit (`docs(epic): stop report NN (class X)`), using the command `review-stop.mjs` prints; only those files, never `git add -A` (decision D32). It is the one commit a manager makes, an exception to "no standalone housekeeping commits": the report is the loop's message to the human, not housekeeping.
 - The final chat message is the same report in the user's language (D9: artifacts on disk stay English).
 
+**Stop report page (D25).** When the human owes the loop something (open H items, unconfirmed agent-made decisions), the report is also a review page:
+
+- The page builder builds a `stop-report` page: where the epic stands, one card per open H item (control `h<n>`: "done" for `human-action`, an explicit confirmation for `security-hold`, a choice for decisions), one card per unconfirmed agent-made decision (confirm/reverse choice `d<n>`), and the `continue-after-submit` check (unanswered counts as on).
+- `gate.mjs open --stop-report --review <id> --covers <every open H id>` registers it inside the stop-review turn; it refuses a page that misses an open H item, an unconfirmed decision or the switch.
+- `review-stop.mjs --outcome accepted` then leaves the loop `awaiting-review` instead of `idle`. The chat message is short: why the loop stopped and the page link.
+- On submit the doorbell wakes the session and an ingest turn records the answers. Switch on: the techlead continues or files the stop again (D38). Switch off: the loop goes `idle` after the ingest (`stop-report-paused`).
+- A stop with nothing to answer keeps the plain report.
+
 ## Review Pages
 
 When the human must answer something that does not fit a line of chat (proportionality levels 2 and 3 in [review-pages.md](review-pages.md)), the manager has a review page built. It never writes the page or a translation in its own context; it keeps only the subagents' summaries.
@@ -225,6 +233,8 @@ Only the manager opens a gate (D1): it registers a checked review page as someth
 2. Make the gate `--blocking` only when no independent work remains. Then this manager turn ends with the loop in `awaiting-review`: no techlead turn follows until the loop resumes. Without `--blocking` the loop keeps working and hands over to the techlead as usual.
 3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server). When the human submits, the doorbell wakes the idle session (Claude Code waiter hook, or `codex queue` from the server) and the loop resumes with an ingest turn; the page tells the human when they need to send a message instead.
 4. Settle gates in a later manager turn: `gate.mjs ingested --review <id>` once the answers are recorded, `gate.mjs close --review <id> [--reason …]` when the gate is done. `gate.mjs list` shows them; `role-summary.mjs` lists open gates.
+
+A problem report on a gate's page ("something is wrong") rings like a submit; the ingest turn lists it, and you have the page builder fix that page (same review id), re-run `review check`, reopen the gate with `gate.mjs open` and give the human the link again.
 
 Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Submitted answers come back to you in an ingest turn (below).
 

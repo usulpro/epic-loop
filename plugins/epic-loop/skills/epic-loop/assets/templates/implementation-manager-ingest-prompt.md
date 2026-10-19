@@ -21,7 +21,8 @@ The human answered a review page or wrote to the epic inbox. Record that input i
 5. Record each inbox request where it belongs (a decision, a constraint, or a note in `state-of-epic.md`), quoting it.
 6. Close each gate whose questions are all answered:
    `-<<*{{GateClose}}*>>-`
-7. Do not add tasks, reorder, set task statuses or write briefs: that is the techlead's job after this turn.
+7. For a problem report: have the page builder fix that page (same review id), re-run `review check`, reopen its gate with `gate.mjs open` (same flags; one entry is kept), and put the link in your report.
+8. Do not add tasks, reorder, set task statuses or write briefs: that is the techlead's job after this turn.
 
 ## Hold Kinds
 

@@ -75,7 +75,10 @@ for (const platform of PLATFORMS) {
     try {
       assertSuccess(ctx.gate(["open", "--review", REVIEW, "--covers", "h1"]));
       const [gate] = ctx.loop().gates;
-      assert.deepEqual({ ...gate, opened_at: undefined }, { blocking: false, covers: ["H1"], opened_at: undefined, opened_iteration: 2, review: REVIEW, status: "open" });
+      assert.deepEqual(
+        { ...gate, opened_at: undefined },
+        { blocking: false, covers: ["H1"], opened_at: undefined, opened_iteration: 2, problems_through: 0, review: REVIEW, status: "open" },
+      );
 
       const next = ctx.stop();
       assert.equal(next.decision, "block");

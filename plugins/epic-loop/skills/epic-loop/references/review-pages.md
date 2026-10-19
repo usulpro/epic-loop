@@ -77,6 +77,7 @@ Use this skeleton; the runtime adds the submit bar, autosave, theme and language
 - **Each option states its consequence** in its `note`: what happens if the human picks it.
 - **Evidence is on the card**: the screenshot, numbers or diff the decision rests on, not a link to elsewhere. The human sees only the page: never cite a repo path (`decision-log.md`, `.epic-loop/…`) as evidence; put its content on the card.
 - **A recommendation names its rule**: `recommended="…" rule="D16"`. Keep `rule` short (a decision id or a few words): it is shown next to the tag.
+- **Name controls after what they answer** on pages that answer human-queue items or agent-made decisions: `h3` (or `h3-…`) for item H3, `d31` for decision D31. A `stop-report` page answers every open H item and every unconfirmed decision this way, and ends with `<el-check name="continue-after-submit">Continue the loop after I submit</el-check>`; `gate.mjs open --stop-report` checks it.
 - **An agent-made decision to confirm or reverse** is a choice of `confirm` and `reverse`; the `reverse` note says what reversing costs. Its `rule` is the rule the decision followed, never the decision's own id.
 - **Ask only what can be answered from the screen.** If the answer needs a file the human cannot see, show it.
 - **No question without a visible or cost difference.**

@@ -70,7 +70,7 @@ export function listOpenGates(root, slug) {
     if (!Array.isArray(gates)) return [];
     return gates
       .filter((gate) => gate && typeof gate === "object" && isName(gate.review) && OPEN_GATE_STATUSES.includes(gate.status))
-      .map((gate) => ({ review: gate.review, blocking: gate.blocking === true, status: gate.status }));
+      .map((gate) => ({ review: gate.review, blocking: gate.blocking === true, kind: gate.kind === "stop-report" ? "stop-report" : null, status: gate.status }));
   } catch {
     return [];
   }

@@ -6,7 +6,7 @@ import { isWaitingForBackgroundTasks, waitedMs, waitingTurnGuidance } from "./lo
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
 import { AWAITING_REVIEW, openGates, reviewPath } from "./loop-gates.mjs";
 import { isDoorbellWake } from "./loop-doorbell.mjs";
-import { pendingHumanInput } from "./loop-ingest.mjs";
+import { describePendingInput, hasInput, pendingHumanInput } from "./loop-ingest.mjs";
 import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
 // A user message never stops the implementation loop by itself. The loop stops only on an
@@ -55,13 +55,10 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
 
 function pendingInputNote(projectRoot, slug, loop) {
   const pending = pendingHumanInput(projectRoot, slug, loop);
-  const parts = [
-    pending.gates.length ? `answered reviews ${pending.gates.map((gate) => gate.review).join(", ")}` : null,
-    pending.inbox.length ? `inbox ${pending.inbox.map((entry) => entry.id).join(", ")}` : null,
-  ].filter(Boolean);
-  if (parts.length === 0) {
+  if (!hasInput(pending)) {
     return null;
   }
+  const parts = [describePendingInput(pending)];
   return loop.status === "running"
     ? `Pending human input (${parts.join("; ")}) is picked up by a manager ingest turn at the next role transition.`
     : `Pending human input (${parts.join("; ")}) waits until the loop is resumed: ${resumeCommand(slug)}`;
@@ -244,7 +241,13 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
 // the human's input arrived, and the next Stop resumes the loop with the ingest turn.
 function doorbellWake(projectRoot, slug, loop, logBase) {
   const pending = pendingHumanInput(projectRoot, slug, loop);
-  appendLoopLog(projectRoot, { action: "doorbell-wake", inbox_ids: pending.inbox.map((entry) => entry.id), reviews: pending.gates.map((gate) => gate.review), ...logBase });
+  appendLoopLog(projectRoot, {
+    action: "doorbell-wake",
+    inbox_ids: pending.inbox.map((entry) => entry.id),
+    problem_reviews: pending.problems.map((entry) => entry.review),
+    reviews: pending.gates.map((gate) => gate.review),
+    ...logBase,
+  });
   return userPromptContext(
     `[epic-loop] epic=${slug} mode=implementation — the doorbell rang: the human's input arrived on the review page or in the inbox. Reply in one line and end the turn; the loop then runs a manager ingest turn and continues. Do not run any loop script yourself.`,
   );
@@ -256,7 +259,7 @@ function awaitingReviewNote(projectRoot, slug, loop) {
   const waiting = openGates(loop).filter((gate) => gate.blocking);
   const reviews = (waiting.length > 0 ? waiting : openGates(loop)).map((gate) => `${gate.review} (${reviewPath(slug, gate.review)})`);
   const pending = pendingHumanInput(projectRoot, slug, loop);
-  if (pending.gates.length + pending.inbox.length > 0) {
+  if (hasInput(pending)) {
     return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. The human's input has arrived; answer the user briefly and end your reply: the loop then runs a manager ingest turn and continues. ${stopHint(slug)}`;
   }
   return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. Nothing runs after this reply. Answer the user; the human answers that page in the epic-loop app (epic-loop serve). Only if the user asks to continue the loop now, resume it: ${resumeCommand(slug)}. ${stopHint(slug)}`;

@@ -366,6 +366,14 @@ test("on Codex the server rings the driver thread with codex queue on a submit a
       ["loop-running", "none"],
     );
     assert.equal(fake.calls().length, 2, "no ring while running or idle");
+
+    // A problem report rings like a submit while the loop awaits the review.
+    ctx.setStatus("awaiting-review");
+    assert.equal((await post(port, `/api/${SLUG}/reviews/${REVIEW}/problem`, { text: "the image is broken" })).status, 200);
+    const problem = (await readRecords(ctx, 5)).at(-1);
+    assert.deepEqual({ reason: problem.reason, review: problem.review, ring: problem.ring }, { reason: "problem", review: REVIEW, ring: "codex-queue" });
+    for (let index = 0; index < 100 && fake.calls().length < 3; index += 1) await sleep(50);
+    assert.match(fake.calls()[2][4], /\(problem reports on 2026-10-20-header\)/u);
   } finally {
     serve(ctx, env, "--stop");
     cleanup(ctx);

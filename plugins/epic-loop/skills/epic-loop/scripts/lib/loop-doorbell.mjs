@@ -4,7 +4,7 @@ import path from "node:path";
 import { epicRuntimeRoot, readJson, resolveRoot, runtimeStatePath, sessionRoot } from "./common.mjs";
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { AWAITING_REVIEW } from "./loop-gates.mjs";
-import { pendingHumanInput } from "./loop-ingest.mjs";
+import { describePendingInput, hasInput, pendingHumanInput } from "./loop-ingest.mjs";
 
 // The Claude Code doorbell (D34 of the visual-review epic). An asyncRewake hook on Stop and
 // SessionStart runs this waiter; it costs nothing unless its session drives a loop that awaits
@@ -17,8 +17,12 @@ export const DOORBELL_REWAKE_TIMEOUT_SECONDS = 86400;
 export const DOORBELL_REWAKE_MESSAGE = "epic-loop:";
 const DEFAULT_POLL_MS = 1000;
 
-export function doorbellPointer(slug, { inbox = [], reviews = [] } = {}) {
-  const parts = [reviews.length ? `answered reviews ${reviews.join(", ")}` : null, inbox.length ? `inbox ${inbox.join(", ")}` : null].filter(Boolean);
+export function doorbellPointer(slug, { inbox = [], problems = [], reviews = [] } = {}) {
+  const parts = [
+    reviews.length ? `answered reviews ${reviews.join(", ")}` : null,
+    problems.length ? `problem reports on ${problems.join(", ")}` : null,
+    inbox.length ? `inbox ${inbox.join(", ")}` : null,
+  ].filter(Boolean);
   return `${DOORBELL_MARKER} epic ${slug}: the human's input arrived (${parts.join("; ") || "new input"}). Reply in one line and end the turn; the loop ingests it now.`;
 }
 
@@ -89,12 +93,23 @@ export async function runDoorbellWaiter({ payload, root: rootFlag, env = process
       return 0;
     }
     const pending = pendingHumanInput(root, slug, loop);
-    if (pending.gates.length > 0 || pending.inbox.length > 0) {
+    if (hasInput(pending)) {
       const reviews = pending.gates.map((gate) => gate.review);
+      const problems = pending.problems.map((entry) => entry.review);
       const inbox = pending.inbox.map((entry) => entry.id);
-      appendLoopLog(root, { action: "doorbell-ring", inbox_ids: inbox, mechanism: "asyncRewake", reviews, session_id: sessionId, slug, timestamp: new Date().toISOString() });
+      appendLoopLog(root, {
+        action: "doorbell-ring",
+        inbox_ids: inbox,
+        mechanism: "asyncRewake",
+        pending: describePendingInput(pending),
+        problem_reviews: problems,
+        reviews,
+        session_id: sessionId,
+        slug,
+        timestamp: new Date().toISOString(),
+      });
       release();
-      stderr.write(`${doorbellPointer(slug, { inbox, reviews })}\n`);
+      stderr.write(`${doorbellPointer(slug, { inbox, problems, reviews })}\n`);
       return 2;
     }
     await sleep(pollMs);

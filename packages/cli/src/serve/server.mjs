@@ -99,6 +99,8 @@ export function createReviewServer({ root, projectName = path.basename(root), on
         url: String(data?.url ?? req.headers.referer ?? ""),
         userAgent: String(req.headers["user-agent"] ?? ""),
       });
+      // A problem report rings like a submit: the manager has the page fixed (D21).
+      ringDoorbell(root, slug, { reason: "problem", review: id });
       if (form) return send(res, 200, renderProblemThanks(projectName, `/${encodeURIComponent(slug)}/reviews/${encodeURIComponent(id)}/`), "text/html; charset=utf-8");
       return sendJson(res, 200, { ok: true, at: entry.at });
     }

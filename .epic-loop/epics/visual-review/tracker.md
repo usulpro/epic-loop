@@ -178,7 +178,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - doctor reports a missing prerequisite.
   - Docs: `docs/human-gates.md`, `docs/doorbell.md`.
 
-- [ ] Kind: implementation | Status: todo | Stop report and human queue on a page, with auto-continue
+- [x] Kind: implementation | Status: done | Stop report and human queue on a page, with auto-continue
   - Outcome:
     - When the manager accepts a stop, the page builder produces a report page: the report against the epic intent, the open H items with controls, the agent-made decisions with confirm/reverse, and the "continue after submit" switch (on by default).
     - The chat message is a short summary with the deep link.

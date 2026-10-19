@@ -149,6 +149,11 @@ test("the epic home shows open gates from the loop state and survives a missing 
     fs.writeFileSync(statePath, JSON.stringify({ implementation_loop: { status: "running", gates: [{ ...gates[0], blocking: false }] } }));
     assert.match((await request(port, "/demo")).text, /The loop keeps working; answer when you can\./u);
 
+    fs.writeFileSync(statePath, JSON.stringify({ implementation_loop: { status: "awaiting-review", gates: [{ ...gates[0], kind: "stop-report" }] } }));
+    const stopReport = await request(port, "/demo");
+    assert.match(stopReport.text, /<span class="el-tag el-tag--danger">stop report<\/span>/u);
+    assert.match(stopReport.text, /The loop stopped and waits for this report to be answered\./u);
+
     fs.writeFileSync(statePath, "{ not json");
     const broken = await request(port, "/demo");
     assert.equal(broken.status, 200);

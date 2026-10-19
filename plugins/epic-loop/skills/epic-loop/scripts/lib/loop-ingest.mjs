@@ -4,7 +4,7 @@ import path from "node:path";
 import { epicRoot, readJson, runtimeStatePath, writeJson } from "./common.mjs";
 import { readHumanQueue } from "./human-queue.mjs";
 import { appendLoopLog, executionDir } from "./loop-artifacts.mjs";
-import { AWAITING_REVIEW, awaitReviewIfBlocked, readGates, reviewPath } from "./loop-gates.mjs";
+import { AWAITING_REVIEW, CONTINUE_CONTROL, awaitReviewIfBlocked, readGates, reviewPath } from "./loop-gates.mjs";
 import { SKILL_DIR, renderTemplate } from "./loop-prompts.mjs";
 
 // Pickup of human input at role transitions (Phase 4 Task 2 of the visual-review epic, D22, D23).
@@ -37,18 +37,57 @@ function readSubmittedAt(projectRoot, slug, review) {
   return answers && typeof answers.submittedAt === "string" && answers.submittedAt ? answers.submittedAt : null;
 }
 
-export function pendingHumanInput(projectRoot, slug, loop) {
-  const gates = readGates(loop)
-    .filter((gate) => gate.status !== "closed")
-    .map((gate) => ({ gate, submittedAt: readSubmittedAt(projectRoot, slug, gate.review) }))
-    .filter(({ gate, submittedAt }) => submittedAt && submittedAt !== gate.ingested_submitted_at)
-    .map(({ gate, submittedAt }) => ({ covers: gate.covers ?? [], review: gate.review, submitted_at: submittedAt }));
-  const through = Number.isFinite(loop.inbox_through) ? loop.inbox_through : 0;
-  const inbox = readInboxEntries(projectRoot, slug).filter((entry) => entry.number > through);
-  return { gates, inbox };
+function readProblems(projectRoot, slug, review) {
+  let text;
+  try {
+    text = fs.readFileSync(path.join(epicRoot(projectRoot, slug), "reviews", review, "problems.jsonl"), "utf8");
+  } catch {
+    return [];
+  }
+  return text
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return { text: line };
+      }
+    });
 }
 
-const hasInput = (pending) => pending.gates.length > 0 || pending.inbox.length > 0;
+// Pending human input: answers submitted and not yet ingested, inbox entries after
+// `inbox_through`, and problem reports on a gate's page after its `problems_through`.
+export function pendingHumanInput(projectRoot, slug, loop) {
+  const live = readGates(loop).filter((gate) => gate.status !== "closed");
+  const gates = live
+    .map((gate) => ({ gate, submittedAt: readSubmittedAt(projectRoot, slug, gate.review) }))
+    .filter(({ gate, submittedAt }) => submittedAt && submittedAt !== gate.ingested_submitted_at)
+    .map(({ gate, submittedAt }) => ({ covers: gate.covers ?? [], kind: gate.kind ?? null, review: gate.review, submitted_at: submittedAt }));
+  const problems = live
+    .map((gate) => {
+      const all = readProblems(projectRoot, slug, gate.review);
+      const from = Number.isFinite(gate.problems_through) ? gate.problems_through : 0;
+      return { lines: all.slice(from).map((entry) => String(entry.text ?? "")), review: gate.review, through: all.length };
+    })
+    .filter((entry) => entry.lines.length > 0);
+  const through = Number.isFinite(loop.inbox_through) ? loop.inbox_through : 0;
+  const inbox = readInboxEntries(projectRoot, slug).filter((entry) => entry.number > through);
+  return { gates, inbox, problems };
+}
+
+export const hasInput = (pending) => pending.gates.length > 0 || pending.inbox.length > 0 || pending.problems.length > 0;
+
+// "answered reviews X; problem reports on Y; inbox I1" for notes and doorbell pointers.
+export function describePendingInput(pending) {
+  return [
+    pending.gates.length ? `answered reviews ${pending.gates.map((gate) => gate.review).join(", ")}` : null,
+    pending.problems.length ? `problem reports on ${pending.problems.map((entry) => entry.review).join(", ")}` : null,
+    pending.inbox.length ? `inbox ${pending.inbox.map((entry) => entry.id).join(", ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
 
 // Human gates on Stop: an ingest turn that stopped marks exactly what it was given as ingested;
 // a manager turn that opened a blocking gate ends with the loop awaiting the review; a loop
@@ -84,8 +123,9 @@ export function planIngest(projectRoot, slug, loop, role) {
 
 export function ingestSnapshot(plan, iteration) {
   return {
-    gates: plan.gates.map(({ review, submitted_at }) => ({ review, submitted_at })),
+    gates: plan.gates.map(({ kind, review, submitted_at }) => ({ ...(kind ? { kind } : {}), review, submitted_at })),
     inbox_ids: plan.inbox.map((entry) => entry.id),
+    problems: plan.problems.map(({ review, through }) => ({ review, through })),
     inbox_through: plan.inbox.length > 0 ? plan.inbox.at(-1).number : null,
     iteration,
     skipped_role: plan.skipped_role,
@@ -97,6 +137,7 @@ export function logIngestStart(projectRoot, slug, plan, iteration, payload, time
     action: "ingest-start",
     inbox_ids: plan.inbox.map((entry) => entry.id),
     iteration,
+    problem_reviews: plan.problems.map((entry) => entry.review),
     reviews: plan.gates.map((gate) => gate.review),
     session_id: payload.session_id ?? null,
     skipped_role: plan.skipped_role,
@@ -118,16 +159,21 @@ export function finishIngestIfStopped(projectRoot, slug, runtime, loop, timestam
       .filter((gate) => marked.has(gate.review) && gate.ingested_submitted_at === marked.get(gate.review))
       .map((gate) => gate.review),
   );
-  const gates = readGates(loop).map((gate) =>
-    marked.has(gate.review) && gate.status !== "closed"
-      ? {
-          ...gate,
-          ingested_at: timestamp,
-          ingested_submitted_at: marked.get(gate.review),
-          status: gate.submitted_at && gate.submitted_at !== marked.get(gate.review) ? "submitted" : "ingested",
-        }
-      : gate,
-  );
+  const problemsThrough = new Map((snapshot.problems ?? []).map((entry) => [entry.review, entry.through]));
+  const gates = readGates(loop).map((gate) => {
+    let next = gate;
+    if (marked.has(gate.review) && gate.status !== "closed") {
+      next = {
+        ...next,
+        ingested_at: timestamp,
+        ingested_submitted_at: marked.get(gate.review),
+        status: gate.submitted_at && gate.submitted_at !== marked.get(gate.review) ? "submitted" : "ingested",
+      };
+    }
+    if (problemsThrough.has(gate.review)) next = { ...next, problems_through: Math.max(problemsThrough.get(gate.review), gate.problems_through ?? 0) };
+    return next;
+  });
+  const stopReport = stopReportOutcome(projectRoot, slug, snapshot);
   const inboxThrough = Number.isFinite(snapshot.inbox_through) ? Math.max(snapshot.inbox_through, loop.inbox_through ?? 0) : (loop.inbox_through ?? 0);
   const inboxEntries = readInboxEntries(projectRoot, slug).filter((entry) => snapshot.inbox_ids.includes(entry.id));
   const nextLoop = {
@@ -138,10 +184,14 @@ export function finishIngestIfStopped(projectRoot, slug, runtime, loop, timestam
     ingest_note: {
       inbox: inboxEntries.map(({ createdAt, id, text }) => ({ createdAt, id, text })),
       iteration: loop.iteration,
+      problem_reviews: (snapshot.problems ?? []).map((entry) => entry.review),
       report: readManagerReport(projectRoot, slug, loop.iteration),
       reviews: snapshot.gates.map((gate) => gate.review),
       skipped_role: snapshot.skipped_role,
+      ...(stopReport ? { stop_report: stopReport } : {}),
     },
+    // Switch off (D25, D38): the answers are recorded and the loop stays paused.
+    ...(stopReport?.continue === false ? { last_reason: `stop-report-paused:${stopReport.review}`, next_role: "idle", status: "idle" } : {}),
   };
   const nextRuntime = { ...runtime, implementation_loop: nextLoop, updated_at: timestamp };
   writeJson(runtimeStatePath(projectRoot, slug), nextRuntime);
@@ -152,7 +202,28 @@ export function finishIngestIfStopped(projectRoot, slug, runtime, loop, timestam
   if (snapshot.inbox_ids.length > 0) {
     appendLoopLog(projectRoot, { action: "inbox-ingested", ids: snapshot.inbox_ids, iteration: loop.iteration, slug, through: snapshot.inbox_through, timestamp });
   }
+  for (const entry of snapshot.problems ?? []) {
+    appendLoopLog(projectRoot, { action: "problems-ingested", iteration: loop.iteration, review: entry.review, slug, through: entry.through, timestamp });
+  }
+  if (stopReport) {
+    appendLoopLog(projectRoot, {
+      action: stopReport.continue ? "stop-report-continue" : "stop-report-paused",
+      iteration: loop.iteration,
+      review: stopReport.review,
+      slug,
+      timestamp,
+    });
+  }
   return { loop: nextLoop, runtime: nextRuntime };
+}
+
+// The stop-report page among the ingested answers, with its continue-after-submit switch:
+// unanswered counts as on; only an explicit false pauses the loop.
+function stopReportOutcome(projectRoot, slug, snapshot) {
+  const gate = snapshot.gates.find((item) => item.kind === "stop-report");
+  if (!gate) return null;
+  const answers = readJson(path.join(epicRoot(projectRoot, slug), "reviews", gate.review, "answers.json"), {});
+  return { continue: answers?.controls?.[CONTINUE_CONTROL] !== false, review: gate.review };
 }
 
 function readManagerReport(projectRoot, slug, iteration) {
@@ -197,6 +268,17 @@ function formatIngestItems(projectRoot, slug, plan) {
     }
     lines.push("");
   }
+  if (plan.problems.length > 0) {
+    lines.push("### Problem reports (verbatim)", "");
+    for (const entry of plan.problems) {
+      lines.push(`- \`${entry.review}\` (${reviewPath(slug, entry.review)}):`, "");
+      for (const text of entry.lines) lines.push("````text", text, "````", "");
+    }
+    lines.push(
+      'For each page with a problem report: have the page builder fix that page (same review id, see "Review Pages" in the manager role), re-run `review check`, reopen its gate with `gate.mjs open` (same flags as before; one entry is kept), and give the human the link again in your report.',
+      "",
+    );
+  }
   if (plan.inbox.length > 0) {
     lines.push("### Inbox requests (verbatim)", "");
     for (const entry of plan.inbox) lines.push(`- ${entry.id}, sent ${entry.createdAt ?? "unknown"}:`, "", "````text", String(entry.text ?? ""), "````", "");
@@ -223,7 +305,14 @@ export function formatIngestNote(note) {
     note.reviews.length ? `review pages ${note.reviews.join(", ")}` : null,
     note.inbox.length ? `inbox ${note.inbox.map((entry) => entry.id).join(", ")}` : null,
   ].filter(Boolean);
+  if (note.problem_reviews?.length) sources.push(`problem reports on ${note.problem_reviews.join(", ")}`);
   lines.push(`A manager ingest turn (turn ${note.iteration}) recorded the human's input before this turn: ${sources.join("; ") || "nothing new"}.`);
+  if (note.stop_report?.continue) {
+    lines.push(
+      "",
+      `This was the stop report page \`${note.stop_report.review}\`, and the human left "continue after submit" on: the loop resumed on its own. Continue if the answers unblock the work; if they do not, file the stop again (D38).`,
+    );
+  }
   if (note.skipped_role === "engineer") {
     lines.push(
       "",
