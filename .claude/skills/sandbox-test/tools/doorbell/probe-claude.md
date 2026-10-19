@@ -5,7 +5,7 @@ Setup turn (now):
 - {{ARM}}
 - Then end your turn with one short sentence ("Waiting for the doorbell."). Do not poll, sleep, or check anything else.
 
-Later, you may be woken without a human message: by a system reminder, a hook message, or a background task notification whose text starts with `Doorbell:`. When that happens:
+Later, you may be woken without a human message: by a system reminder or hook message whose text starts with `Doorbell:`, or by the completion notification of the doorbell background task (then read that task's output file: its text starts with `Doorbell:`). When that happens:
 
 1. Run this command once, with `--via` naming how you were woken (`asyncRewake`, `background-task`, or `user-prompt`) and `--saw` holding the doorbell text you received, on one line, in single quotes:
    `node .doorbell/kit/pickup.mjs --via <how> --saw '<doorbell text>'`

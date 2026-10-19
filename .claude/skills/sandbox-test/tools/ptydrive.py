@@ -9,6 +9,7 @@ steps.json is a list of steps:
   {"key": "enter" | "esc" | "ctrl-c" | "tab" | "down"}
   {"expect": "regex", "timeout": 60}  wait until the (ANSI-stripped) screen tail matches
   {"expect_file": "path", "pattern": "regex", "timeout": 120}  wait until a file contains pattern
+  {"run": ["argv", ...], "timeout": 60}  run a local command to completion (output appended to the raw log)
   {"forbid": "regex"}                 from now on, kill the child and stop as soon as the screen matches
                                       (guards against typing into unexpected dialogs, e.g. updaters)
 The child is killed after the last step.
@@ -110,6 +111,14 @@ def run_steps(steps, drain, screen, mark, fd, forbid):
             while time.time() < deadline and not re.search(step["expect"], screen()):
                 drain(0.5)
             mark("expect " + ("OK" if re.search(step["expect"], screen()) else "TIMEOUT"))
+        elif "run" in step:
+            import subprocess
+            try:
+                out = subprocess.run(step["run"], capture_output=True, text=True, timeout=step.get("timeout", 60))
+                mark("run exit %d: %s" % (out.returncode, (out.stdout + out.stderr).strip()[:500]))
+            except Exception as exc:
+                mark("run failed: %s" % exc)
+            drain(0.1)
         elif "expect_file" in step:
             deadline = time.time() + step.get("timeout", 120)
             pattern = re.compile(step["pattern"])

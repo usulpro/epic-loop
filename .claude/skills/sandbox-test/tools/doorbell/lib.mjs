@@ -95,9 +95,12 @@ export function hookFields(payload) {
     hookEvent: payload.hook_event_name ?? null,
     sessionId: payload.session_id ?? null,
     turnId: payload.turn_id ?? null,
+    promptId: payload.prompt_id ?? undefined,
+    backgroundTasks: Array.isArray(payload.background_tasks) ? payload.background_tasks.map((t) => t.status ?? "?") : undefined,
     stopHookActive: payload.stop_hook_active ?? null,
     prompt: typeof payload.prompt === "string" ? payload.prompt.slice(0, 300) : undefined,
     tool: payload.tool_name ?? undefined,
+    command: typeof payload.tool_input?.command === "string" ? payload.tool_input.command.slice(0, 200) : undefined,
     source: payload.source ?? undefined,
   };
 }

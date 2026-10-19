@@ -10,12 +10,12 @@ Node built-ins only. Nothing here touches global host config: the hooks go into 
 
 | File | Role |
 | --- | --- |
-| `install.mjs` | Copies the kit to `<sandbox>/.doorbell/kit/`, writes the project-local hook config for one variant, renders `<sandbox>/.doorbell/probe.md`, and gitignores `.doorbell/`. |
+| `install.mjs` | Options: `--rewake-timeout <s|default>` and `--rewake-pad <bytes>`. Copies the kit to `<sandbox>/.doorbell/kit/`, writes the project-local hook config for one variant, renders `<sandbox>/.doorbell/probe.md`, and gitignores `.doorbell/`. |
 | `server.mjs` | Answers server on `127.0.0.1` (a dynamic port by default). It serves a form at `/` and `GET /status`; `POST /answers` writes `answers.json` and rings. Its port and pid go to `server.json`. |
 | `submit.mjs` | CLI stand-in for the human pressing Submit: it POSTs to the running server. |
 | `waiter.mjs` | `--mode background` is the `run_in_background` waiter (pointer on stdout, exit 0). `--mode rewake --form event\|session` is the `asyncRewake` hook command (pointer on stderr, exit 2). Only one rewake waiter runs at a time (`waiter.pid` lock). |
 | `fallback-hook.mjs` | `UserPromptSubmit` fallback: when answers are pending, it injects the pointer as `additionalContext`. |
-| `log-hook.mjs` | Passive logger for every hook event around the ring: `SessionStart`, `UserPromptSubmit`, `Stop`, and `PreToolUse` on Claude Code. |
+| `log-hook.mjs` | Passive logger for every hook event around the ring: `SessionStart`, `UserPromptSubmit`, `Stop`, and `PreToolUse` on Claude Code. It records `promptId`, the tool `command`, and the `Stop` `background_tasks` statuses. |
 | `pickup.mjs` | Run by the woken session. It writes `pickup.json`, logs what the model saw (`--saw`) and how it was woken (`--via`), and prints the answers. |
 | `register-thread.mjs` | Run by a Codex session. It stores `CODEX_THREAD_ID` in `thread-id` for the `codex-queue` ringer. |
 | `summary.mjs` | Prints submit → ring → waiter fired → first hook → pickup latencies from the probe log. |
@@ -60,6 +60,8 @@ KIT=<repo>/.claude/skills/sandbox-test/tools/doorbell
 # wait for an "event":"pickup" line, then:
 "$NODE" $KIT/summary.mjs --dir "$S/.doorbell"
 ```
+
+The matrix driver `runs/2026-10-19-doorbell-claude-matrix/driver/run-cell.sh <cell>` runs one cell (mechanism × session state) per sandbox; `ptydrive.py`'s `run` step submits answers from inside the step list.
 
 The smoke-run drivers in `runs/2026-10-19-doorbell-smoke/driver/` show complete runs:
 

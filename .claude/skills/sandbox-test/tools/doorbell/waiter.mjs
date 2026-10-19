@@ -3,10 +3,11 @@
 //   node waiter.mjs --mode background [--dir D] [--timeout 1800]
 //     Claude Code run_in_background waiter: prints the pointer on stdout and exits 0; the host's
 //     task-notification is the ring.
-//   node waiter.mjs --mode rewake --form event|session [--dir D] [--timeout 86400]
+//   node waiter.mjs --mode rewake --form event|session [--dir D] [--timeout 86400] [--pad <bytes>]
 //     Claude Code asyncRewake hook command: reads the hook payload on stdin, prints the pointer on stderr
 //     and exits 2, which wakes the model. Only one rewake waiter runs at a time (waiter.pid lock), so an
 //     event hook that fires every turn does not stack waiters.
+//     --pad appends <bytes> of filler and an END-OF-DOORBELL marker to the pointer (measures size limits).
 // Every step is logged to probe-log.jsonl, including SIGTERM/SIGHUP (shows how the host ends a waiter).
 import fs from "node:fs";
 import { hookFields, logEvent, parseArgs, paths, pendingAnswers, pointer, probeDir, readStdinJson, sleep } from "./lib.mjs";
@@ -63,8 +64,9 @@ if (mode === "rewake") {
 while (Date.now() - startedAt < timeoutMs) {
   const answers = pendingAnswers(dir);
   if (answers) {
-    const text = pointer(dir, answers);
-    logEvent(dir, "waiter-fired", { mechanism, answersId: answers.id, pointer: text });
+    const pad = Number(flags.pad || 0);
+    const text = pad > 0 ? `${pointer(dir, answers)} PAD:${"x".repeat(pad)} END-OF-DOORBELL` : pointer(dir, answers);
+    logEvent(dir, "waiter-fired", { mechanism, answersId: answers.id, pointer: text.slice(0, 400), bytes: Buffer.byteLength(text) });
     releaseLock();
     if (mode === "rewake") {
       process.stderr.write(`${text}\n`);

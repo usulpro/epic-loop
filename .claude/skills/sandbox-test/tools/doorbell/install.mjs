@@ -6,6 +6,8 @@
 //   codex variants:       codex-queue, fallback-only
 //   --fallback        also install the UserPromptSubmit fallback hook
 //   --no-log-hooks    skip the passive hook logger (SessionStart, UserPromptSubmit, Stop, PreToolUse)
+//   --rewake-timeout <seconds|default>  asyncRewake hook timeout (default 86400; "default" omits it, host default 600 s)
+//   --rewake-pad <bytes>  pad the rewake pointer to measure the stderr size limit
 // Hook commands use the absolute node binary (process.execPath), not a version-manager shim.
 import fs from "node:fs";
 import path from "node:path";
@@ -43,8 +45,15 @@ const add = (event, entry, matcher) => {
 
 const logEvents = host === "codex" ? ["SessionStart", "UserPromptSubmit", "Stop"] : ["SessionStart", "UserPromptSubmit", "Stop", "PreToolUse"];
 if (!flags["no-log-hooks"]) for (const event of logEvents) add(event, hook(cmd("log-hook.mjs")), host === "codex" ? undefined : "");
-if (variant === "rewake-session") add("SessionStart", hook(cmd("waiter.mjs", " --mode rewake --form session"), { asyncRewake: true, timeout: 86400 }), "");
-if (variant === "rewake-event") add("Stop", hook(cmd("waiter.mjs", " --mode rewake --form event"), { asyncRewake: true, timeout: 86400 }), "");
+const rewakeTimeout = flags["rewake-timeout"] === "default" ? undefined : Number(flags["rewake-timeout"] || 86400);
+const pad = flags["rewake-pad"] ? ` --pad ${Number(flags["rewake-pad"])}` : "";
+const rewakeHook = (form) => {
+  const entry = hook(cmd("waiter.mjs", ` --mode rewake --form ${form}${pad}`), { asyncRewake: true, timeout: rewakeTimeout });
+  if (rewakeTimeout === undefined) delete entry.timeout;
+  return entry;
+};
+if (variant === "rewake-session") add("SessionStart", rewakeHook("session"), "");
+if (variant === "rewake-event") add("Stop", rewakeHook("event"), "");
 if (flags.fallback || variant === "fallback-only") add("UserPromptSubmit", hook(cmd("fallback-hook.mjs")), host === "codex" ? undefined : "");
 
 let configPath;

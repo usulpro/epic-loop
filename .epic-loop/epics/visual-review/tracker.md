@@ -153,7 +153,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: one smoke run per platform in a disposable sandbox shows a ring followed by a model turn that reads the answers file, with timings in the probe log.
   - Docs: `docs/prior-art.md` ("Doorbell research"), `docs/doorbell.md`.
 
-- [ ] Kind: verification | Status: todo | Claude Code terminal doorbell matrix
+- [x] Kind: verification | Status: done | Claude Code terminal doorbell matrix
   - Method: in disposable sandboxes driven through the pty driver, ring with each Claude Code mechanism in each state:
     - idle after a finished turn;
     - mid-turn while a role works;

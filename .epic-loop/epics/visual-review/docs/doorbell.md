@@ -36,7 +36,44 @@ Facts the matrix and the design must account for:
 
 ## Matrix
 
-To be filled by the Phase 2 verification tasks. Rows: mechanism. Columns: idle, mid-turn, loop running, after Esc, 15 min idle, closed then resumed.
+### Claude Code 2.1.293, terminal (interactive TUI)
+
+Run log: `.claude/skills/sandbox-test/runs/2026-10-19-doorbell-claude-matrix/log.md` (run 10). Idle cells 1A and 3A come from run 9 (`2026-10-19-doorbell-smoke`).
+
+Latency is submit → pickup. "New turn" means a new host turn (new `prompt_id`). "Same turn" means the wake is queued and delivered in the running turn right after its current tool call ends.
+
+| Mechanism | A idle | B mid-turn | C loop running | D after Esc | E 15 min idle | F closed, then `--resume` |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 `asyncRewake` hook on `Stop` | works, new turn, 3.8 s | works, same turn, 41 s | works, same turn, 30 s | works, new turn, 5.2 s | works with `timeout` 86400 (4.4 s); does not with the default timeout | does not |
+| 2 `asyncRewake` hook on `SessionStart` | works, new turn, 4.3 s | works, same turn, 37 s | n/a (see note) | works, new turn, 10.4 s | works with `timeout` 86400 (3.9 s) | works, 11.3 s |
+| 3 `run_in_background` waiter | works, new turn, 5.1 s | works, same turn, 36 s | works, same turn, 32 s | works, new turn, 3.5 s | works, 12.6 s | does not |
+| 4 `UserPromptSubmit` fallback | next human message | next human message | n/a (see note) | next human message | next human message | first human message after resume |
+
+Notes:
+
+- **Where the pointer comes from.**
+  - Rows 1–2: the asyncRewake exit-2 body (`Stop hook blocking error from command "<name>": <stderr>`) arrives as a `UserPromptSubmit` whose prompt is `<task-notification>` XML plus a system reminder.
+  - Row 3: the notification has only the task id and output-file path. The model reads the waiter's output file, which works without any instruction beyond "read the doorbell task's output".
+  - Row 4: `additionalContext` on the human's message.
+- **The asyncRewake timeout.** The default is exactly 600 s: Claude Code SIGTERMed the hook at 600,001 ms, after which a ring wakes nothing. A waiter must set `timeout` explicitly. No upper cap was hit at 86400 s over 15 min.
+- **The rewake body size.** A 20 KB stderr body reached the model untruncated. Larger sizes were not tested.
+- **Esc and close.**
+  - Esc fires no `Stop`, and armed waiters (hook processes and background tasks) survive it.
+  - Closing the session SIGTERMs every waiter, and background tasks are not restored on resume.
+  - Only a `SessionStart` hook re-arms on resume (`source: resume`). It fires at once when answers are pending.
+- **The event-armed waiter (row 1) re-arms on every `Stop`, including every Stop-hook block of an epic-loop chain.** A lock keeps one waiter. While the session idles, nothing re-arms a waiter that died.
+- **epic-loop classification (state C, rows 1 and 3).**
+  - The wake is logged as `synthetic-prompt-ignored` (`harness-injected-prompt`, `turn_key_adopted: false`).
+  - The engineer turn stays open, and the loop chains normally to `idle`, with no abort, stop, or lost `next_role`.
+  - The whole loop is one host turn (one `prompt_id`), so the synthetic check is what keeps the wake from being read as a user message. **No misclassification was found.**
+- **n/a cells.**
+  - 2C was not run. It uses the same asyncRewake delivery path as 1C and differs only in when it is armed, and it is one-shot per session.
+  - 4C needs a human message during the loop, which is epic-loop's documented `user-message-in-turn` path, not a doorbell.
+- **Hidden tool calls.** Claude Code sometimes fires a `PreToolUse` hook about 2–5 s after a `Stop` for a speculative next command that never appears in the transcript. A future `PreToolUse` hook must tolerate it.
+
+### Codex
+
+To be filled by the Codex matrix task.
 
 ## Choice
 

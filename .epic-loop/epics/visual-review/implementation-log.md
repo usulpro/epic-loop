@@ -221,3 +221,23 @@
   - Claude run_in_background 63 ms / 5.1 s
   - Codex codex queue on an idle TUI 10.1 s / 13.6 s on the default sandbox (96 k tokens). Techlead checked one pickup per archived probe log. test:unit 150/150, validate passes. Previous task commit: f9dc7f9 (merge base)
 - Residual risk: Claude wakes arrive as UserPromptSubmit with <task-notification> XML and Codex queue as a plain prompt (R8); asyncRewake timeout cap and stderr limit unconfirmed; nested Claude sessions not fully isolated from the host env
+
+## 2026-10-19T17:12:43+00:00 - done
+
+- Phase: Phase 2 - Doorbell Spike
+- Task: Claude Code terminal doorbell matrix
+- Verdict: done
+- Changed:
+  - Run 10 log and drivers (run-cell.sh, make-steps.mjs, archive.sh) under runs/2026-10-19-doorbell-claude-matrix/
+  - kit options --rewake-timeout, --rewake-pad, --pad, richer hook log
+  - ptydrive run step
+  - docs/doorbell.md Claude Code matrix
+  - LEARNINGS D-16 and three needs-tuning entries
+  - R8 updated
+- Verification:
+  - 22 cells, one sandbox each: all 4x6 cells have results (2C and 4C n/a with reasons). asyncRewake default timeout 600 s (hook SIGTERM at 600001 ms, 1E0)
+  - 20 KB rewake body untruncated
+  - mid-turn wakes delivered in the same turn after the tool call
+  - Esc keeps waiters
+  - close kills them, only SessionStart re-arms on resume. Loop cells 1C and 3C: epic-loop logs synthetic-prompt-ignored, loop chains to idle. Techlead spot-checked 1C/3C progress logs and 1E0. test:unit 150/150, validate passes. About $5.60 Sonnet. Previous task commit: 2a533a9
+- Residual risk: 1C needed a rerun (dontAsk denies compound commands); E cells post-processed by hand after a mid-run driver edit; rewake bodies above 20 KB and run_in_background beyond 15 min idle untested
