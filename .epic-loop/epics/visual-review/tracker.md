@@ -216,7 +216,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 3: Review Engine In The CLI
 
-- Phase status: doing
+- Phase status: done
 - Intent: the npm CLI serves review pages written by agents as HTML with the engine's web components; a static check derives the answer schema and the translation segments; the manager's page-builder and translator subagents produce pages (D4–D6, D13, D20, D21).
 
 - [x] Kind: implementation | Status: done | Design language for the app and review pages
@@ -283,7 +283,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: on each platform, a manager turn in a sandbox epic produces a checked page and its translation through the two subagents; the main transcript shows only the summary; the translator ran on the cheap model.
   - Docs: `docs/review-engine.md`, `docs/prior-art.md`.
 
-- [ ] Kind: verification | Status: todo | Three representative review pages, built by subagents, served and answered
+- [x] Kind: verification | Status: done | Three representative review pages, built by subagents, served and answered
   - Method: in a sandbox epic, on each platform, have the manager request three pages:
     - a stop report with a human queue;
     - a decision between options with screenshots and a live iframe;

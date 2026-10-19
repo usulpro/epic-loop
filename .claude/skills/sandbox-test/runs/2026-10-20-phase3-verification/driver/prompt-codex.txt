@@ -1,0 +1,23 @@
+You are working in a disposable sandbox project. Act as the epic-loop manager of the epic `demo` (the skill is at .codex/skills/epic-loop). Everything below is the human's explicit instruction; do not ask questions.
+
+1. Read the "Review Pages" section of .codex/skills/epic-loop/references/implementation-manager-role.md and follow it exactly.
+2. Open three review pages. Each brief must carry everything its page needs (facts, options with consequences, recommendation and rule, evidence paths); the subagents do not read the epic artifacts.
+   a. Review id 2026-10-20-stop-report, kind stop-report: the stop report for the human. The epic stopped on class B (it needs a human action). Read .epic-loop/epics/demo/state-of-epic.md, human-queue.md and decision-log.md, and put on the page:
+      - a short "where the epic stands" (from state-of-epic.md);
+      - H1 (human-action) with a confirmation the human checks when it is done;
+      - H2 (product decision) with both options and their consequences, recommending the default by its rule;
+      - the agent-made decision D7, for the human to confirm or reverse.
+   b. Review id 2026-10-20-pricing-layout, kind decision, level 3: choose the pricing page layout before the pricing page is built.
+      - Option "cards" (evidence/pricing-cards.svg): three plan cards side by side; quickest to build (half a day); on mobile the cards stack and a visitor scrolls to compare.
+      - Option "table" (evidence/pricing-table.svg): one comparison table; best for comparing features; needs a horizontal scroll on a 375 px screen.
+      - Option "toggle" (evidence/pricing-toggle.svg): the cards plus a monthly / yearly toggle; shows the yearly saving; one more day of work. The file evidence/pricing-toggle.html is a working prototype of this option: show it live on the page.
+      - Recommend "cards", by the rule "ship the smallest scope first" (D2).
+      - Show the three option screenshots as one group the human can page through.
+   c. Review id 2026-10-20-footer-result, kind result: confirm the finished footer redesign (phase-1-task-3).
+      - Compare the render before (evidence/footer-before.svg: one long column of links, 240 px high) with the render after (evidence/footer-after.svg: three labelled columns, 160 px high), at 375 px and 1280 px widths.
+      - The human confirms the new footer is right, and has an optional comment.
+3. The human writes in Russian, so the second language of every page is ru (Russian).
+4. Use spawn_agent and wait_agent exactly as the section says for Codex: page builders on the inherited model, translators on the cheap model, each with its brief template filled. Run one subagent at a time: wait for it before spawning the next. First build all three pages (three page builder subagents), then translate all three (three translator subagents). Never write a page or a translation yourself.
+5. Do not start the review server; the human starts it.
+6. Run shell commands one at a time: no pipes, no ";" and no "&&".
+7. End with only the six subagent summaries.

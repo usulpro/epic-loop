@@ -408,3 +408,20 @@
   - review check --lang ru ok (16 segments, 0 missing)
   - page renders in Russian. 761,056 tokens. Techlead checked the rollout model and the check output. test:unit 202/202, validate passes. Previous checkpoint commit: c955d3b
 - Residual risk: On Codex the review server must be started outside the sandbox (Phase 4 doorbell server)
+
+## 2026-10-19T19:30:26+00:00 - done (Phase 3 verified and closed)
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Three representative review pages, built by subagents, served and answered
+- Verdict: done (Phase 3 verified and closed)
+- Changed:
+  - packages/cli/scripts/cdp.mjs: DevTools helpers shared by the browser scripts, browser-check.mjs uses it
+  - review-pages.md: no repo paths as evidence, confirm/reverse pattern for agent-made decisions, created from date -u
+  - sandbox run 15 log, driver (run.sh, verify.mjs, fixture) and LEARNINGS (D-19, three needs-tuning entries)
+- Verification:
+  - Run 15 on Claude Code (sonnet manager, 3 builders default model, 3 translators haiku, about $1.00 incl. a failed attempt from prefix-rule denials in subagents) and Codex (6 sequential spawn_agent calls, translators gpt-6-luna/low, 1.63 M tokens)
+  - verify.mjs outside the sessions: all six pages check ok with 0 missing ru segments, served, every control answered, en and ru screenshots, lightbox and compare modes, submittedAt, problems.jsonl entry, values and submitted state restored after reload, no external requests, no page errors
+  - main threads saw only summaries
+  - techlead checked both summary.json files (0 failures)
+  - test:unit 202/202, validate passes, browser-check all 32 pass
+- Residual risk: Runtime UI strings stay English on translated pages; Codex workspace-write cannot start the server (Phase 4); Codex e2e doorbell still on hold (H3)

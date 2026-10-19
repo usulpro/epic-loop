@@ -35,7 +35,7 @@ Match the request to the proportionality ladder:
 ```
 
 - Review id: `<YYYY-MM-DD>-<short-topic>`, lowercase letters, digits and hyphens (for example `2026-10-20-doorbell-choice`).
-- Write `review.json` before the first check: `id`, `title`, `kind` (`decision`, `confirmation`, `result`, `stop-report`), `created` (the current time, ISO), and `languages` from the brief.
+- Write `review.json` before the first check: `id`, `title`, `kind` (`decision`, `confirmation`, `result`, `stop-report`), `created` (the current time from `date -u +%Y-%m-%dT%H:%M:%SZ`, not a made-up one), and `languages` from the brief.
 - Do not create `answers.json` or `problems.jsonl`; the server writes them.
 
 ## Components
@@ -75,8 +75,9 @@ Use this skeleton; the runtime adds the submit bar, autosave, theme and language
 
 - **One decision per card.** Several questions mean several cards.
 - **Each option states its consequence** in its `note`: what happens if the human picks it.
-- **Evidence is on the card**: the screenshot, numbers or diff the decision rests on, not a link to elsewhere.
+- **Evidence is on the card**: the screenshot, numbers or diff the decision rests on, not a link to elsewhere. The human sees only the page: never cite a repo path (`decision-log.md`, `.epic-loop/…`) as evidence; put its content on the card.
 - **A recommendation names its rule**: `recommended="…" rule="D16"`. Keep `rule` short (a decision id or a few words): it is shown next to the tag.
+- **An agent-made decision to confirm or reverse** is a choice of `confirm` and `reverse`; the `reverse` note says what reversing costs. Its `rule` is the rule the decision followed, never the decision's own id.
 - **Ask only what can be answered from the screen.** If the answer needs a file the human cannot see, show it.
 - **No question without a visible or cost difference.**
 - **English only.** The translator adds the second language; never write a translation into the page.
