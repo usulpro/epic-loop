@@ -1,0 +1,147 @@
+/*
+ * epic-loop review design tokens.
+ * Ink on paper in light, phosphor on slate in dark: warm neutrals, one green accent for action and
+ * focus, amber only for the recommended option, red only for errors. Crisp 1px rules instead of
+ * shadows; monospace for ids, keys and metadata.
+ *
+ * Theme: follows prefers-color-scheme; <html data-theme="light|dark"> overrides it.
+ * Contrast pairs are asserted by tests/unit/review-design-tokens.test.mjs (WCAG AA).
+ * Keep the two dark blocks identical (the test checks it).
+ */
+
+:root {
+  /* Type */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-xs: 0.75rem; /* 12px: labels, badges */
+  --fs-sm: 0.8125rem; /* 13px: metadata, table text */
+  --fs-md: 0.9375rem; /* 15px: body */
+  --fs-lg: 1.125rem; /* 18px: card titles */
+  --fs-xl: 1.375rem; /* 22px: page title */
+  --fs-2xl: 1.75rem; /* 28px: epic home title */
+  --lh-tight: 1.25;
+  --lh-body: 1.55;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-bold: 650;
+  --tracking-label: 0.06em;
+
+  /* Space (4px grid) */
+  --space-0: 0;
+  --space-1: 0.125rem; /* 2 */
+  --space-2: 0.25rem; /* 4 */
+  --space-3: 0.5rem; /* 8 */
+  --space-4: 0.75rem; /* 12 */
+  --space-5: 1rem; /* 16 */
+  --space-6: 1.5rem; /* 24 */
+  --space-7: 2rem; /* 32 */
+  --space-8: 3rem; /* 48 */
+  --space-9: 4rem; /* 64 */
+  --measure: 72ch; /* reading width */
+  --page-max: 72rem;
+
+  /* Shape */
+  --radius-0: 0;
+  --radius-1: 2px; /* controls, badges */
+  --radius-2: 4px; /* cards, panels */
+  --rule-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* Motion */
+  --dur-fast: 80ms; /* hover, press */
+  --dur-base: 140ms; /* state changes */
+  --dur-slow: 220ms; /* overlays */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Layers */
+  --z-bar: 20;
+  --z-overlay: 40;
+
+  /* Text on the lightbox scrim (same in both themes) */
+  --color-on-scrim: #f2f0e9;
+}
+
+/* Light (default) */
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f5f4ef; /* page */
+  --color-surface: #fbfaf6; /* cards, sections */
+  --color-raised: #ffffff; /* controls, panels, overlay content */
+  --color-sunken: #ecebe4; /* code, table header, inset areas */
+  --color-rule: #d6d3c8; /* dividers, card borders */
+  --color-rule-strong: #8d897c; /* control borders (3:1 on raised) */
+  --color-text: #1c1b18;
+  --color-text-muted: #5b584f; /* secondary text */
+  --color-text-faint: #77736a; /* metadata only, never body copy */
+  --color-accent: #1d6b47; /* primary action, link, selection */
+  --color-accent-fg: #ffffff; /* text on accent */
+  --color-accent-tint: #e3efe7; /* selected row, saved status */
+  --color-recommended: #8a5300;
+  --color-recommended-tint: #f6ecd9;
+  --color-danger: #a8261c;
+  --color-danger-tint: #f8e5e2;
+  --color-info: #1f5f8a;
+  --color-focus: #1d6b47;
+  --color-scrim: rgb(20 19 16 / 0.72); /* lightbox backdrop */
+}
+
+/* Dark from the OS, unless the page forces light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #121210;
+    --color-surface: #181816;
+    --color-raised: #1f1f1c;
+    --color-sunken: #0d0d0c;
+    --color-rule: #34332e;
+    --color-rule-strong: #77746a;
+    --color-text: #e9e7df;
+    --color-text-muted: #a7a397;
+    --color-text-faint: #8c897e;
+    --color-accent: #74c99a;
+    --color-accent-fg: #0c1a12;
+    --color-accent-tint: #1a2a21;
+    --color-recommended: #e2b45a;
+    --color-recommended-tint: #2b2416;
+    --color-danger: #f08b80;
+    --color-danger-tint: #2e1a18;
+    --color-info: #86b8e0;
+    --color-focus: #74c99a;
+    --color-scrim: rgb(0 0 0 / 0.78);
+  }
+}
+
+/* Dark forced by the page */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #121210;
+  --color-surface: #181816;
+  --color-raised: #1f1f1c;
+  --color-sunken: #0d0d0c;
+  --color-rule: #34332e;
+  --color-rule-strong: #77746a;
+  --color-text: #e9e7df;
+  --color-text-muted: #a7a397;
+  --color-text-faint: #8c897e;
+  --color-accent: #74c99a;
+  --color-accent-fg: #0c1a12;
+  --color-accent-tint: #1a2a21;
+  --color-recommended: #e2b45a;
+  --color-recommended-tint: #2b2416;
+  --color-danger: #f08b80;
+  --color-danger-tint: #2e1a18;
+  --color-info: #86b8e0;
+  --color-focus: #74c99a;
+  --color-scrim: rgb(0 0 0 / 0.78);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

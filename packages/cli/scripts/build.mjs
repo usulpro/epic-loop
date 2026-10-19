@@ -1,6 +1,7 @@
 import { build } from "esbuild";
 import { chmodSync, cpSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
+import { copyReviewRuntime } from "./copy-runtime.mjs";
 
 const outfile = "dist/epic-loop.mjs";
 const skillSource = path.join("..", "..", "plugins", "epic-loop", "skills", "epic-loop");
@@ -26,6 +27,8 @@ await build({
 
 chmodSync(outfile, 0o755);
 console.log(`Built ${outfile}`);
+
+console.log(`Copied review runtime into ${path.relative(".", copyReviewRuntime("."))}/`);
 
 rmSync(skillTarget, { force: true, recursive: true });
 cpSync(skillSource, skillTarget, {

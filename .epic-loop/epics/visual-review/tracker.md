@@ -216,10 +216,10 @@ Order (agreed 2026-10-18, revised the same day, D18):
 
 ### Phase 3: Review Engine In The CLI
 
-- Phase status: todo
+- Phase status: doing
 - Intent: the npm CLI serves review pages written by agents as HTML with the engine's web components; a static check derives the answer schema and the translation segments; the manager's page-builder and translator subagents produce pages (D4–D6, D13, D20, D21).
 
-- [ ] Kind: implementation | Status: todo | Design language for the app and review pages
+- [x] Kind: implementation | Status: done | Design language for the app and review pages
   - Outcome: a design system made with a design skill (design system first, D30) and used by every later UI task:
     - tokens for colour, type, spacing and motion;
     - dark and light themes chosen from the OS;

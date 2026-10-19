@@ -275,3 +275,23 @@
   - human ok logged user-message-in-turn with the pointer injected. E3: asyncRewake woke the idle loop in 0.2 s
   - the model rebound and the loop resumed with no human message. Techlead checked the progress and probe logs. test:unit 150/150, validate passes. About $5.27. Previous task commit: 86efcc8
 - Residual risk: E1 and E2 stalled at class A because review-stop needs stdin under a no-redirection rule (follow-up-02); E3 auto-continue relied on the model rebinding; Codex half on hold (H3)
+
+## 2026-10-19T18:31:29+00:00 - done
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Design language for the app and review pages
+- Verdict: done
+- Changed:
+  - packages/cli/src/review/runtime/ tokens.css (colour, type, space, shape, motion
+  - light, OS dark, forced dark), base.css (el-* shell, cards, choice/check, fields, buttons, submit bar, progress, save status, notices, badges, tables, segmented control, compare, lightbox
+  - .is-* state hooks), specimen.html
+  - build copies the runtime to dist/review/runtime (scripts/copy-runtime.mjs)
+  - references/review-design.md
+  - tests/unit/review-design-tokens.test.mjs
+- Verification:
+  - WCAG AA test over 30 pairs per theme passes (tightest: faint text 4.52, control border 3.50)
+  - OS and forced dark blocks identical
+  - specimen lists every colour token
+  - build copy tested and a real build produced dist/review/runtime. Screenshots in both themes at 1280 and 390 px (sandbox-logs/2026-10-20-design-language). Design critique: no blocking issue
+  - fixed mobile overflow, compare bar wrap, 28 px segmented targets, table hover, mono prose. test:unit 156/156, validate passes. Previous task commit: 4389302
+- Residual risk: Separate accessibility-review skill not run; specimen ships in dist; packages/cli deps were installed in this worktree for the build check
