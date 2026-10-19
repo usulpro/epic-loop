@@ -241,3 +241,18 @@
   - Esc keeps waiters
   - close kills them, only SessionStart re-arms on resume. Loop cells 1C and 3C: epic-loop logs synthetic-prompt-ignored, loop chains to idle. Techlead spot-checked 1C/3C progress logs and 1E0. test:unit 150/150, validate passes. About $5.60 Sonnet. Previous task commit: 2a533a9
 - Residual risk: 1C needed a rerun (dontAsk denies compound commands); E cells post-processed by hand after a mid-run driver edit; rewake bodies above 20 KB and run_in_background beyond 15 min idle untested
+
+## 2026-10-19T17:48:45+00:00 - done (cell C deferred to the end-to-end task)
+
+- Phase: Phase 2 - Doorbell Spike
+- Task: Codex terminal doorbell matrix
+- Verdict: done (cell C deferred to the end-to-end task)
+- Changed:
+  - Run 11 log and drivers (run-ccell.sh, make-steps.mjs, archive.sh) under runs/2026-10-20-doorbell-codex-matrix/
+  - docs/doorbell.md Codex matrix
+  - LEARNINGS D-17 and two needs-tuning entries
+  - tracker note on the end-to-end task
+- Verification:
+  - codex queue: mid-turn held until the turn completes (39.5 s), after Esc not dispatched until the next completed turn, 15 min idle 13.4 s, closed thread queued and dispatched on resume (about 3 s), remote app server 14.0 s
+  - fallback injects on Codex. Rollouts tag queued turns turn_trigger queue. Techlead checked one pickup per passing cell and the queue trigger in QD. 0.73 M Codex tokens of the 2 M budget. test:unit 150/150, validate passes. Previous task commit: d2ccfb2
+- Residual risk: Cell C (queued message during a loop) needs a danger-full-access run; QD pickup latency unknown (model stall); hook payload visibility of turn_trigger unchecked; the setsid fix in run-ccell.sh is untested

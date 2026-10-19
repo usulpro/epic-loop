@@ -172,7 +172,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Cleanup: kill waiters and servers, archive the runs in the sandbox-test `runs/` log.
   - Docs: `docs/doorbell.md`.
 
-- [ ] Kind: verification | Status: todo | Codex terminal doorbell matrix
+- [x] Kind: verification | Status: done | Codex terminal doorbell matrix
   - Method: same states as the Claude Code matrix, in the Codex TUI.
     - Ring with `codex queue --thread "$CODEX_THREAD_ID"`, both with the shared daemon and with an embedded-server session (`-c` override).
     - Try `app-server` `thread/resume` + `turn/start` only if queue fails in a state that matters.
@@ -192,6 +192,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - D7 and R1 are updated.
   - Cleanup: archive the runs; remove probe hooks from the sandbox fixtures.
   - Docs: `docs/doorbell.md`, `decision-log.md` (D7, D8, D19).
+  - Note (2026-10-20): the Codex half needs a `danger-full-access` sandbox run, because loop commits fail under `workspace-write` (run 11). It also covers the deferred Codex matrix cell C (a queued message during a loop).
 
 ### Phase 3: Review Engine In The CLI
 

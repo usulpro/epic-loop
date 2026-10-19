@@ -71,9 +71,39 @@ Notes:
   - 4C needs a human message during the loop, which is epic-loop's documented `user-message-in-turn` path, not a doorbell.
 - **Hidden tool calls.** Claude Code sometimes fires a `PreToolUse` hook about 2–5 s after a `Stop` for a speculative next command that never appears in the transcript. A future `PreToolUse` hook must tolerate it.
 
-### Codex
+### Codex 0.162.0, terminal (interactive TUI)
 
-To be filled by the Codex matrix task.
+Run log: `.claude/skills/sandbox-test/runs/2026-10-20-doorbell-codex-matrix/log.md` (run 11). Idle cell A comes from run 9.
+
+The ring is `codex queue --thread <id> --message <pointer>`. It exits 0 in about 0.2 s and prints `Queued message <id> for thread <id>`. The thread id comes from `CODEX_THREAD_ID`, which the session registers. Latency is submit → pickup.
+
+| Mechanism | A idle | B mid-turn | C loop running | D after Esc | E 15 min idle | F closed, then `codex resume` |
+| --- | --- | --- | --- | --- | --- | --- |
+| `codex queue` | works, new turn, 13.6 s | works, held until the turn completes, then its own turn, 39.5 s | deferred (see note) | not dispatched until the next completed turn | works, 13.4 s | works: queued while closed, dispatched on resume, about 3 s after resume |
+| `UserPromptSubmit` fallback | next human message | next human message | n/a | next human message | next human message | next human message |
+
+Notes:
+
+- **How a queued message arrives.**
+  - It arrives as a plain user prompt in a new turn (`UserPromptSubmit` whose prompt is exactly the pointer).
+  - The TUI picks it up about 9–10 s after the queue call (the state-store watcher).
+  - It never steers into a running turn. It starts its own turn about 40 ms after the running turn's `Stop`.
+  - The rollout marks such turns `turn_attribution.turn_trigger: "queue"`. Typed turns are marked `"user"`. Whether the hook payload exposes that field is not yet checked; until then, a hook can tell a queued pointer from a typed message only by its text.
+- **After Esc.** No auto-dispatch: 79 s of silence in the run. The next completed turn releases the queue, so the human's next message runs first and the pointer turn follows immediately. This matches the research.
+- **Closed thread.** `codex queue` accepts a message for a thread that is not loaded, and `codex resume` dispatches it right after `SessionStart` (`source: resume`).
+- **Daemon vs embedded.**
+  - No shared app-server daemon runs on this machine, so the plain TUI is embedded, and `codex queue` reaches it without a socket.
+  - A TUI attached through `--remote unix://…` to its own `codex app-server` behaves the same: 9.5 s, plain `codex queue`.
+  - The shared daemon was not started, because that would be a machine-wide side effect.
+- **Version and sandbox.**
+  - `codex queue` is present in 0.162.0. The research says it has been stable since 0.149; the minimum version was not re-tested.
+  - The default `workspace-write` sandbox with `-a never` is enough for the session side (registering the thread, the pickup).
+  - Loop commits are not possible under `workspace-write`: `.git` stays read-only even with `sandbox_workspace_write.writable_roots`.
+- **The fallback** works on Codex: `additionalContext` on the next human message, including a message steered into a running turn.
+- **C deferred.** It needs the human's approval for a `danger-full-access` sandbox run (sandbox-test D-7). Inference from cell B, unverified:
+  - A Stop-hook chain continues one turn, so a queued message is likely held until the loop goes idle.
+  - If it ever arrives while a role turn is open, epic-loop would see a new turn key and treat it as an aborted turn (`implementation-cycle.md`).
+
 
 ## Choice
 
