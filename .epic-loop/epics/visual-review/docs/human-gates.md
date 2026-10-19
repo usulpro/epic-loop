@@ -12,6 +12,13 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
 - **Non-blocking gate.** Independent work remains, so the loop continues. The gate shows on the epic home as a notification.
 - **Blocking gate.** Nothing independent remains. The loop status becomes `awaiting-review` and the turn ends.
 - **Every step is logged as a progress event:** `gate-opened`, `answers-submitted`, `gate-ingested`, `gate-closed`.
+- **Script and state (Phase 4 Task 1).**
+  - The command is `scripts/gate.mjs open|ingested|close|list`; `open`, `ingested` and `close` run only in an open manager turn.
+  - `open` requires a review with a `schema` (it passed `review check`) and open H ids in `--covers`. Reopening a review updates its entry.
+  - The record lives in `implementation_loop.gates`: `{ review, covers, blocking, status: open|submitted|ingested|closed, opened_at, opened_iteration, submitted_at?, ingested_at?, closed_at?, close_reason? }`.
+  - The Stop of the manager turn that opened an unanswered blocking gate sets `implementation_loop.status = "awaiting-review"` and logs `awaiting-review` with the review ids. No continuation follows. Resuming uses `bind-session --mode implementation`, and `stop-loop` stops the loop. An accepted stop in the same turn wins.
+  - The hook logs `answers-submitted` (`review`, `submitted_at`) on any hook event of the driver session, once per `submittedAt`. It does not route yet; that is Task 2.
+  - `role-summary` lists open gates, and the epic home shows a Gates section ("the loop waits for this review" or "the loop keeps working").
 
 ## Pickup At Role Transitions
 

@@ -59,6 +59,23 @@ export function listReviews(root, slug) {
     .sort((a, b) => b.created.localeCompare(a.created));
 }
 
+// Open gates from the loop state the skill keeps in .runtime/runtime-state.json
+// (implementation_loop.gates). A missing or malformed state means no gates.
+const OPEN_GATE_STATUSES = ["open", "submitted", "ingested"];
+
+export function listOpenGates(root, slug) {
+  try {
+    const runtime = JSON.parse(fs.readFileSync(path.join(epicDir(root, slug), ".runtime", "runtime-state.json"), "utf8"));
+    const gates = runtime?.implementation_loop?.gates;
+    if (!Array.isArray(gates)) return [];
+    return gates
+      .filter((gate) => gate && typeof gate === "object" && isName(gate.review) && OPEN_GATE_STATUSES.includes(gate.status))
+      .map((gate) => ({ review: gate.review, blocking: gate.blocking === true, status: gate.status }));
+  } catch {
+    return [];
+  }
+}
+
 export function listEpicsWithReviews(root) {
   return listEpics(root).map((epic) => {
     const reviews = listReviews(root, epic.slug);

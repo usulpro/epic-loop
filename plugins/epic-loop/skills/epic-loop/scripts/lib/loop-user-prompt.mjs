@@ -4,6 +4,7 @@ import { nowIso, readJson, requireFlag, resolveRoot, runtimeStatePath, writeJson
 import { appendLoopLog } from "./loop-artifacts.mjs";
 import { isWaitingForBackgroundTasks, waitedMs, waitingTurnGuidance } from "./loop-background.mjs";
 import { hasOpenTurn, mergeEpicStateIntoRuntime, normalizeObject, recordTurnInterrupted, turnKeyOf } from "./loop.mjs";
+import { AWAITING_REVIEW, openGates, reviewPath } from "./loop-gates.mjs";
 import { SKILL_DIR, completeTurnCommand } from "./loop-prompts.mjs";
 
 // A user message never stops the implementation loop by itself. The loop stops only on an
@@ -52,6 +53,16 @@ export function handleDriverUserPrompt(projectRoot, payload, binding) {
 
   if (loop.status === "interrupted") {
     return userPromptContext(`[epic-loop] epic=${slug} mode=implementation — loop stopped. If the user asks to resume it, run: ${resumeCommand(slug)}`);
+  }
+
+  if (loop.status === AWAITING_REVIEW) {
+    if (isStopLoopCommand(payload.prompt)) {
+      stopLoop(projectRoot, slug, { reason: "user-stop-command", sessionId: payload.session_id ?? null, timestamp, turnId: turnKeyOf(payload) });
+      return userPromptContext(
+        `[epic-loop] epic=${slug} mode=implementation — the user stopped the loop while it awaited a review. Confirm the loop is stopped and that it resumes with: ${resumeCommand(slug)}`,
+      );
+    }
+    return userPromptContext(awaitingReviewNote(slug, loop));
   }
 
   if (loop.status !== "running") {
@@ -162,7 +173,7 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
   const runtime = mergeEpicStateIntoRuntime(projectRoot, slug, normalizeObject(readJson(runtimePath, {})));
   const loop = normalizeObject(runtime.implementation_loop);
 
-  if (loop.status !== "running") {
+  if (loop.status !== "running" && loop.status !== AWAITING_REVIEW) {
     return false;
   }
 
@@ -185,6 +196,14 @@ function stopLoop(projectRoot, slug, { reason, sessionId, timestamp, turnId }) {
 
   appendLoopLog(projectRoot, { action: "loop-stopped", reason, role: loop.current_role ?? null, session_id: stoppingSessionId, slug, timestamp });
   return { reportRole };
+}
+
+// A blocking gate ended the manager's turn: nothing runs until the human answers the page or
+// the loop is resumed explicitly.
+function awaitingReviewNote(slug, loop) {
+  const waiting = openGates(loop).filter((gate) => gate.blocking);
+  const reviews = (waiting.length > 0 ? waiting : openGates(loop)).map((gate) => `${gate.review} (${reviewPath(slug, gate.review)})`);
+  return `[epic-loop] epic=${slug} mode=implementation — loop awaiting review: ${reviews.join(", ") || "none listed"}. Nothing runs after this reply. Answer the user; the human answers that page in the epic-loop app (epic-loop serve). Only if the user asks to continue the loop now, resume it: ${resumeCommand(slug)}. ${stopHint(slug)}`;
 }
 
 function stoppedTurnReportNote(role) {

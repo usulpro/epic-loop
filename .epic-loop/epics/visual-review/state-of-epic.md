@@ -3,7 +3,7 @@
 Epic: Visual Human Interface For Epic-loop
 Slug: `visual-review`
 Created: 2026-10-17T18:03:53+00:00
-Active phase: Phase 3 - Review Engine In The CLI
+Active phase: Phase 4 - Human Gates In The Loop
 Active task: TBD
 
 ## Read First
@@ -33,8 +33,9 @@ Active task: TBD
 
 ## Next Action
 
-- Phase 1 was squash-merged into `main` as PR #13 (`f9dc7f9`).
-- The Phase 2-7 worktree `../epic-loop-visual` (branch `feature/visual-review`, from `main` at `f9dc7f9`) is set up: runtime copies in sync with `plugins/`, Claude Code hooks installed, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP=0`, doctor ready.
-- Implementation loop restarted in the worktree on 2026-10-19; next is Phase 2, first task "Doorbell probe kit for sandbox runs".
-- Agent-made decisions still to confirm: D31 (tracker.md edited in place), D32 (the manager commits stop reports).
-- Follow-ups recorded in PR #13: challenge-path real-run evidence for C and E; the agent-decision prompt fix on Codex; closure notes written after the last task commit stay uncommitted at a stop; one stop request covers several classes but records one.
+- Phase 1 was squash-merged into `main` as PR #13 (`f9dc7f9`). Phases 2-7 run in the worktree `../epic-loop-visual` on branch `feature/visual-review` (`docs/delivery.md`).
+- Phase 2 (doorbell spike): done except the Codex end-to-end task, on hold for H3 (approval of a `danger-full-access` Codex run and quota). Claude Code mechanism proposed in D34.
+- Phase 3 (review engine) closed on 2026-10-20 (`aac1655`): server, runtime and components, static check, page builder and translator subagents, verified end to end on Claude Code and Codex (sandbox run 15).
+- Next: Phase 4 (human gates), first task "Gate lifecycle in the loop state". On Codex the review server cannot start inside `workspace-write`; Phase 4's doorbell server must start outside the sandbox (R5).
+- Open: H3; follow-up-02 (accept a stop without stdin); agent-made decisions D31, D32, D34, D35, D36 to confirm.
+- Tracker compacted at Phase 3 closure: the task lists of closed Phases 0, 1 and 3 are in `tracker.closed-phases.previous-layer-01.md`.

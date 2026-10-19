@@ -4,6 +4,7 @@ import path from "node:path";
 import { epicRoot, epicRuntimeRoot, readJson, requireFlag, resolveRoot, runtimeStatePath } from "./common.mjs";
 import { readAgentDecisions } from "./agent-decisions.mjs";
 import { readHumanQueue } from "./human-queue.mjs";
+import { AWAITING_REVIEW, describeGate, openGates, reviewPath } from "./loop-gates.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 export function roleSummary(flags = {}) {
@@ -30,6 +31,13 @@ export function roleSummary(flags = {}) {
     open_human_queue: readHumanQueue(root, slug)
       .filter((item) => item.status === "open")
       .map(({ ask, blocks, id, kind }) => ({ ask, blocks, id, kind })),
+    open_gates: openGates(runtime.implementation_loop).map(({ blocking, covers, review, status }) => ({
+      blocking,
+      covers: covers ?? [],
+      path: reviewPath(slug, review),
+      review,
+      status,
+    })),
     unconfirmed_agent_decisions: readAgentDecisions(root, slug)
       .filter((decision) => decision.state === "unconfirmed")
       .map(({ id, title }) => ({ id, title })),
@@ -46,11 +54,22 @@ export function roleSummary(flags = {}) {
   console.log(`Active task: ${summary.active_task ?? "none"}`);
   console.log(`State: ${summary.state_path}`);
   console.log(`Tracker: ${summary.tracker_path}`);
+  if (summary.implementation_loop?.status === AWAITING_REVIEW) {
+    console.log(`Loop: ${AWAITING_REVIEW} (a blocking gate ended the last manager turn)`);
+  }
   if (summary.open_human_queue.length > 0) {
     console.log("");
     console.log(`Open human-queue items (.epic-loop/epics/${slug}/human-queue.md):`);
     for (const item of summary.open_human_queue) {
       console.log(`- ${item.id} ${item.kind}: ${item.ask} (blocks: ${item.blocks})`);
+    }
+  }
+  const gates = openGates(runtime.implementation_loop);
+  if (gates.length > 0) {
+    console.log("");
+    console.log("Open gates (review pages the human answers):");
+    for (const gate of gates) {
+      console.log(`- ${describeGate(slug, gate)}`);
     }
   }
   if (summary.unconfirmed_agent_decisions.length > 0) {

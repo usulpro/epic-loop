@@ -6,7 +6,7 @@ import { REVIEW_RUNTIME_DIR, reviewVendorFile } from "../paths.mjs";
 import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answers.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { injectReview, renderEpicHome, renderEpicList, renderNotFound, renderProblemThanks } from "./pages.mjs";
-import { epicExists, listEpicsWithReviews, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
+import { epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
 const MAX_BODY = 1024 * 1024;
 
@@ -154,7 +154,7 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       const slug = decode(home[1]);
       if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
       const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
-      return send(res, 200, renderEpicHome(projectName, epic, listReviews(root, slug)), "text/html; charset=utf-8");
+      return send(res, 200, renderEpicHome(projectName, epic, listReviews(root, slug), listOpenGates(root, slug)), "text/html; charset=utf-8");
     }
     throw new HttpError(404, "There is no page at this address.");
   }

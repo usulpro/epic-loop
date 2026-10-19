@@ -215,7 +215,18 @@ When the human must answer something that does not fit a line of chat (proportio
    - Codex: `spawn_agent` with `fork_turns: "none"`, `model: "gpt-6-luna"` (the fast, affordable tier in `codex debug models`) and `reasoning_effort: "low"`; then `wait_agent`. Setting a model needs `fork_turns: "none"`.
 5. Give the human the URL from the summary. If the server is not running, start it with `epic-loop serve --detach`. Codex's default `workspace-write` sandbox does not allow a command to listen on a port (`listen EPERM`): there, give the human the command (`npx epic-loop serve --detach` in the project) instead.
 
-Gate opening, waiting for answers and ingesting them are wired in later (human gates); this section covers producing the page.
+### Gates
+
+Only the manager opens a gate (D1): it registers a checked review page as something the loop is waiting on.
+
+1. After the builder's summary (and the translator's, if any), register the page:
+   `node <skill-dir>/scripts/gate.mjs open --slug "<slug>" --review <review-id> [--covers H3,H4] [--blocking]`.
+   `--covers` names the open human-queue items the page answers. The review must have passed `review check`.
+2. Make the gate `--blocking` only when no independent work remains. Then this manager turn ends with the loop in `awaiting-review`: no techlead turn follows until the loop resumes. Without `--blocking` the loop keeps working and hands over to the techlead as usual.
+3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server).
+4. Settle gates in a later manager turn: `gate.mjs ingested --review <id>` once the answers are recorded, `gate.mjs close --review <id> [--reason …]` when the gate is done. `gate.mjs list` shows them; `role-summary.mjs` lists open gates.
+
+Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Picking up submitted answers into a manager ingest turn is wired in later (human gates).
 
 ## Handoff Constraint
 

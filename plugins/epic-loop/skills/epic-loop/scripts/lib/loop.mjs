@@ -34,6 +34,7 @@ import {
   normalizePromptFile,
   prependResumeNote,
 } from "./loop-prompts.mjs";
+import { awaitReviewIfBlocked } from "./loop-gates.mjs";
 import { readRoadmapSummary } from "./roadmap.mjs";
 
 const LOOP_ROLES = ["manager", "techlead", "engineer", "idle"];
@@ -244,6 +245,11 @@ export function maybeBuildImplementationContinuation(projectRoot, payload, bindi
   ({ loop, runtime } = recordTurnStopIfNeeded(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = recordStoppedTurnReportIfPending(projectRoot, slug, runtime, loop, payload, timestamp));
   ({ loop, runtime } = ensureClaudeBlockCapMetadata(projectRoot, slug, runtime, loop, timestamp));
+
+  // A manager turn that opened a blocking gate ends here: the loop awaits the review.
+  if (loop.status === "running" && awaitReviewIfBlocked(projectRoot, slug, runtime, loop, payload, timestamp)) {
+    return null;
+  }
 
   // A fresh user turn (first Stop, stop_hook_active === false) resets Claude Code's own
   // consecutive Stop-hook block counter. Mirror that so a finite block cap is measured

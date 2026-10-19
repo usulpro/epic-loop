@@ -128,6 +128,39 @@ test("epic list, epic home and the review page render with the pending count and
   assert.match(missing.text, /Not found/u);
 });
 
+test("the epic home shows open gates from the loop state and survives a missing or broken state", async () => {
+  const runtimeDir = path.join(project.root, ".epic-loop", "epics", "demo", ".runtime");
+  const statePath = path.join(runtimeDir, "runtime-state.json");
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  try {
+    const gates = [
+      { review: "r1", blocking: true, covers: ["H1"], status: "open" },
+      { review: "r-gone", blocking: false, covers: [], status: "closed" },
+    ];
+    fs.writeFileSync(statePath, JSON.stringify({ implementation_loop: { status: "awaiting-review", gates } }));
+    const blocking = await request(port, "/demo");
+    assert.equal(blocking.status, 200);
+    assert.match(blocking.text, /<h2>Gates<\/h2>/u);
+    assert.match(blocking.text, /data-gate="r1" data-blocking="true"/u);
+    assert.match(blocking.text, /The loop waits for this review\./u);
+    assert.match(blocking.text, /Pick a doorbell <span class="el-tag el-tag--accent">gate<\/span>/u);
+    assert.doesNotMatch(blocking.text, /r-gone/u, "closed gates are not shown");
+
+    fs.writeFileSync(statePath, JSON.stringify({ implementation_loop: { status: "running", gates: [{ ...gates[0], blocking: false }] } }));
+    assert.match((await request(port, "/demo")).text, /The loop keeps working; answer when you can\./u);
+
+    fs.writeFileSync(statePath, "{ not json");
+    const broken = await request(port, "/demo");
+    assert.equal(broken.status, 200);
+    assert.doesNotMatch(broken.text, /<h2>Gates<\/h2>/u);
+  } finally {
+    fs.rmSync(statePath, { force: true });
+  }
+  const missing = await request(port, "/demo");
+  assert.equal(missing.status, 200);
+  assert.doesNotMatch(missing.text, /<h2>Gates<\/h2>/u);
+});
+
 test("review assets are served and traversal is refused", async () => {
   const asset = await request(port, "/demo/reviews/r1/assets/shot.txt");
   assert.equal(asset.status, 200);

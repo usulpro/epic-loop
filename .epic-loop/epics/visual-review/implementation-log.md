@@ -425,3 +425,25 @@
   - techlead checked both summary.json files (0 failures)
   - test:unit 202/202, validate passes, browser-check all 32 pass
 - Residual risk: Runtime UI strings stay English on translated pages; Codex workspace-write cannot start the server (Phase 4); Codex e2e doorbell still on hold (H3)
+
+## 2026-10-19T19:39:38+00:00 - done
+
+- Phase: Phase 4 - Human Gates In The Loop
+- Task: Gate lifecycle in the loop state
+- Verdict: done
+- Changed:
+  - scripts/gate.mjs and lib/loop-gates.mjs: open/ingested/close (manager turns only, review must have a schema, covers must be open H items, reopen keeps one entry) and list
+  - gates in implementation_loop.gates
+  - Stop of the manager turn that opened an unanswered blocking gate sets status awaiting-review with no continuation
+  - answers-submitted logged once per submittedAt on any driver hook event
+  - awaiting-review note on user messages, stop-loop and resume from it
+  - role-summary open gates
+  - CLI epic home Gates section from the runtime state
+  - manager role Gates subsection, implementation-cycle step 14, manager prompt step 7, docs/human-gates.md
+  - tracker compaction of closed phases 0, 1, 3 (manager housekeeping) and state-of-epic for Phase 4
+- Verification:
+  - gate-contracts.test.mjs 11 tests on codex and claude-code (non-blocking hands to techlead, blocking ends in awaiting-review, accepted stop wins, manager-only, validation, events with review id, answers-submitted once, stop-loop, resume)
+  - review-server epic home gates test
+  - techlead reran both files 20/20
+  - test:unit 214/214, validate passes, browser-check passes
+- Residual risk: answers are not routed to a manager ingest turn yet (Task 2); gate.mjs reaches the live runtime copy only after self-update

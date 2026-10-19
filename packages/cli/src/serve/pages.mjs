@@ -77,16 +77,39 @@ ${rows}
   });
 }
 
-export function renderEpicHome(projectName, epic, reviews) {
+// Gates (implementation_loop.gates): a blocking gate means the loop waits for this review.
+function gateNotices(epic, reviews, gates) {
+  if (!gates.length) return "";
+  const titleOf = (id) => reviews.find((review) => review.id === id)?.title ?? id;
+  const items = gates
+    .map((gate) => {
+      const href = `/${encodeURIComponent(epic.slug)}/reviews/${encodeURIComponent(gate.review)}/`;
+      const text = gate.blocking ? "The loop waits for this review." : "The loop keeps working; answer when you can.";
+      return `          <div class="el-notice ${gate.blocking ? "el-notice--danger" : "el-notice--action"}" data-gate="${escapeHtml(gate.review)}" data-blocking="${gate.blocking}">
+            <span class="el-tag ${gate.blocking ? "el-tag--danger" : "el-tag--accent"}">${gate.blocking ? "blocking gate" : "gate"}</span>
+            <div><div class="el-notice__title">${escapeHtml(titleOf(gate.review))}</div><p class="el-notice__text">${text}${gate.status === "open" ? "" : ` · ${escapeHtml(gate.status)}`}</p></div>
+            <a class="el-btn el-btn--primary" href="${href}">Open</a>
+          </div>`;
+    })
+    .join("\n");
+  return `        <section class="el-section el-gates">
+          <div class="el-section__head"><h2>Gates</h2><span class="el-meta">${gates.length}</span></div>
+${items}
+        </section>
+`;
+}
+
+export function renderEpicHome(projectName, epic, reviews, gates = []) {
   const pending = reviews.filter((review) => !review.submittedAt);
   const done = reviews.filter((review) => review.submittedAt);
+  const gateIds = new Set(gates.map((gate) => gate.review));
   const href = (review) => `/${encodeURIComponent(epic.slug)}/reviews/${encodeURIComponent(review.id)}/`;
   const notices = pending.length
     ? pending
         .map(
           (review) => `          <div class="el-notice el-notice--action">
             <span class="el-id">${escapeHtml(review.id)}</span>
-            <div><div class="el-notice__title">${escapeHtml(review.title)}</div><p class="el-notice__text">Waiting for your answers${review.savedAt ? ` · draft saved ${escapeHtml(review.savedAt)}` : ""}</p></div>
+            <div><div class="el-notice__title">${escapeHtml(review.title)}${gateIds.has(review.id) ? ' <span class="el-tag el-tag--accent">gate</span>' : ""}</div><p class="el-notice__text">Waiting for your answers${review.savedAt ? ` · draft saved ${escapeHtml(review.savedAt)}` : ""}</p></div>
             <a class="el-btn el-btn--primary" href="${href(review)}">Open</a>
           </div>`,
         )
@@ -111,7 +134,7 @@ ${done.map((review) => `              <tr><td><span class="el-id">${escapeHtml(r
     ],
     headerEnd: `<span class="el-meta">pending</span> ${pendingBadge(pending.length)}`,
     body: `        <div class="el-page-head"><div class="el-label">epic</div><h1>${escapeHtml(epic.title)}</h1><p class="el-meta">${escapeHtml(epic.slug)} · ${escapeHtml(epic.mode)}</p></div>
-        <section class="el-section">
+${gateNotices(epic, reviews, gates)}        <section class="el-section">
           <div class="el-section__head"><h2>Waiting for you</h2>${pendingBadge(pending.length)}</div>
 ${notices}
         </section>
