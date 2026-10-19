@@ -594,3 +594,27 @@
   - light and dark home screenshots reviewed, feed column wrap fixed
 - Residual risk: Live check on both platforms is part of Phase 5 Task 6; this repo's live loop sees driver_transcript_path only after the next self-update. Fixtures are synthetic, modeled on the archived samples.
 - Commit: this task commit (feat(app): activity feed and turn statistics)
+
+## 2026-10-19T21:32:15+00:00 - closed
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Phase 5 Task 4 - Docs browser and reference expansion
+- Verdict: closed
+- Changed:
+  - CLI docs browser: /<slug>/docs/ index and /<slug>/docs/<path> pages (top-level artifacts, docs/**, stop-reports/**
+  - .runtime, reviews, encoded .. and escaping symlinks are 404), markdown-it 14.1.0 with html off (D39), heading ids, relative links rewritten to doc pages (outside or missing paths shown as plain text), code spans naming epic files linked
+  - GET /api/<slug>/ids from a copy of the skill's id index
+  - server-side el-ref links on doc pages and the home with definition anchors
+  - /_runtime/refs.js popover (hover, focus, Escape, aria-describedby) and client-side wrapping on review pages
+  - Docs section on the home
+  - doc pages refresh live on their own file
+  - route contract in docs/review-engine.md
+- Verification:
+  - pnpm run test:unit 263/263 (new epic-docs.test.mjs)
+  - pnpm run validate passed
+  - build ok and dist serves a doc page with refs
+  - browser-check all passed (link navigation to #D34, popover on hover and focus, Escape, review-page id expansion)
+  - light and dark doc screenshots reviewed
+  - acceptance on a migrated scratch copy of this epic: 14 pages, 353 internal links and 251 anchors with 0 failures, 251 of 251 expected id mentions expanded, 1 unknown id (T0)
+- Residual risk: A doc page refreshes on changes to its own file only, not when the id index changes elsewhere.
+- Commit: this task commit (feat(app): docs browser with expandable id references)

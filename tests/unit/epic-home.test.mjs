@@ -163,12 +163,19 @@ function nextEvent(name, action, timeoutMs = 2000) {
 
 const nextChange = (action, timeoutMs) => nextEvent("change", action, timeoutMs);
 
+// The page with id links unwrapped, for assertions about the rest of the markup.
+const plain = (html) => html.replace(/<a class="el-ref" data-ref="[A-Z]\d+" href="[^"]*">([^<]*)<\/a>/gu, "$1");
+
 const health = async () => JSON.parse((await get("/_health")).text);
 
 test("the epic home shows intent, loop state, what waits, agent decisions, and phases with tasks", async () => {
   const page = await get(`/${SLUG}`);
   assert.equal(page.status, 200);
-  const html = page.text;
+  const html = plain(page.text);
+  // Known ids link to their definition; the id badges and mentions alike.
+  assert.match(page.text, /<dt>task<\/dt><dd>Phase 2 Task 2 \(<a class="el-ref" data-ref="T4" href="\/home\/docs\/tracker\.md#T4">T4<\/a>\) - Publish the package<\/dd>/u);
+  assert.match(page.text, /<span class="el-id"><a class="el-ref" data-ref="D1" href="\/home\/docs\/decision-log\.md#D1">D1<\/a><\/span>/u);
+  assert.match(page.text, /data-task="T4"/u);
   assert.match(html, /<h1>Home Epic<\/h1>/u);
   assert.match(html, /<p class="el-intent">Publishing by hand is slow and error-prone\.<\/p>/u);
   // Loop state: status label, mode, phase, task with its id, role with the ticking elapsed time, iteration.
@@ -292,7 +299,7 @@ test("the turn statistics match progress-report.md built by the skill from the s
   assertSuccess(runNodeScript("rebuild-progress.mjs", ["--root", root, "--slug", SLUG]));
   const report = fs.readFileSync(path.join(root, ".epic-loop", "epics", SLUG, ".runtime", "progress-report.md"), "utf8");
   const field = (label) => report.match(new RegExp(`^- ${label}: (.+)$`, "mu"))[1];
-  const html = (await get(`/${SLUG}`)).text;
+  const html = plain((await get(`/${SLUG}`)).text);
   const stats = html.slice(html.indexOf('<section class="el-section el-stats">'), html.indexOf("</section>", html.indexOf('<section class="el-section el-stats">')));
   assert.match(stats, /<details id="el-stats">/u, "closed by default");
   assert.match(stats, new RegExp(`<dt>active time</dt><dd>${field("Active turn time")}</dd>`, "u"));

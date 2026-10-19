@@ -389,6 +389,82 @@ async function checkHome(s, server, project) {
   await s.shot("home-dark");
 }
 
+const DOCS_DECISIONS = `# Decision Log
+
+## Active Decisions
+
+- **D1 — Parse with a hand-written lexer** (2026-10-20; agent-made, stop class C; unconfirmed).
+  - Default taken: no parser generator
+- **D34 — Claude Code doorbell mechanism: an asyncRewake waiter hook** (2026-10-20).
+  - Why: it wakes an idle session in 0.2 s; see [the guide](docs/guide.md#the-waiter).
+`;
+
+const DOCS_GUIDE = `# Doorbell guide
+
+The loop follows [the decision log](../decision-log.md#d34) and the tracker (\`tracker.md\`).
+
+## The waiter
+
+The waiter hook implements D34 and keeps T1 moving; D1 stays unconfirmed.
+
+| Cell | Result |
+|---|---|
+| 1A | works |
+`;
+
+async function hover(s, selector) {
+  const box = await s.evaluate(
+    `(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`,
+  );
+  await s.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: box.x, y: box.y });
+}
+
+// The docs browser: a doc page follows relative links, ids open a popover on hover and focus that
+// Escape closes, and ids on an agent-written review page expand too.
+async function checkDocs(s, server, project) {
+  const { evaluate, waitFor, expect } = s;
+  const epicDir = path.join(project.root, ".epic-loop", "epics", "demo");
+  fs.mkdirSync(path.join(epicDir, "docs"), { recursive: true });
+  fs.writeFileSync(path.join(epicDir, "decision-log.md"), DOCS_DECISIONS);
+  fs.writeFileSync(path.join(epicDir, "docs", "guide.md"), DOCS_GUIDE);
+  await s.send("Page.navigate", { url: `${server.url}demo/docs/docs/guide.md` });
+  await waitFor("document.readyState === 'complete' && !!window.epicLoopRefs && window.epicLoopHome?.live === 'live'", "doc page ready");
+  expect((await evaluate("document.querySelectorAll('article.el-doc a.el-ref').length")) === 3, "the guide's D34, T1 and D1 mentions are links");
+  await hover(s, 'a.el-ref[data-ref="D34"]');
+  await waitFor("window.epicLoopRefs.open === 'D34' && !document.getElementById('el-refpop').hidden", "popover on hover", 3000);
+  const title = await evaluate("document.querySelector('#el-refpop .el-refpop__title').textContent");
+  expect(title === "Claude Code doorbell mechanism: an asyncRewake waiter hook", `the hover popover shows the entry title (${title})`);
+  expect(
+    await evaluate(
+      "document.querySelector('a.el-ref[data-ref=\"D34\"]').getAttribute('aria-describedby') === 'el-refpop' && !!document.getElementById('el-refpop').getAttribute('aria-label')",
+    ),
+    "the popover describes the link and has an accessible name",
+  );
+  await evaluate("document.documentElement.dataset.theme = 'light'");
+  await s.shot("docs-light");
+  await evaluate("document.documentElement.dataset.theme = 'dark'");
+  await s.shot("docs-dark");
+  await s.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
+  await waitFor("window.epicLoopRefs.open === null", "popover closes on mouse out", 3000);
+  await evaluate("document.querySelector('a.el-ref[data-ref=\"D1\"]').focus()");
+  await waitFor("window.epicLoopRefs.open === 'D1'", "popover on focus", 3000);
+  await s.key("Escape");
+  expect(await evaluate("window.epicLoopRefs.open === null && document.getElementById('el-refpop').hidden"), "Escape closes the popover");
+
+  await evaluate("document.querySelector('article.el-doc a[href$=\"decision-log.md#D34\"]').click()");
+  await waitFor("location.pathname === '/demo/docs/decision-log.md' && location.hash === '#D34' && document.readyState === 'complete'", "relative link navigation", 5000);
+  expect(await evaluate("!!document.getElementById('D34') && document.getElementById('D34').classList.contains('el-anchor')"), "a relative link lands on the definition anchor");
+  expect(await evaluate("document.querySelector('article.el-doc a[href=\"/demo/docs/docs/guide.md#the-waiter\"]') !== null"), "links back resolve to the guide's heading anchor");
+
+  await s.send("Page.navigate", { url: `${server.url}demo/reviews/r1/` });
+  await waitFor("document.readyState === 'complete' && window.epicLoopRefs?.wrapped > 0", "review page ids wrapped", 5000);
+  expect(await evaluate("!!document.querySelector('main .el-page-head a.el-ref[data-ref=\"D34\"]')"), "an id on a review page expands to a link");
+  expect(await evaluate("!document.querySelector('el-check a.el-ref, el-option a.el-ref, label a.el-ref')"), "ids inside form controls stay plain");
+  await hover(s, 'main a.el-ref[data-ref="D34"]');
+  await waitFor("window.epicLoopRefs.open === 'D34'", "review page popover", 3000);
+  expect(true, "the review page popover opens");
+}
+
 async function main() {
   const project = makeProject();
   const server = serve(project.root, "--detach");
@@ -401,6 +477,7 @@ async function main() {
     await checkAnswers(s, server, project);
     await checkVisual(s, server, project);
     await checkHome(s, server, project);
+    await checkDocs(s, server, project);
     s.expect(s.consoleErrors.length === 0, `no page errors (${s.consoleErrors.join(" | ") || "none"})`);
   } finally {
     await closeChrome(browser, cdp);

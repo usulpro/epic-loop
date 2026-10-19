@@ -23,10 +23,22 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - `/<slug>` is the epic home, the live overview (Phase 5 Task 2):
     - **Sections:** title and intent; loop state (mode, status, phase, task, role with the elapsed turn time, iteration); gates and pending reviews; human-queue items grouped by hold kind and external waits; unconfirmed agent-made decisions; phases and tasks with progress and `<details>`; the inbox; answered reviews.
     - **Data:** the CLI reads it with copies of the skill's parsers in `packages/cli/src/epic/`.
-    - **Live updates:** `GET /api/<slug>/events` is a `text/event-stream` with `event: change` and `data: {"file": "<path under the epic>"}`, debounced to about 300 ms, plus a heartbeat every 20 s; it watches the tracker, runtime state, progress log, queue, decision log, state, inbox, reviews and docs. It also watches the driver's transcript (`implementation_loop.driver_transcript_path`, re-armed when the runtime state names another path) and sends `event: activity` with `data: {}` when it grows.
+    - **Live updates:** `GET /api/<slug>/events` is a `text/event-stream` with `event: change` and `data: {"file": "<path under the epic>"}`, debounced to about 300 ms, plus a heartbeat every 20 s; it watches every top-level artifact (tracker and archive layers, queue, logs, registers, state), the runtime state, progress log, inbox, reviews, `docs/` and `stop-reports/`. It also watches the driver's transcript (`implementation_loop.driver_transcript_path`, re-armed when the runtime state names another path) and sends `event: activity` with `data: {}` when it grows.
     - **Fragment:** `GET /<slug>?fragment=main` returns the inner `<main>`, which `/_runtime/home.js` swaps in. The scroll position, open `<details>` and an inbox draft are kept. `GET /<slug>?fragment=activity` returns only the activity section, which the page swaps in on `event: activity`.
     - **Activity and statistics:** the activity feed reads the tail (256 KB, last 30 items) of the driver's Claude Code transcript or Codex rollout, per `.epic-loop/.runtime/platform.json`, with items `{ at, kind: "tool" | "message" | "result" | "turn", role?, name?, summary }`; thinking and reasoning are never shown. Turn statistics come from `.runtime/progress-log.jsonl` with the aggregation of `progress-report.md`, plus background waits and time awaiting a review.
+    - **Sections, continued:** activity, turn statistics and a Docs list (artifacts, docs, stop reports).
     - `/_health` reports the open watchers;
+  - `/<slug>/docs/` lists the epic's files, and `/<slug>/docs/<path>` is the docs browser (Phase 5 Task 4):
+    - **Scope:** top-level `*.md` artifacts, `docs/**` and `stop-reports/**`. Hidden paths (`.runtime/`), `reviews/`, `..` in any encoding and symlinks that leave the epic are 404.
+    - **Rendering:** markdown-it with raw HTML off (D39). Headings get GitHub-style ids. Tables use `.el-table`.
+    - **Links:** a relative link to an epic file goes to its docs page, resolved against the doc's folder and then the epic root, with the anchor kept (an id anchor such as `#d16` becomes `#D16`). A link that leaves the epic or names a missing file becomes plain text with the path shown. `http(s)` links get `rel="noopener noreferrer"`. An inline code span naming an epic `.md` file links to it. Non-markdown files under `docs/` are served with their type.
+    - **Live:** `?fragment=main` returns the inner `<main>`. The page swaps it in when a change event names its own file (`data-live-file`).
+  - `GET /api/<slug>/ids` returns `{ ids, aliases }` from a copy of the skill's id index (D27): each id with its kind, title, status, file and line.
+  - **Id references:**
+    - On the home and doc pages the server wraps known `D/H/T/R/Q` mentions (and the hyphenated form) in `<a class="el-ref" data-ref="D16" href="/<slug>/docs/<file>#D16">`. Code, existing links and unknown ids stay plain.
+    - The defining line gets an anchor (`<span class="el-anchor" id="D16">`) instead of a self-link.
+    - `/_runtime/refs.js` shows the entry in a popover on hover and focus (`role="tooltip"`, `aria-describedby`); Escape closes it, and a click goes to the definition.
+    - On review pages the same script wraps ids in the text of `<main>`, skipping code, links, labels and form controls.
   - `/<slug>/reviews/<id>/` is a review page. The canonical URL ends with `/`, so relative assets in `page.html` resolve inside the review; the address without it redirects (301).
 - The manager gives deep links to review routes.
 

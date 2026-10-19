@@ -1,11 +1,13 @@
-// The live epic home (Phase 5): follows /api/<slug>/events and swaps in the fresh <main> from
-// /<slug>?fragment=main after each change, keeping the scroll position, the open state of every
+// The live epic home and doc pages (Phase 5): follows /api/<slug>/events and swaps in the fresh
+// <main> from <this page>?fragment=main after each change (a doc page only after a change to its
+// own file, named by data-live-file), keeping the scroll position, the open state of every
 // <details id>, and an unsent inbox draft. An `activity` event refreshes only the activity section
 // from /<slug>?fragment=activity. Ticks the elapsed time of the open role turn and the relative
 // times of the feed. The page works without this script; it is only current on reload then.
 const main = document.querySelector("main[data-live-main]");
 const marker = document.querySelector(".el-live");
 const slug = main?.dataset.epic;
+const liveFile = main?.dataset.liveFile ?? null;
 const state = { activityRefreshes: 0, refreshes: 0, live: "connecting" };
 window.epicLoopHome = state;
 
@@ -43,7 +45,7 @@ async function refresh() {
     return inFlight;
   }
   inFlight = (async () => {
-    const response = await fetch(`/${encodeURIComponent(slug)}?fragment=main`, { cache: "no-store", headers: { accept: "text/html" } });
+    const response = await fetch(`${location.pathname}?fragment=main`, { cache: "no-store", headers: { accept: "text/html" } });
     if (!response.ok) return;
     const html = await response.text();
     const openState = new Map([...main.querySelectorAll("details[id]")].map((node) => [node.id, node.open]));
@@ -112,8 +114,15 @@ function connect() {
     setLive("live");
     if (wasPaused) refresh();
   });
-  source.addEventListener("change", () => refresh());
-  source.addEventListener("activity", () => refreshActivity());
+  source.addEventListener("change", (event) => {
+    if (!liveFile) return refresh();
+    try {
+      if (JSON.parse(event.data).file === liveFile) refresh();
+    } catch {}
+  });
+  source.addEventListener("activity", () => {
+    if (main.querySelector("[data-live-activity]")) refreshActivity();
+  });
   source.addEventListener("error", () => {
     source.close();
     setLive("paused");

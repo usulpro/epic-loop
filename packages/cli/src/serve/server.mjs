@@ -8,11 +8,15 @@ import { ringDoorbell } from "./doorbell.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
 import { readEpicActivity } from "../epic/activity.mjs";
+import { listEpicDocs } from "../epic/docs.mjs";
+import { buildIdIndex } from "../epic/id-index.mjs";
 import { buildOverview } from "../epic/overview.mjs";
 import { buildStatistics } from "../epic/statistics.mjs";
 import { streamEpicEvents, watcherCount } from "./events.mjs";
+import { docsResponse } from "./docs.mjs";
 import { renderActivity, renderEpicHome, renderHomeMain } from "./home.mjs";
 import { injectReview, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
+import { linkIdsInHtml } from "./refs.mjs";
 import { epicDir, epicExists, listEpicsWithReviews, listOpenGates, listReviews, reviewDir, reviewExists } from "./reviews.mjs";
 
 const MAX_BODY = 1024 * 1024;
@@ -76,6 +80,14 @@ async function readPayload(req) {
   } catch {
     throw new HttpError(400, "Body must be JSON or form-encoded.");
   }
+}
+
+// GET /api/<slug>/ids: the epic's id index (D27) for the reference popovers.
+function sendIds(req, res, root, slug) {
+  if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+  if (req.method !== "GET" && req.method !== "HEAD") throw new HttpError(405, "Method not allowed.");
+  const index = buildIdIndex(epicDir(root, slug));
+  return sendJson(res, 200, { aliases: index.aliases, ids: index.ids });
 }
 
 export function createReviewServer({ root, projectName = path.basename(root), onListening }) {
@@ -172,6 +184,8 @@ export function createReviewServer({ root, projectName = path.basename(root), on
       if (req.headers.origin !== undefined && !origins.includes(req.headers.origin)) throw new HttpError(403, "Cross-origin request refused.");
       return streamEpicEvents(req, res, epicDir(root, slug));
     }
+    const ids = raw.match(/^\/api\/([^/]+)\/ids$/u);
+    if (ids) return sendIds(req, res, root, decode(ids[1]));
     const inbox = raw.match(/^\/api\/([^/]+)\/inbox$/u);
     if (inbox) return handleInbox(req, res, decode(inbox[1]));
     const api = raw.match(/^\/api\/([^/]+)\/reviews\/([^/]+)\/(answers|submit|problem)$/u);
@@ -181,17 +195,28 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     if (raw === "/") return send(res, 200, renderEpicList(projectName, listEpicsWithReviews(root)), "text/html; charset=utf-8");
     const review = raw.match(/^\/([^/]+)\/reviews\/([^/]+)(?:\/(.*))?$/u);
     if (review) return handleReview(req, res, decode(review[1]), decode(review[2]), review[3]);
+    const docs = raw.match(/^\/([^/]+)\/docs(?:\/(.*))?$/u);
+    if (docs) {
+      const slug = decode(docs[1]);
+      if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
+      const out = docsResponse(projectName, epicDir(root, slug), slug, decode(docs[2] ?? ""), url.searchParams.get("fragment"));
+      if (!out) throw new HttpError(404, "There is no such doc in this epic.");
+      return out.file ? sendFile(res, out.file) : send(res, 200, out.html, "text/html; charset=utf-8");
+    }
     const home = raw.match(/^\/([^/]+)\/?$/u);
     if (home) {
       const slug = decode(home[1]);
       if (!epicExists(root, slug)) throw new HttpError(404, "There is no such epic in this project.");
       const dir = epicDir(root, slug);
       // ?fragment=activity is the activity section alone, refreshed after an activity event.
-      if (url.searchParams.get("fragment") === "activity") return send(res, 200, renderActivity(readEpicActivity(root, dir)), "text/html; charset=utf-8");
+      const index = buildIdIndex(dir);
+      const withRefs = (html) => linkIdsInHtml(html, index, slug);
+      if (url.searchParams.get("fragment") === "activity") return send(res, 200, withRefs(renderActivity(readEpicActivity(root, dir))), "text/html; charset=utf-8");
       const epic = listEpicsWithReviews(root).find((item) => item.slug === slug);
       const gates = listOpenGates(root, slug);
       const view = {
         activity: readEpicActivity(root, dir),
+        docs: listEpicDocs(dir),
         epic,
         gates,
         inbox: readInbox(dir),
@@ -200,8 +225,8 @@ export function createReviewServer({ root, projectName = path.basename(root), on
         statistics: buildStatistics(dir),
       };
       // ?fragment=main is the inner <main> the live page swaps in after a change event.
-      if (url.searchParams.get("fragment") === "main") return send(res, 200, renderHomeMain(view), "text/html; charset=utf-8");
-      return send(res, 200, renderEpicHome(projectName, view), "text/html; charset=utf-8");
+      if (url.searchParams.get("fragment") === "main") return send(res, 200, withRefs(renderHomeMain(view)), "text/html; charset=utf-8");
+      return send(res, 200, renderEpicHome(projectName, view, withRefs), "text/html; charset=utf-8");
     }
     throw new HttpError(404, "There is no page at this address.");
   }

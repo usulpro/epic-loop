@@ -15,11 +15,10 @@ const POLL_MS = 1000;
 const WATCHED = [
   /^\.runtime\/runtime-state\.json$/u,
   /^\.runtime\/progress-log\.jsonl$/u,
-  /^tracker(\..+\.previous-layer-\d+)?\.md$/u,
-  /^human-queue\.md$/u,
-  /^decision-log\.md$/u,
-  /^state-of-epic\.md$/u,
+  // Every top-level artifact: tracker and archive layers, queue, logs, registers, state.
+  /^[^/]+\.md$/u,
   /^inbox\.jsonl$/u,
+  /^stop-reports\//u,
   /^reviews\//u,
   /^docs\//u,
 ];

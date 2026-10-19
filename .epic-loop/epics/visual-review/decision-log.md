@@ -161,6 +161,9 @@
 - **D38 — Auto-continue after a stop report: the techlead judges whether the answers unblock work** (2026-10-19; agent-made, stop class C; unconfirmed).
   - Default taken: with continue-after-submit on (the default, unanswered counts as on), the submit resumes the loop into a manager ingest turn and then the techlead, which continues or files a new stop; with it off, the ingest turn records the answers and the loop returns to idle without a techlead turn
   - Why: D25 leaves open who decides that work is unblocked; the techlead already owns planning after ingest (D23), and a hook cannot judge partial answers; a still-blocked techlead files a repeated stop that the manager accepts
+- **D39 — Render epic markdown with markdown-it bundled into the CLI** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: markdown-it 14.1.0 pinned as a CLI devDependency, bundled into dist by esbuild like the rest of the CLI, with html: false so raw HTML in docs is escaped
+  - Why: The docs browser needs tables, nested lists and code fences rendered correctly; a hand-written renderer would be a long tail of edge cases, and the CLI already bundles its npm dependencies at build time
 
 ## Open Questions
 

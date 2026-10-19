@@ -257,7 +257,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Acceptance: with a running sandbox loop on each platform, the feed shows the current role's latest actions within seconds, and the statistics match `progress-report.md`.
   - Docs: `docs/review-engine.md`.
 
-- [ ] Kind: implementation | Status: todo | Docs browser and reference expansion
+- [x] Kind: implementation | Status: done | Docs browser and reference expansion
   - Outcome:
     - Every epic doc and artifact renders as a page with working relative links.
     - Any `D<n>`, `H<n>`, `T<n>`, `R<n>`, `Q<n>` (or the hyphenated form) in any page expands on hover or click to its entry, with a link to its source.

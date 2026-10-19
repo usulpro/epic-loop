@@ -134,7 +134,7 @@ export function injectReview(html, { slug, id, runtimeScript }) {
   if (!/\/_runtime\/tokens\.css/u.test(page)) head.push(cssLinks());
   head.push(`<meta name="epic-loop-review" content="${escapeHtml(`${slug}/${id}`)}" />`);
   // Page runtime (components, autosave): an ES module, deferred by default.
-  if (runtimeScript) head.push(`<script type="module" src="/_runtime/runtime.js"></script>`);
+  if (runtimeScript) head.push(`<script type="module" src="/_runtime/runtime.js"></script>`, `<script type="module" src="/_runtime/refs.js"></script>`);
   const headBlock = `\n    ${head.join("\n    ")}\n`;
   page = /<\/head>/iu.test(page) ? page.replace(/<\/head>/iu, () => `${headBlock}</head>`) : `${headBlock}${page}`;
   const control = problemControl(slug, id);

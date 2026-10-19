@@ -3,6 +3,7 @@
 // `?fragment=main` and swaps in when /api/<slug>/events reports a change. `renderActivity` is the
 // activity section alone (`?fragment=activity`), refreshed on `event: activity`.
 import { formatDuration } from "../epic/statistics.mjs";
+import { docsSection } from "./docs.mjs";
 import { escapeHtml, layout, pendingBadge } from "./pages.mjs";
 
 const reviewHref = (slug, id) => `/${encodeURIComponent(slug)}/reviews/${encodeURIComponent(id)}/`;
@@ -296,13 +297,14 @@ ${done.map((review) => `              <tr><td><span class="el-id">${escapeHtml(r
         </section>`;
 }
 
-export function renderHomeMain({ activity = null, epic, gates = [], inbox = [], overview, reviews, statistics = null }) {
+export function renderHomeMain({ activity = null, docs = null, epic, gates = [], inbox = [], overview, reviews, statistics = null }) {
   const title = overview.title ?? epic.title;
   return `        <div class="el-page-head"><div class="el-label">epic</div><h1>${escapeHtml(title)}</h1><p class="el-meta">${escapeHtml(epic.slug)} · ${escapeHtml(overview.mode ?? epic.mode)}</p>${overview.intent ? `<p class="el-intent">${escapeHtml(overview.intent)}</p>` : ""}</div>
-${loopSection(overview)}${renderActivity(activity)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${statisticsSection(statistics)}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
+${loopSection(overview)}${renderActivity(activity)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${statisticsSection(statistics)}${docs ? docsSection(epic.slug, docs) : ""}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
 }
 
-export function renderEpicHome(projectName, view) {
+// `transform` post-processes the inner <main> (the server links id mentions with it).
+export function renderEpicHome(projectName, view, transform = (html) => html) {
   const { epic, overview, reviews } = view;
   const pending = reviews.filter((review) => !review.submittedAt).length;
   return layout({
@@ -313,7 +315,7 @@ export function renderEpicHome(projectName, view) {
     ],
     headerEnd: `<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending</span> ${pendingBadge(pending)}`,
     main: { attributes: ` data-epic="${escapeHtml(epic.slug)}" data-live-main` },
-    scripts: ['<script type="module" src="/_runtime/home.js"></script>'],
-    body: renderHomeMain(view),
+    scripts: ['<script type="module" src="/_runtime/home.js"></script>', '<script type="module" src="/_runtime/refs.js"></script>'],
+    body: transform(renderHomeMain(view)),
   });
 }
