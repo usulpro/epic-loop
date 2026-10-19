@@ -14,6 +14,7 @@ Counterpart role: [implementation-techlead-role.md](implementation-techlead-role
 - [Stop Review](#stop-review)
 - [Rules By Class](#rules-by-class)
 - [Stop Report](#stop-report)
+- [Review Pages](#review-pages)
 - [Handoff Constraint](#handoff-constraint)
 
 ## Identity
@@ -199,6 +200,18 @@ Saving contract:
 - The saved copy becomes the manager report (`.runtime/latest-manager-report.md`); the `stop-gate` event and `implementation_loop.last_stop_report_path` record its path.
 - The manager then commits the report with that review's `human-queue.md` and `decision-log.md` changes, in one commit (`docs(epic): stop report NN (class X)`), using the command `review-stop.mjs` prints; only those files, never `git add -A` (decision D32). It is the one commit a manager makes, an exception to "no standalone housekeeping commits": the report is the loop's message to the human, not housekeeping.
 - The final chat message is the same report in the user's language (D9: artifacts on disk stay English).
+
+## Review Pages
+
+When the human must answer something that does not fit a line of chat (proportionality levels 2 and 3 in [review-pages.md](review-pages.md)), the manager has a review page built. It never writes the page or a translation in its own context; it keeps only the subagents' summaries.
+
+1. Pick a review id (`<YYYY-MM-DD>-<short-topic>`) and the second language: the language the human writes in (D9), unless it is English.
+2. Fill [../assets/templates/review-page-builder-brief.md](../assets/templates/review-page-builder-brief.md) with the question, the options and their consequences, the recommendation and its rule, and the evidence paths.
+3. Delegate it. On Claude Code: the Agent tool with `subagent_type: "general-purpose"` and the default model. The builder returns a gate summary: review id, URL, what is asked, controls, check result.
+4. If a second language is set, fill [../assets/templates/review-translator-brief.md](../assets/templates/review-translator-brief.md) and delegate it with the Agent tool and `model: "haiku"`. It returns one line.
+5. Give the human the URL from the summary (start `epic-loop serve --detach` if the summary says the server is not running).
+
+Gate opening, waiting for answers and ingesting them are wired in later (human gates); this section covers producing the page.
 
 ## Handoff Constraint
 

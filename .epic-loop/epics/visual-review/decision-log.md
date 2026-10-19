@@ -152,6 +152,9 @@
 - **D35 — Ship bundled Mermaid 12.2.0 inside the epic-loop npm package** (2026-10-19; agent-made, stop class C; unconfirmed).
   - Default taken: mermaid is an exact-pinned devDependency; its single-file build (5.5 MB unpacked) is copied into dist/review/runtime/vendor/ and served only to pages with an el-diagram
   - Why: Diagrams must render offline with no network (review-engine.md, D12); a CDN would break the local-only rule. Cost: the npm package grows by about 5.5 MB unpacked. Reverse by dropping el-diagram or making Mermaid an optional download
+- **D36 — Claude Code subagents are invoked through the host's Agent tool, not installed agent files** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: the manager runs the page builder as a general-purpose subagent on the main model and the translator with model haiku, each with a filled brief template from assets/templates/; no .claude/agents files are installed
+  - Why: Works for copy installs and plugin installs alike with no install or manifest changes; the Agent tool already takes a model per call. Reverse by shipping .claude/agents definitions if the brief-in-prompt approach proves unreliable
 
 ## Open Questions
 

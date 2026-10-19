@@ -14,7 +14,7 @@ const CONTROL_KINDS = { "el-choice": "choice", "el-check": "check", "el-select":
 // Not translated by the runtime: raw text, code, inline frame content, diagram source, the head.
 const NO_SEGMENTS = new Set(["head", "script", "style", "textarea", "code", "pre", "template", "el-diagram"]);
 // Attributes the runtime renders as visible text, translated as text nodes after upgrade.
-const RENDERED_ATTRIBUTES = ["label", "caption"];
+const RENDERED_ATTRIBUTES = ["label", "caption", "rule"];
 const LOADING_LINK_RELS = /\b(stylesheet|preload|prefetch|modulepreload|icon|manifest|import)\b/iu;
 const EMBEDS = new Set(["iframe", "frame", "frameset", "object", "embed"]);
 

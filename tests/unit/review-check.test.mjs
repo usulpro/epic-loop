@@ -113,6 +113,7 @@ test("a valid page with every element passes and writes the schema and the segme
     "Pick the doorbell for Claude Code",
     "Which doorbell should Claude Code use?",
     "Mechanism",
+    "D16",
     "Wakes an idle session in 0.2 s",
     "asyncRewake waiter hook",
     "Why?",

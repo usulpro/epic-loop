@@ -366,3 +366,23 @@
   - Techlead reran tests/unit/review-check.test.mjs (30/30: valid page, rerun stability, one fixture per error code, failing page keeps files, translation gaps and --lang, warnings, segment parity with the runtime fixture, parser cases). Engineer: test:unit 202/202, validate passes
   - both browser-check fixture pages pass from source and through dist. Previous task commit: 752657e
 - Residual risk: Parser is not full HTML5 (no foreign content, adoption agency or foster parenting); unknown named entities stay literal
+
+## 2026-10-19T19:07:03+00:00 - checkpoint (slice A of 2: Claude Code; task stays doing)
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Page-builder and translator subagents for the manager
+- Verdict: checkpoint (slice A of 2: Claude Code; task stays doing)
+- Changed:
+  - references/review-pages.md (ladder, layout, skeleton, catalog, content rules, assets, check loop, custom blocks, gate summary)
+  - assets/templates/review-page-builder-brief.md and review-translator-brief.md
+  - manager role Review Pages section
+  - check: rule is a rendered segment (test)
+  - sandbox run 13 log and driver
+  - LEARNINGS
+- Verification:
+  - Sandbox run 13: headless Sonnet manager made two Agent calls (builder default model, translator model haiku)
+  - subagent metadata shows claude-sonnet-5-5 and claude-haiku-5-5
+  - main thread saw only summaries
+  - page passed review check --lang ru (0 missing, 0 stale) and rendered in Russian
+  - about $0.43. Techlead checked the subagent metadata and reran review-check tests (30/30). test:unit 202/202, validate passes. Checkpoint reason: Codex slice follows. Previous task commit: ae37131
+- Residual risk: Runtime UI strings stay English on translated pages; Codex delegation (Q10) not yet done
