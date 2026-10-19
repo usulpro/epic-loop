@@ -222,14 +222,14 @@ export function createReviewServer({ root, projectName = path.basename(root), on
         translator,
       });
       if (!out) throw new HttpError(404, "There is no such doc in this epic.");
-      return out.file ? sendFile(res, out.file) : send(res, 200, out.html, "text/html; charset=utf-8");
+      return out.file ? sendFile(res, out.file) : send(res, 200, out.html, "text/html; charset=utf-8", { "content-language": page.lang ?? "en" });
     }
     const home = raw.match(/^\/([^/]+)\/?$/u);
     if (home) {
       const page = epicPage(req, res, url, root, decode(home[1]));
       if (!page) return undefined;
       const html = homeHtml({ fragment: url.searchParams.get("fragment"), lang: page.lang, langSwitch: page.switch, projectName, root, slug: page.slug, translator });
-      return send(res, 200, html, "text/html; charset=utf-8");
+      return send(res, 200, html, "text/html; charset=utf-8", { "content-language": page.lang ?? "en" });
     }
     throw new HttpError(404, "There is no page at this address.");
   }

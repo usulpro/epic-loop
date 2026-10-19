@@ -642,3 +642,28 @@
   - real smoke calls: Claude Code haiku 3.97 s and Codex gpt-6-luna read-only 5.1 s, both validated
 - Residual risk: Header labels and the docs index page stay English; this repo's live epic gets its Second language line only after the next self-update.
 - Commit: this task commit (feat(app): language switch with background translation)
+
+## 2026-10-19T22:27:38+00:00 - closed
+
+- Phase: Phase 5 - Epic Viewer
+- Task: Phase 5 Task 6 - Viewer on a live loop and on a real epic, with design and accessibility review
+- Verdict: closed
+- Changed:
+  - verification run 17 (sandbox-test runs/2026-10-20-viewer-verification): Claude Code live loop with a CDP watcher, a capped Codex workspace-write session, this epic on a migrated copy, an accessibility pass
+  - fixes: event stream watches directories non-recursively (recursive fs.watch lost atomically replaced runtime-state.json, so the activity feed never armed after bind
+  - regression test epic-events-live), transcript watched via its directory with a rearm interval
+  - Codex <hook_prompt> shown as a turn item
+  - feed paths relative to the project root and messages without bold markers
+  - translation prompt v2 (imperative action labels, all headings)
+  - Content-Language and reload on a language switch from another tab
+  - inline code in intent and task details
+  - header badge labeled pending reviews
+  - LEARNINGS D-21, D-22
+- Verification:
+  - Claude attempt 5: feed median 427 ms (p90 2.4 s) over 29 samples, stats match progress-report.md, H1/D1, links, popovers, RU translation with real haiku and cache hit, themes via prefers-color-scheme, review page ids
+  - Codex: driver_transcript_path from hook payloads, 58 feed items, stats matched 291/291 polls, 1.04 M tokens, no danger-full-access
+  - this epic: 14 pages, 362 links and 259 anchors with 0 failures, 97 ids, translations validated
+  - a11y: AA contrast 0 failures, visible focus on all stops, landmarks, names, keyboard paths
+  - pnpm run test:unit 272/272, validate, build, browser-check all passed
+- Residual risk: Method deviation: scripted CDP (D-19) instead of browser MCP; Claude spend about 5.67 USD over 5 attempts (diagnosis); minor findings tracked as the follow-up 'Viewer polish from the Phase 5 design and accessibility review'.
+- Commit: this task commit (fix(app): event stream survives atomic writes; viewer verification run 17)

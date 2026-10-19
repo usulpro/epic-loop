@@ -147,12 +147,16 @@ test("the switch shows only with a second language and sets a SameSite cookie th
     /<div class="el-seg el-lang" role="group" aria-label="Language"><a href="\/intl\/docs\/docs\/guide\.md\?lang=en" hreflang="en" data-lang="en" aria-current="true">EN<\/a><a href="\/intl\/docs\/docs\/guide\.md\?lang=ru" hreflang="ru" data-lang="ru">RU<\/a><\/div>/u,
   );
   assert.doesNotMatch(english.text, /Translating/u);
+  // Content-Language is the chosen language, so a live page notices a switch made in another tab.
+  assert.equal(english.headers["content-language"], "en");
+  assert.equal((await get(server, "/intl?fragment=main")).headers["content-language"], "ru");
+  assert.equal((await get(server, "/intl/docs/docs/guide.md?fragment=main")).headers["content-language"], "ru");
   const set = await get(server, "/intl/docs/docs/guide.md?lang=ru", null);
   assert.equal(set.status, 303);
   assert.equal(set.headers.location, "/intl/docs/docs/guide.md");
   assert.match(set.headers["set-cookie"][0], /^el-lang=ru; Path=\/; SameSite=Strict/u);
   assert.equal((await get(server, "/intl?lang=de", null)).status, 400);
-  assert.equal(server.calls().length, 0, "English never calls the translator");
+  assert.ok(server.calls().length <= 2, "only the two RU fragment requests above queued jobs");
 });
 
 test("a doc translates in the background, renders through the same renderer, and is cached by content", { timeout: 30000 }, async () => {

@@ -20,7 +20,9 @@ function oneLine(text, limit = LINE_CHARS) {
 }
 
 function cut(text, limit = MESSAGE_CHARS) {
+  // A message is shown as plain text: bold markers would only add noise.
   const flat = String(text ?? "")
+    .replace(/\*\*|__/gu, "")
     .replace(/\s+/gu, " ")
     .trim();
   return flat.length > limit ? `${flat.slice(0, limit - 1)}…` : flat;
@@ -135,6 +137,9 @@ function codexItems(entry) {
   if (payload.type === "message" && (payload.role === "assistant" || payload.role === "user")) {
     const text = contentText(payload.content);
     if (!text.trim() || (payload.role === "user" && CODEX_CONTEXT.test(text))) return [];
+    // A Stop-hook continuation arrives as a user message wrapped in <hook_prompt>: a turn marker.
+    const hook = payload.role === "user" ? text.match(/^\s*<hook_prompt\b[^>]*>([\s\S]*?)(<\/hook_prompt>|$)/u) : null;
+    if (hook) return [{ at, kind: "turn", summary: `role prompt: ${oneLine(hook[1])}` }];
     return [{ at, kind: "message", role: payload.role, summary: cut(text) }];
   }
   if (payload.type === "function_call") {
@@ -192,5 +197,8 @@ export function readEpicActivity(root, epicDir) {
   const loop = readJson(path.join(epicDir, ".runtime", "runtime-state.json"))?.implementation_loop ?? null;
   const platform = readJson(path.join(root, ".epic-loop", ".runtime", "platform.json"))?.platform ?? null;
   const transcript = driverTranscriptPath(epicDir);
-  return { items: readActivity(transcript, platform) ?? [], platform, role: loop?.current_role ?? null, transcript };
+  // Paths inside the project read shorter without the project root.
+  const prefix = `${root.replace(/\/+$/u, "")}/`;
+  const items = (readActivity(transcript, platform) ?? []).map((item) => ({ ...item, summary: item.summary.split(prefix).join("") }));
+  return { items, platform, role: loop?.current_role ?? null, transcript };
 }

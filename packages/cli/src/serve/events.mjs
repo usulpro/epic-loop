@@ -42,38 +42,103 @@ export function isWatchedFile(relative) {
   return WATCHED.some((pattern) => pattern.test(file));
 }
 
-function watch(epicDir, onFile) {
+// Machine directories with a stream of files the app never shows.
+const SKIP_DIRS = new Set([".runtime/hook-events", ".runtime/sessions", ".runtime/engineer-briefs"]);
+const REARM_MS = 2000;
+
+function listDirs(epicDir, relative = "", depth = 0) {
+  if (depth > 6 || SKIP_DIRS.has(relative)) return [];
+  let entries;
   try {
-    const watcher = fs.watch(epicDir, { recursive: true }, (_event, filename) => {
-      if (filename && isWatchedFile(filename)) onFile(String(filename));
-    });
-    return () => watcher.close();
+    entries = fs.readdirSync(path.join(epicDir, relative), { withFileTypes: true });
   } catch {
-    // No recursive fs.watch here: poll the files the home reads.
-    const stamp = () =>
-      POLLED.map((file) => {
-        try {
-          return `${file}:${fs.statSync(path.join(epicDir, file)).mtimeMs}`;
-        } catch {
-          return `${file}:-`;
-        }
-      });
-    let last = stamp();
-    const timer = setInterval(() => {
-      const now = stamp();
-      const changed = now.find((value, index) => value !== last[index]);
-      last = now;
-      if (changed) onFile(changed.split(":")[0]);
-    }, POLL_MS);
-    return () => clearInterval(timer);
+    return [];
   }
+  return [relative, ...entries.filter((entry) => entry.isDirectory()).flatMap((entry) => listDirs(epicDir, relative ? `${relative}/${entry.name}` : entry.name, depth + 1))];
 }
 
-// Watches one file outside the epic (the transcript); polls when it cannot be watched, e.g. before it exists.
+// One non-recursive watcher per directory. Node's recursive fs.watch on Linux follows files by
+// inode, so a file replaced atomically (written to .tmp, then renamed, as the skill writes
+// runtime-state.json) goes silent after its first replacement; a directory watch keeps reporting
+// it by name. New directories (`.runtime/` after the first bind, a new review) are picked up.
+function watch(epicDir, onFile) {
+  const watchers = new Map();
+  let syncTimer = null;
+  let initial = true;
+  const sync = () => {
+    const dirs = new Set(listDirs(epicDir));
+    for (const [dir, watcher] of watchers)
+      if (!dirs.has(dir)) {
+        watcher.close();
+        watchers.delete(dir);
+      }
+    for (const dir of dirs) {
+      if (watchers.has(dir)) continue;
+      try {
+        const watcher = fs.watch(path.join(epicDir, dir), (event, name) => {
+          if (!name) return;
+          const relative = dir ? `${dir}/${String(name)}` : String(name);
+          if (event === "rename") {
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(sync, 100);
+          }
+          if (isWatchedFile(relative)) onFile(relative);
+        });
+        watcher.on("error", () => {
+          watcher.close();
+          watchers.delete(dir);
+        });
+        watchers.set(dir, watcher);
+      } catch {
+        continue;
+      }
+      // A directory that appeared after the stream connected may already hold a file written
+      // before its watcher existed (a translation job's first jobs.jsonl line): report it.
+      if (initial) continue;
+      try {
+        for (const entry of fs.readdirSync(path.join(epicDir, dir), { withFileTypes: true })) {
+          const relative = dir ? `${dir}/${entry.name}` : entry.name;
+          if (entry.isFile() && isWatchedFile(relative)) onFile(relative);
+        }
+      } catch {}
+    }
+    initial = false;
+  };
+  sync();
+  if (watchers.has("")) {
+    return () => {
+      clearTimeout(syncTimer);
+      for (const watcher of watchers.values()) watcher.close();
+    };
+  }
+  // No fs.watch here: poll the files the home reads.
+  const stamp = () =>
+    POLLED.map((file) => {
+      try {
+        return `${file}:${fs.statSync(path.join(epicDir, file)).mtimeMs}`;
+      } catch {
+        return `${file}:-`;
+      }
+    });
+  let last = stamp();
+  const timer = setInterval(() => {
+    const now = stamp();
+    const changed = now.find((value, index) => value !== last[index]);
+    last = now;
+    if (changed) onFile(changed.split(":")[0]);
+  }, POLL_MS);
+  return () => clearInterval(timer);
+}
+
+// Watches one file outside the epic (the transcript) through its directory, so an atomic rewrite
+// does not silence it; polls when the directory cannot be watched.
 function watchFile(file, onChange) {
   if (!file) return () => {};
+  const base = path.basename(file);
   try {
-    const watcher = fs.watch(file, () => onChange());
+    const watcher = fs.watch(path.dirname(file), (_event, name) => {
+      if (String(name) === base) onChange();
+    });
     watcher.on("error", () => {});
     return () => watcher.close();
   } catch {
@@ -111,6 +176,8 @@ export function streamEpicEvents(req, res, epicDir) {
     unwatchTranscript = watchFile(transcript, sendActivity);
     sendActivity();
   };
+  // A safety net for a missed runtime-state event: the path is cheap to re-read.
+  const rearmTimer = setInterval(rearm, REARM_MS);
   const unwatch = watch(epicDir, (file) => {
     const relative = file.split(path.sep).join("/");
     if (TRANSLATED.test(relative)) return sendTranslated();
@@ -126,6 +193,7 @@ export function streamEpicEvents(req, res, epicDir) {
     open -= 1;
     unwatch();
     unwatchTranscript();
+    clearInterval(rearmTimer);
     sendChange.cancel();
     sendActivity.cancel();
     sendTranslated.cancel();

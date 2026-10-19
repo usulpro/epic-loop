@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><title>Pick the npm package name</title></head>
+  <body>
+    <main class="el-main" id="content">
+      <div class="el-page-head"><div class="el-label">review</div><h1>Pick the npm package name</h1><p class="el-meta">Phase 1 · H1 · D1</p></div>
+      <el-card id="q1" title="Which package name should the helpers ship under?">
+        <p>The helpers from T1–T3 ship as one module (D1). H1 asks for the npm name before any publish.</p>
+        <el-choice name="h1" recommended="mini-greetings" rule="short and descriptive">
+          <el-option value="mini-greetings" note="Matches the module's purpose">mini-greetings</el-option>
+          <el-option value="mini-viewer" note="Matches the epic name">mini-viewer</el-option>
+        </el-choice>
+        <el-comment name="h1-why" optional placeholder="Why?"></el-comment>
+      </el-card>
+      <el-card id="q2" title="Confirm the agent-made decision">
+        <el-check name="confirm-d1">Confirm D1: the helpers stay in one module</el-check>
+      </el-card>
+    </main>
+  </body>
+</html>

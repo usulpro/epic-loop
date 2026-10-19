@@ -279,7 +279,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - editing a doc invalidates only that doc's entry.
   - Docs: `decision-log.md` (D9, D28).
 
-- [ ] Kind: verification | Status: todo | Viewer on a live loop and on a real epic, with design and accessibility review
+- [x] Kind: verification | Status: done | Viewer on a live loop and on a real epic, with design and accessibility review
   - Method:
     - Run the viewer against a sandbox loop on each platform, and against this epic's own artifacts.
     - Through browser MCP, check the following: live updates as the loop moves, the activity feed, waiting items and agent-made decisions, docs links, id expansion, the language switch with cache hits, and dark and light themes from the OS setting.
@@ -322,3 +322,13 @@ Order (agreed 2026-10-18, revised the same day, D18):
   - Surface: scripts/lib/loop-stop-gate.mjs, review-stop.mjs, the stop-review prompt, hook-contracts and cli-contracts tests
   - Acceptance: a CLI contract test accepts a stop with --file; a hook contract test shows the routing after an unresolved stop review; found in sandbox run 12 (E1, E2) under a no-redirection command rule
   - Docs: .claude/skills/sandbox-test/runs/2026-10-20-doorbell-claude-e2e/log.md, docs/stop-gate.md
+
+- [ ] Kind: follow-up | Status: todo | Viewer polish from the Phase 5 design and accessibility review
+  - Outcome:
+    - Review pages render card titles as h2 under the page h1, with no skipped heading level.
+    - On the home, the loop role value and the header labels ("live", "pending reviews") follow the language switch; the docs index page does too.
+    - An `el-ref` link's accessible name includes the entry title, not only the id.
+    - Review pages offer a way back to the epic home.
+  - Surface: packages/cli/src/review/runtime (card rendering, refs.js), serve/home.mjs, serve/docs.mjs, serve/pages.mjs (injectReview)
+  - Acceptance: the a11y check from run 17 (`a11y-check.mjs`) reports no heading skips on a review page; the RU home shows the role and header labels translated; a screen reader name check finds the title on `el-ref` links
+  - Docs: .claude/skills/sandbox-test/runs/2026-10-20-viewer-verification/log.md

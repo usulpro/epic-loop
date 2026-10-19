@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 
-import { MAX_ITEMS, readActivity } from "../../packages/cli/src/epic/activity.mjs";
+import { MAX_ITEMS, readActivity, readEpicActivity } from "../../packages/cli/src/epic/activity.mjs";
 import { makeTempRoot, repoRoot } from "./test-utils.mjs";
 
 const fixtures = path.join(repoRoot, "tests", "fixtures", "activity");
@@ -40,6 +40,7 @@ test("the Codex reader keeps function calls, outputs and messages, and drops rea
       ["result", "tests passed: 12"],
       ["tool", "shell: bash -lc pnpm test"],
       ["message", "Run the next task."],
+      ["turn", "role prompt: [$epic-loop] Implementation loop: techlead turn 2 for `demo`."],
       ["turn", "turn started"],
     ],
   );
@@ -62,6 +63,23 @@ test("the reader reads only the tail of a large transcript and keeps the last it
   assert.equal(items.length, MAX_ITEMS);
   assert.match(items[0].summary, /^Bash: echo 3999 /u);
   assert.match(items.at(-1).summary, new RegExp(`^Bash: echo ${4000 - MAX_ITEMS} `, "u"));
+});
+
+test("the epic activity drops the project root from summaries", () => {
+  const root = makeTempRoot("activity-root");
+  const epicDir = path.join(root, ".epic-loop", "epics", "demo");
+  fs.mkdirSync(path.join(epicDir, ".runtime"), { recursive: true });
+  fs.mkdirSync(path.join(root, ".epic-loop", ".runtime"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".epic-loop", ".runtime", "platform.json"), JSON.stringify({ platform: "claude-code" }));
+  const transcript = path.join(root, "t.jsonl");
+  fs.writeFileSync(
+    transcript,
+    `${JSON.stringify({ type: "assistant", timestamp: "2026-10-20T10:00:00.000Z", message: { content: [{ type: "tool_use", name: "Edit", input: { file_path: `${root}/src/index.mjs` } }] } })}\n`,
+  );
+  fs.writeFileSync(path.join(epicDir, ".runtime", "runtime-state.json"), JSON.stringify({ implementation_loop: { current_role: "engineer", driver_transcript_path: transcript } }));
+  const activity = readEpicActivity(root, epicDir);
+  assert.equal(activity.items[0].summary, "Edit: src/index.mjs");
+  assert.equal(activity.role, "engineer");
 });
 
 test("a missing transcript reads as no activity", () => {

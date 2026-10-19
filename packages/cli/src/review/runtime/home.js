@@ -37,6 +37,15 @@ function setLive(value) {
   marker.textContent = value === "paused" ? "live updates paused" : "live";
 }
 
+// Content-Language carries the language chosen by the cookie (not whether a translation is ready).
+function languageChanged(response) {
+  const lang = response.headers.get("content-language");
+  const chosen = document.querySelector('.el-lang [aria-current="true"]')?.dataset.lang ?? "en";
+  if (!lang || lang === chosen) return false;
+  location.reload();
+  return true;
+}
+
 let inFlight = null;
 let again = false;
 async function refresh() {
@@ -47,6 +56,9 @@ async function refresh() {
   inFlight = (async () => {
     const response = await fetch(`${location.pathname}?fragment=main`, { cache: "no-store", headers: { accept: "text/html" } });
     if (!response.ok) return;
+    // The language changed in another tab (the cookie is shared): reload so the header switch and
+    // <html lang> follow, instead of swapping translated content into an English page.
+    if (languageChanged(response)) return;
     const html = await response.text();
     const openState = new Map([...main.querySelectorAll("details[id]")].map((node) => [node.id, node.open]));
     const draft = main.querySelector("#el-inbox-text");
@@ -86,7 +98,7 @@ async function refreshActivity() {
     if (inFlight) await inFlight;
     const response = await fetch(`/${encodeURIComponent(slug)}?fragment=activity`, { cache: "no-store", headers: { accept: "text/html" } });
     const section = main.querySelector("[data-live-activity]");
-    if (!response.ok || !section) return;
+    if (!response.ok || !section || languageChanged(response)) return;
     const template = document.createElement("template");
     template.innerHTML = (await response.text()).trim();
     const next = template.content.firstElementChild;

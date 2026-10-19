@@ -498,6 +498,18 @@ async function checkI18n(s, server, project) {
   await evaluate("document.querySelector('.el-lang a[data-lang=\"en\"]').click()");
   await waitFor("document.readyState === 'complete' && document.getElementById('el-loop-title')?.textContent === 'Loop'", "back to English");
   expect(true, "EN switches back");
+  // A switch made in another tab (the cookie is shared): the next live refresh reloads the page so
+  // its header switch and <html lang> follow, instead of mixing languages.
+  await waitFor("window.epicLoopHome?.live === 'live'", "live again");
+  await evaluate("window.__beforeSwitch = true; fetch('/demo?lang=ru').then(() => true)");
+  fs.appendFileSync(path.join(epicDir, "tracker.md"), "\n");
+  await waitFor(
+    "!window.__beforeSwitch && document.readyState === 'complete' && document.querySelector('.el-lang a[aria-current=\"true\"]')?.dataset.lang === 'ru'",
+    "reload into RU",
+    8000,
+  );
+  expect((await evaluate("document.documentElement.lang")) === "ru", "a language switch from another tab reloads the live page into that language");
+  await evaluate("fetch('/demo?lang=en').then(() => true)");
 }
 
 async function main() {

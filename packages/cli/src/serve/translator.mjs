@@ -16,7 +16,7 @@ import path from "node:path";
 //   jobs.jsonl              one line per job: at, kind, key, platform, model, ms, ok | reason
 // The event stream watches jobs.jsonl and tells open pages `event: translated`.
 
-export const PROMPT_VERSION = 1;
+export const PROMPT_VERSION = 2;
 const DEFAULT_TIMEOUT_MS = 120000;
 const MAX_BATCH = 150;
 
@@ -92,7 +92,7 @@ export function docPrompt(lang, text) {
     "- Keep the Markdown structure exactly: headings, lists, tables, blank lines, emphasis.",
     "- Never change inline code, fenced code blocks, link targets (the URL or path in parentheses), file paths, numbers and dates.",
     "- Never change ids such as D16, T3, H2, R5, Q7 or D-16; keep each one where it is.",
-    "- Translate prose, headings, list items, table cells and link texts.",
+    "- Translate prose, every heading (including short Title Case headings), list items, table cells and link texts.",
     "",
     "<document>",
     text,
@@ -106,6 +106,8 @@ export function segmentsPrompt(lang, object) {
     "Rules:",
     "- Output only the JSON object with the same keys, nothing else.",
     "- These are short labels and titles from a software project dashboard; keep them short.",
+    "- Labels of buttons and links are actions: translate them as imperative verbs (Open, Send to the loop), never as states.",
+    "- Translate every heading and title, including short Title Case ones.",
     "- Never change ids such as D16, T3, H2, R5, Q7 or D-16, code, file paths and numbers.",
     "",
     JSON.stringify(object, null, 2),

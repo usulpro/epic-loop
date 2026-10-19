@@ -20,6 +20,9 @@ function elapsed(since) {
   return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m` : `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
+// Inline code spans (`x`) in text from epic files, after escaping.
+const withCode = (text) => escapeHtml(text).replace(/`([^`]+)`/gu, "<code>$1</code>");
+
 const row = (label, value) => `            <dt>${label}</dt><dd>${value}</dd>`;
 
 function loopSection(overview) {
@@ -229,7 +232,7 @@ function taskLine(task, key) {
   const head = `<span class="el-id">${escapeHtml(task.tid ?? "·")}</span> ${statusTag(task.status)} <span class="el-task__title">${escapeHtml(task.title)}</span> <span class="el-meta">${escapeHtml(task.kind)}</span>`;
   if (!details.length) return `              <li class="el-task" data-task="${escapeHtml(task.tid ?? key)}" data-status="${escapeHtml(task.status)}">${head}</li>`;
   return `              <li class="el-task" data-task="${escapeHtml(task.tid ?? key)}" data-status="${escapeHtml(task.status)}"><details id="task-${escapeHtml(task.tid ?? key)}"><summary>${head}</summary>
-                <dl class="el-kv">${details.map(([label, value]) => `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>
+                <dl class="el-kv">${details.map(([label, value]) => `<dt>${escapeHtml(label)}</dt><dd>${withCode(value)}</dd>`).join("")}</dl>
               </details></li>`;
 }
 
@@ -299,7 +302,7 @@ ${done.map((review) => `              <tr><td><span class="el-id">${escapeHtml(r
 
 export function renderHomeMain({ activity = null, docs = null, epic, gates = [], inbox = [], overview, reviews, statistics = null }) {
   const title = overview.title ?? epic.title;
-  return `        <div class="el-page-head"><div class="el-label">epic</div><h1>${escapeHtml(title)}</h1><p class="el-meta">${escapeHtml(epic.slug)} · ${escapeHtml(overview.mode ?? epic.mode)}</p>${overview.intent ? `<p class="el-intent">${escapeHtml(overview.intent)}</p>` : ""}</div>
+  return `        <div class="el-page-head"><div class="el-label">epic</div><h1>${escapeHtml(title)}</h1><p class="el-meta">${escapeHtml(epic.slug)} · ${escapeHtml(overview.mode ?? epic.mode)}</p>${overview.intent ? `<p class="el-intent">${withCode(overview.intent)}</p>` : ""}</div>
 ${loopSection(overview)}${renderActivity(activity)}${gateNotices(epic.slug, reviews, gates)}${waitingSection(epic.slug, reviews, gates, overview)}${decisionsSection(overview)}${phasesSection(overview)}${statisticsSection(statistics)}${docs ? docsSection(epic.slug, docs) : ""}${inboxSection(epic.slug, inbox)}${historySection(epic.slug, reviews)}`;
 }
 
@@ -314,7 +317,7 @@ export function renderEpicHome(projectName, view, transform = (html) => html, { 
       { href: "/", label: projectName },
       { href: `/${encodeURIComponent(epic.slug)}`, label: epic.slug },
     ],
-    headerEnd: `${langSwitch ? `${langSwitch} ` : ""}<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending</span> ${pendingBadge(pending)}`,
+    headerEnd: `${langSwitch ? `${langSwitch} ` : ""}<span class="el-live el-meta" data-live="connecting" aria-live="polite">live</span> <span class="el-meta">pending reviews</span> ${pendingBadge(pending)}`,
     lang: lang ?? "en",
     main: { attributes: ` data-epic="${escapeHtml(epic.slug)}" data-live-main` },
     scripts: ['<script type="module" src="/_runtime/home.js"></script>', '<script type="module" src="/_runtime/refs.js"></script>'],
