@@ -70,6 +70,7 @@
           <tr><td><span class="sw" style="background: var(--color-focus)"></span></td><td><code>--color-focus</code></td><td class="num">#1d6b47</td><td class="num">#74c99a</td><td></td></tr>
           <tr><td><span class="sw" style="background: var(--color-scrim)"></span></td><td><code>--color-scrim</code></td><td class="num">rgb(20 19 16 / 0.72)</td><td class="num">rgb(0 0 0 / 0.78)</td><td>lightbox backdrop</td></tr>
           <tr><td><span class="sw" style="background: var(--color-on-scrim)"></span></td><td><code>--color-on-scrim</code></td><td class="num">#f2f0e9</td><td class="num">#f2f0e9</td><td>text on the lightbox scrim</td></tr>
+          <tr><td><span class="sw" style="background: var(--color-embed-canvas)"></span></td><td><code>--color-embed-canvas</code></td><td class="num">#ffffff</td><td class="num">#ffffff</td><td>canvas behind embedded pages</td></tr>
             </tbody>
           </table></div>
         </section>
@@ -230,6 +231,16 @@
               <div class="el-compare__pane"><div class="shot shot--alt">render B</div></div>
             </div>
           </div>
+        </section>
+
+        <section class="el-section" aria-labelledby="s-evidence">
+          <div class="el-section__head"><h2 id="s-evidence">Evidence: shot, live page, diagram</h2><span class="el-meta">el-shot · el-iframe · el-diagram</span></div>
+          <div class="grid2">
+            <figure class="el-shot"><button type="button" class="el-shot__open" aria-label="Open the home page full size"><span class="shot" style="display:grid;width:20rem">screenshot</span></button><figcaption class="el-shot__caption">Home page at 1280 px</figcaption></figure>
+            <div class="el-iframe"><div class="el-iframe__bar"><span class="el-label">Live demo</span><a class="el-meta" href="#">open ↗</a><button type="button" class="el-btn el-btn--ghost">reload</button></div><div class="el-iframe__frame" style="height:8rem"></div></div>
+          </div>
+          <figure class="el-diagram" style="margin-top: var(--space-5)"><div class="el-diagram__canvas"><pre>graph LR
+  A[Submit] --&gt; B[Ring]   (rendered by Mermaid on a page)</pre></div><figcaption class="el-shot__caption">Doorbell flow</figcaption></figure>
         </section>
 
         <section class="el-section" aria-labelledby="s-lightbox">

@@ -40,6 +40,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "mermaid": "12.2.0"
   }
 }

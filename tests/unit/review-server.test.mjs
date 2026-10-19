@@ -113,6 +113,16 @@ test("epic list, epic home and the review page render with the pending count and
   const css = await request(port, "/_runtime/tokens.css");
   assert.equal(css.status, 200);
   assert.match(css.headers["content-type"], /text\/css/u);
+  const vendorInstalled = fs.existsSync(path.join(repoRoot, "packages", "cli", "node_modules", "mermaid", "dist", "mermaid.min.js"));
+  if (vendorInstalled) {
+    const mermaid = await request(port, "/_runtime/vendor/mermaid.min.js");
+    assert.equal(mermaid.status, 200);
+    assert.match(mermaid.headers["content-type"], /text\/javascript/u);
+    assert.match(mermaid.text, /globalThis\["mermaid"\]/u);
+  }
+  for (const attempt of ["/_runtime/vendor/../tokens.css", "/_runtime/vendor/%2e%2e%2fpaths.mjs", "/_runtime/vendor/package.json", "/_runtime/vendor/mermaid.js"]) {
+    assert.equal((await request(port, attempt)).status, attempt.includes("../tokens.css") ? 200 : 404, attempt);
+  }
   const missing = await request(port, "/nope/at/all");
   assert.equal(missing.status, 404);
   assert.match(missing.text, /Not found/u);

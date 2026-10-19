@@ -4,11 +4,11 @@
 
 const OPTION_TAG = "EL-OPTION";
 
-function text(value) {
+export function text(value) {
   return document.createTextNode(value);
 }
 
-function el(tag, attrs = {}, children = []) {
+export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {
     if (value === undefined || value === null || value === false) continue;
@@ -26,13 +26,13 @@ function readOptions(host) {
 }
 
 let uid = 0;
-const nextId = (prefix) => `${prefix}-${++uid}`;
+export const nextId = (prefix) => `${prefix}-${++uid}`;
 
 // Set by defineComponents: the runtime's control registry ({ register, set }).
 let registry = null;
 
 // Every upgrade is isolated: one broken element never stops the others.
-const safe = (fn) =>
+export const safe = (fn) =>
   function upgrade() {
     if (this.dataset.upgraded) return;
     this.dataset.upgraded = "true";
@@ -45,7 +45,7 @@ const safe = (fn) =>
     }
   };
 
-class Base extends HTMLElement {
+export class Base extends HTMLElement {
   connectedCallback() {
     // Children may not be parsed yet when the element connects during parsing.
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => this.upgrade(), { once: true });

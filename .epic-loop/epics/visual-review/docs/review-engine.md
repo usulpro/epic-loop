@@ -74,6 +74,33 @@ Reviews are human-facing epic artifacts, so they are not under `.runtime/`.
   - `<el-comment name="…" [label] [placeholder] [rows] [optional]></el-comment>`: free text.
   - `<el-links><a href="…">…</a></el-links>` and `<el-table><table>…</table></el-table>`.
   - Controls are required unless marked `optional`. Progress counts required controls.
+- **Visual elements (v1, slice B).** None of them is an answer control.
+  - `<el-shot caption="…" [group="g1"] [width]><img src="assets/x.png" alt="…" /></el-shot>`, or `<el-shot src="…" alt="…">` (that form shows nothing without JS).
+    - A click, Enter or Space opens the lightbox.
+    - The counter and ←/→ page through shots of the same `group`, or through all ungrouped shots. Esc closes it and focus returns to the shot.
+    - The side panel shows the caption and the shot's card. While the panel is open, the card's answer controls are moved into it (not cloned), and digits pick an option there.
+    - The injected problem control is hidden while the lightbox is open.
+  - `<el-iframe src="https://…|assets/page.html" [title] [height]>` shows a live page; inline HTML goes in `<el-iframe title="…"><template>…</template></el-iframe>` (or a `srcdoc` attribute).
+    - A `<template>` keeps the inline markup inert in the page; inline scripts must not run in the review page itself.
+    - Inline pages and same-origin assets get `sandbox="allow-scripts"`, an opaque origin with no access to `window.epicLoop` or the API. Only a cross-origin URL also gets `allow-same-origin allow-forms allow-popups`.
+    - Put a fallback `<a>` inside for readers without JS.
+  - `<el-diagram [caption]>` holds the Mermaid source as text content (escape `<`).
+    - It is rendered by bundled Mermaid, with `securityLevel: "strict"` and no network.
+    - Mermaid loads only when the page has a diagram, and the diagram re-renders when the theme changes.
+    - If rendering fails, the source is shown with an error note.
+  - `<el-compare [mode="side|overlay|flip"] [widths="375,1280"] [caption]>` takes two or more `el-shot` or `img` children, each with a `label`.
+    - Modes: side by side, overlay with an opacity slider, or flip (button or Space).
+    - The width presets constrain the panes.
+- **Mermaid.** `mermaid` is an exact-pinned devDependency of `packages/cli`, and its single-file build is served from `/_runtime/vendor/mermaid.min.js`.
+  - The build copies it into `dist/review/runtime/vendor/`; from source it is read from `node_modules`.
+  - Only allow-listed vendor names are served (`REVIEW_VENDOR_FILES` in `paths.mjs`).
+- **Local files the check must verify:**
+  - `el-shot` `src` and its `img` `src`;
+  - `img` `src` inside `el-compare`;
+  - `el-iframe` `src` when relative;
+  - plain `img`, `a` and `link` targets.
+
+  `el-iframe` `src` may be an external `https:` URL; any other network reference in a page (scripts, styles) is refused.
   - Without JS the elements still render as readable blocks, and options show as a list.
 - **`window.epicLoop`:**
   - `get(name)`, `set(name, value)`, `onChange((name, value, { local }) => …)`;

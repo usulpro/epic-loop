@@ -50,8 +50,7 @@ Use tokens, never raw values.
 
 ## Page Markup
 
-Review pages use the runtime's elements. The runtime saves answers, shows progress and submit, and switches theme and language.
-
+Review pages use the runtime's elements; it saves answers, shows progress and submit, and switches theme and language.
 ```html
 <el-card id="q1" title="Which doorbell should Claude Code use?">
   <p>Evidence and context.</p>
@@ -66,7 +65,19 @@ Review pages use the runtime's elements. The runtime saves answers, shows progre
 <el-section title="Evidence"><el-table><table>…</table></el-table><el-links><a href="…">Run log</a></el-links></el-section>
 ```
 
-Every control needs a unique `name`; mark non-essential ones `optional`. Page scripts read and write answers only through `window.epicLoop`.
+Evidence elements:
+```html
+<el-shot caption="Home at 1280 px" group="home"><img src="assets/home-1280.png" alt="Home at 1280 px" /></el-shot>
+<el-compare caption="Before / after" widths="375,1280">
+  <el-shot label="before"><img src="assets/before.png" alt="Before" /></el-shot>
+  <el-shot label="after"><img src="assets/after.png" alt="After" /></el-shot>
+</el-compare>
+<el-iframe src="assets/demo.html" title="Live demo" height="480"><a href="assets/demo.html">Open the demo</a></el-iframe>
+<el-diagram caption="Flow">graph LR
+  A[Submit] --> B[Ring]</el-diagram>
+```
+
+Put shots inside the card they support: the lightbox then shows that card's controls beside the image. Every control needs a unique `name`; mark non-essential ones `optional`. Page scripts read and write answers only through `window.epicLoop`.
 
 States use real pseudo-classes. Static pages can force one with `.is-hover`, `.is-focus`, `.is-disabled`, `.is-error`; inputs use `disabled` and `aria-invalid="true"`.
 

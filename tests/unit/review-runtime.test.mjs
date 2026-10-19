@@ -133,3 +133,26 @@ test("segments normalize whitespace and translations keep the surrounding whites
   assert.equal(isTranslatableSegment("3 / 5"), false);
   assert.equal(isTranslatableSegment("Evidence"), true);
 });
+
+test("shots page within their group, ungrouped shots page together, and paging wraps around", async () => {
+  const { groupMembers, stepIndex } = await import("../../packages/cli/src/review/runtime/gallery.mjs");
+  const shots = [{ g: "home" }, { g: "" }, { g: "home" }, { g: null }];
+  const groupOf = (shot) => shot.g;
+  assert.deepEqual(groupMembers(shots, shots[2], groupOf), [shots[0], shots[2]]);
+  assert.deepEqual(groupMembers(shots, shots[1], groupOf), [shots[1], shots[3]]);
+  assert.equal(stepIndex(1, 1, 2), 0);
+  assert.equal(stepIndex(0, -1, 3), 2);
+  assert.equal(stepIndex(4, 0, 3), 1);
+  assert.equal(stepIndex(0, 1, 0), -1);
+});
+
+test("compare modes and width presets parse leniently", async () => {
+  const { parseMode, parseWidths } = await import("../../packages/cli/src/review/runtime/gallery.mjs");
+  assert.equal(parseMode("Overlay"), "overlay");
+  assert.equal(parseMode("flip"), "flip");
+  assert.equal(parseMode("zoom"), "side");
+  assert.equal(parseMode(undefined), "side");
+  assert.deepEqual(parseWidths("375, 768,1280"), [375, 768, 1280]);
+  assert.deepEqual(parseWidths("wide, 50, 99999, 1024.5, 640"), [640]);
+  assert.deepEqual(parseWidths(null), []);
+});

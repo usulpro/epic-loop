@@ -4,7 +4,9 @@
 import { createAnswerStore } from "./answer-store.mjs";
 import { defineComponents } from "./components.mjs";
 import { TRANSLATABLE_ATTRIBUTES, isTranslatableSegment, translateText } from "./i18n.mjs";
+import { isLightboxOpen } from "./lightbox.mjs";
 import { computeProgress, isAnswered } from "./progress.mjs";
+import { defineVisualComponents } from "./visual.mjs";
 
 const meta = document.querySelector('meta[name="epic-loop-review"]');
 const reviewKey = meta?.getAttribute("content") ?? "";
@@ -297,7 +299,7 @@ function typingIn(target) {
 }
 
 document.addEventListener("keydown", (event) => {
-  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typingIn(event.target)) return;
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || typingIn(event.target) || isLightboxOpen()) return;
   const list = cards();
   const current = document.activeElement?.closest?.("el-card, el-section");
   if (event.key === "j" || event.key === "k") {
@@ -341,6 +343,7 @@ window.addEventListener("beforeunload", (event) => {
 document.body.append(bar);
 document.body.classList.add("el-has-submitbar");
 defineComponents(registry);
+defineVisualComponents();
 setupToc();
 updateProgress();
 refresh()

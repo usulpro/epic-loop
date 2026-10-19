@@ -2,7 +2,7 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 
-import { REVIEW_RUNTIME_DIR } from "../paths.mjs";
+import { REVIEW_RUNTIME_DIR, reviewVendorFile } from "../paths.mjs";
 import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answers.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { injectReview, renderEpicHome, renderEpicList, renderNotFound, renderProblemThanks } from "./pages.mjs";
@@ -130,6 +130,12 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     const url = new URL(req.url ?? "/", `http://${host}`);
     const raw = url.pathname;
     if (raw === "/_health") return sendJson(res, 200, { ok: true, root, pid: process.pid });
+    if (raw.startsWith("/_runtime/vendor/")) {
+      // Only names in the vendor allow-list are served, so no path from the URL reaches the disk.
+      const file = reviewVendorFile(raw.slice("/_runtime/vendor/".length));
+      if (!file) throw new HttpError(404, "Unknown vendor file.");
+      return sendFile(res, file);
+    }
     if (raw.startsWith("/_runtime/")) {
       const file = resolveInside(REVIEW_RUNTIME_DIR, raw.slice("/_runtime/".length));
       if (!file || !isFile(file)) throw new HttpError(404, "Unknown runtime file.");

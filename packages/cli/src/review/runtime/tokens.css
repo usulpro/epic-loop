@@ -61,6 +61,8 @@
 
   /* Text on the lightbox scrim (same in both themes) */
   --color-on-scrim: #f2f0e9;
+  /* Canvas behind embedded pages, which assume a white background (same in both themes) */
+  --color-embed-canvas: #ffffff;
 }
 
 /* Light (default) */

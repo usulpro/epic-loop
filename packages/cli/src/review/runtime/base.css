@@ -1082,3 +1082,159 @@ el-choice[data-upgrade-error] {
 body.el-has-submitbar {
   margin-bottom: 0;
 }
+
+/* ---------- Visual components (slice B) ---------- */
+
+/* Without JS: shots show their image and caption, diagrams their source, compare frames stack. */
+el-shot,
+el-iframe,
+el-diagram,
+el-compare {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+el-shot:not(.is-upgraded)[caption]::after {
+  content: attr(caption);
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+el-diagram:not(.is-upgraded) {
+  white-space: pre;
+  overflow: auto;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  background: var(--color-sunken);
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+}
+el-compare:not(.is-upgraded) > [label]::before {
+  content: attr(label);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+}
+
+.el-shot {
+  margin: 0;
+}
+.el-shot__open {
+  display: block;
+  padding: 0;
+  max-width: 100%;
+  background: var(--color-sunken);
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-1);
+  cursor: zoom-in;
+  overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+.el-shot__open:hover {
+  border-color: var(--color-rule-strong);
+}
+.el-shot__open img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.el-shot__caption {
+  margin-top: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+body.el-lightbox-open {
+  overflow: hidden;
+}
+.el-lightbox__stage {
+  gap: var(--space-4);
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+.el-lightbox__img {
+  grid-column: 2;
+  justify-self: center;
+  max-width: 100%;
+  max-height: calc(100vh - var(--space-8));
+  object-fit: contain;
+  background: var(--color-raised);
+  border-radius: var(--radius-1);
+}
+.el-lightbox__nav {
+  color: var(--color-on-scrim);
+  font-size: var(--fs-lg);
+}
+.el-lightbox__prev {
+  grid-column: 1;
+}
+.el-lightbox__next {
+  grid-column: 3;
+}
+.el-lightbox__caption {
+  margin: 0;
+}
+.el-lightbox__card {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-md);
+}
+
+.el-iframe {
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.el-iframe__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: var(--rule-width) solid var(--color-rule);
+}
+.el-iframe__bar .el-label {
+  margin-right: auto;
+}
+.el-iframe__frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: var(--color-embed-canvas);
+}
+
+.el-diagram {
+  margin: 0;
+  padding: var(--space-5);
+  background: var(--color-raised);
+  border: var(--rule-width) solid var(--color-rule);
+  border-radius: var(--radius-2);
+  overflow: auto;
+}
+.el-diagram__canvas svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.el-compare__panes {
+  margin-inline: auto;
+}
+.el-compare__opacity {
+  accent-color: var(--color-accent);
+}
+.el-compare--flip .el-compare__panes {
+  grid-template-columns: 1fr;
+}
+.el-compare--flip .el-compare__pane:not(.is-front) {
+  display: none;
+}
+.el-compare:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+/* The injected problem control sits above every page layer; the open lightbox owns the screen. */
+body.el-lightbox-open #el-problem {
+  display: none;
+}

@@ -28,3 +28,18 @@ export function bundledSkillDir() {
 // Static files of the review runtime (tokens, styles, later the page runtime). The build copies
 // src/review/runtime/ to dist/review/runtime/, so this resolves from source and from the bundle.
 export const REVIEW_RUNTIME_DIR = path.join(ENTRY_DIR, "review", "runtime");
+
+// Large third-party browser files served under /_runtime/vendor/. The build copies them into
+// dist/review/runtime/vendor/; from source they are read from the package's devDependencies, so
+// nothing large is committed under src/.
+export const REVIEW_VENDOR_FILES = {
+  "mermaid.min.js": ["mermaid", "dist", "mermaid.min.js"],
+};
+
+export function reviewVendorFile(name) {
+  if (!Object.hasOwn(REVIEW_VENDOR_FILES, name)) return null;
+  const bundled = path.join(REVIEW_RUNTIME_DIR, "vendor", name);
+  if (fs.existsSync(bundled)) return bundled;
+  const fromModules = path.join(PACKAGE_ROOT, "node_modules", ...REVIEW_VENDOR_FILES[name]);
+  return fs.existsSync(fromModules) ? fromModules : null;
+}

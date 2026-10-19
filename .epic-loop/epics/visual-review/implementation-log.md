@@ -333,3 +333,21 @@
   - Techlead reran tests/unit/review-runtime + review-server (14/14) and browser-check.mjs (15/15 pass: save, reload restore, theme, ru switch and exact revert, submit, problem form, no page errors). test:unit 170/170, validate passes. Screenshots in sandbox-logs/2026-10-20-review-runtime. Checkpoint reason: the task is split into two slices
   - slice B (shot, lightbox, iframe, diagram, compare) follows. Previous task commit: 8ee9e7c
 - Residual risk: Runtime UI strings stay English; short pages do not pin the submit bar to the viewport bottom
+
+## 2026-10-19T18:53:15+00:00 - done (slice B completes the task)
+
+- Phase: Phase 3 - Review Engine In The CLI
+- Task: Page runtime and web components v1
+- Verdict: done (slice B completes the task)
+- Changed:
+  - gallery.mjs, lightbox.mjs, visual.mjs: el-shot with a group lightbox whose side panel moves the card's live controls, el-iframe sandboxed (inline via <template>), el-diagram with bundled Mermaid 12.2.0 loaded on demand and re-rendered on theme change, el-compare with side/overlay/flip and width presets
+  - /_runtime/vendor/ allow-list route
+  - build copies vendor files
+  - --color-embed-canvas token
+  - specimen evidence section
+  - docs (markup, Mermaid, files the check must verify)
+  - agent-made decision for the npm package size
+- Verification:
+  - Techlead reran review-runtime + review-server (16/16) and browser-check.mjs (32/32: lightbox paging, panel controls moved and restored, digit saves, focus return, sandboxed frames report access blocked and origin null, Mermaid svg and theme re-render, compare modes, no request leaves 127.0.0.1). test:unit 172/172, validate passes
+  - dist serves vendor/mermaid.min.js (5,494,801 bytes). Previous checkpoint commit: 92686ba
+- Residual risk: npm package +5.5 MB (agent-made decision); full-page screenshots show the sticky bar mid-page (capture artifact)
