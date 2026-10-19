@@ -155,6 +155,9 @@
 - **D36 — Claude Code subagents are invoked through the host's Agent tool, not installed agent files** (2026-10-19; agent-made, stop class C; unconfirmed).
   - Default taken: the manager runs the page builder as a general-purpose subagent on the main model and the translator with model haiku, each with a filled brief template from assets/templates/; no .claude/agents files are installed
   - Why: Works for copy installs and plugin installs alike with no install or manifest changes; the Agent tool already takes a model per call. Reverse by shipping .claude/agents definitions if the brief-in-prompt approach proves unreliable
+- **D37 — Codex doorbell adapter: the server rings the driver thread with codex queue, pending the H3 end-to-end run** (2026-10-19; agent-made, stop class C; unconfirmed).
+  - Default taken: the review server runs codex queue --thread <driver session id> --message <pointer> on a submit or inbox entry while the loop awaits a review; the UserPromptSubmit fallback covers the rest; the Codex mechanism stays provisional until the H3 run confirms it
+  - Why: The Codex matrix (run 11) shows codex queue delivering idle, mid-turn (held to turn end), 15 min idle and after resume; only the running-loop cell and after-Esc are open, and the loop is idle while awaiting a review; building the adapter now unblocks Phase 4 and H3 only verifies it
 
 ## Open Questions
 

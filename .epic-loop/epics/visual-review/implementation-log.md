@@ -467,3 +467,23 @@
   - techlead reran ingest, gate, review-server and human-queue tests 35/35
   - test:unit 223/223, validate passes, browser-check passes
 - Residual risk: inbox ids restart if inbox.jsonl is deleted while inbox_through stays; the loop wakes only on a Stop until the doorbell (Task 3); new scripts reach the live runtime only after self-update
+
+## 2026-10-19T20:06:09+00:00 - done
+
+- Phase: Phase 4 - Human Gates In The Loop
+- Task: Doorbell from the server, per platform, with fallback
+- Verdict: done
+- Changed:
+  - Claude Code asyncRewake waiter (scripts/doorbell-waiter.mjs, lib/loop-doorbell.mjs) installed on Stop and SessionStart with timeout 86400 and rewakeMessage, per-epic lock, polls pending input, rings with the [epic-loop doorbell] pointer
+  - Codex ring from the review server with codex queue --thread <driver session id> (D37), attempts in .runtime/doorbell.jsonl
+  - doorbell-wake handling and the pending-input fallback note on UserPromptSubmit
+  - submit response doorbell field and the page note
+  - CLI doctor doorbell section (waiter timeout, Claude Code >= 2.1.293, codex >= 0.149 with codex queue)
+  - references hooks-and-session-routing Doorbell, implementation-cycle step 16, manager Gates
+  - docs doorbell.md Implemented, human-gates.md
+- Verification:
+  - doorbell-contracts.test.mjs 10 tests (waiter exit/ring/lock/stale lock, install idempotent, wake on both platforms to ingest, fallback notes, codex ring with a fake codex on PATH, missing codex, waiter mode, doctor)
+  - browser-check asserts the none and loop-running notes
+  - techlead reran doorbell, cli-package, gate and ingest tests 41/41 and found no leftover processes
+  - test:unit 233/233, validate passes
+- Residual risk: real hosts unproven: asyncRewake wake and rewakeMessage on a real idle session, a duplicate ring racing the resume, codex queue into an awaiting thread (H3); problem reports do not ring (Task 4)

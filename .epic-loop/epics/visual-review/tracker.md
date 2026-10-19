@@ -166,7 +166,7 @@ Order (agreed 2026-10-18, revised the same day, D18):
     - a `security-hold` item is not resolved by a plain submit.
   - Docs: `docs/human-gates.md`, `decision-log.md` (D22, D23, D26).
 
-- [ ] Kind: implementation | Status: todo | Doorbell from the server, per platform, with fallback
+- [x] Kind: implementation | Status: done | Doorbell from the server, per platform, with fallback
   - Outcome:
     - On submit, a problem report or an inbox entry for an epic whose loop is idle in `awaiting-review` (or stopped with "continue after submit"), the server rings the driver session with the Phase 2 mechanism for the configured platform.
     - The fallback injects pending answers on the next human message.

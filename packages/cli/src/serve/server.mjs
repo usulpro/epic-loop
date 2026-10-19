@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { REVIEW_RUNTIME_DIR, reviewVendorFile } from "../paths.mjs";
 import { appendProblem, patchAnswers, readAnswers, submitAnswers } from "./answers.mjs";
+import { ringDoorbell } from "./doorbell.mjs";
 import { contentType, isFile, resolveInside } from "./files.mjs";
 import { INBOX_TEXT_LIMIT, appendInbox, readInbox } from "./inbox.mjs";
 import { injectReview, renderEpicHome, renderEpicList, renderInboxThanks, renderNotFound, renderProblemThanks } from "./pages.mjs";
@@ -87,7 +88,9 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     }
     if (action === "submit" && req.method === "POST") {
       const { data } = await readPayload(req);
-      return sendJson(res, 200, await submitAnswers(dir, { resubmit: data?.resubmit === true }));
+      const answers = await submitAnswers(dir, { resubmit: data?.resubmit === true });
+      // The doorbell field tells the page how the loop learns about this submit.
+      return sendJson(res, 200, { ...answers, doorbell: ringDoorbell(root, slug, { reason: "submit", review: id }) });
     }
     if (action === "problem" && req.method === "POST") {
       const { form, data } = await readPayload(req);
@@ -109,6 +112,7 @@ export function createReviewServer({ root, projectName = path.basename(root), on
     const text = String(data?.text ?? "").trim();
     if (!text) throw new HttpError(400, "Write what the loop should know.");
     const entry = await appendInbox(epicDir(root, slug), text.slice(0, INBOX_TEXT_LIMIT));
+    ringDoorbell(root, slug, { inbox: entry.id, reason: "inbox" });
     if (form) return send(res, 200, renderInboxThanks(projectName, `/${encodeURIComponent(slug)}`, entry), "text/html; charset=utf-8");
     return sendJson(res, 201, entry);
   }

@@ -95,6 +95,7 @@ bar.innerHTML = `
       <button type="button" data-theme-set="auto">auto</button><button type="button" data-theme-set="light">light</button><button type="button" data-theme-set="dark">dark</button>
     </div>
     <span class="el-submitted el-meta" hidden></span>
+    <span class="el-doorbell el-meta" aria-live="polite" hidden></span>
     <button class="el-btn el-btn--primary el-submit" type="button">Submit answers</button>
   </div>`;
 const $ = (selector) => bar.querySelector(selector);
@@ -139,6 +140,21 @@ function renderSubmitted() {
   }
 }
 
+// After a submit, how the loop learns about it (the server's doorbell field).
+const DOORBELL_NOTES = {
+  waiter: "The loop picks your answers up now.",
+  "codex-queue": "The loop picks your answers up now.",
+  "loop-running": "The loop picks your answers up at its next step.",
+  none: "Send any message in the agent session to continue.",
+};
+
+function renderDoorbell(mode) {
+  const note = $(".el-doorbell");
+  note.hidden = !DOORBELL_NOTES[mode];
+  note.dataset.doorbell = mode ?? "";
+  note.textContent = DOORBELL_NOTES[mode] ?? "";
+}
+
 $(".el-submit").addEventListener("click", async () => {
   const button = $(".el-submit");
   button.disabled = true;
@@ -147,6 +163,7 @@ $(".el-submit").addEventListener("click", async () => {
     const answers = await api("submit", { method: "POST", body: submittedAt ? { resubmit: true } : {} });
     submittedAt = answers.submittedAt ?? null;
     renderSubmitted();
+    renderDoorbell(answers.doorbell);
   } catch (error) {
     renderSave({ state: "error", at: null, error: String(error) });
   } finally {

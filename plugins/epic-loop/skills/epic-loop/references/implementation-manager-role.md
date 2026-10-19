@@ -223,7 +223,7 @@ Only the manager opens a gate (D1): it registers a checked review page as someth
    `node <skill-dir>/scripts/gate.mjs open --slug "<slug>" --review <review-id> [--covers H3,H4] [--blocking]`.
    `--covers` names the open human-queue items the page answers. The review must have passed `review check`.
 2. Make the gate `--blocking` only when no independent work remains. Then this manager turn ends with the loop in `awaiting-review`: no techlead turn follows until the loop resumes. Without `--blocking` the loop keeps working and hands over to the techlead as usual.
-3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server).
+3. Give the human the deep link from the summary (`/<slug>/reviews/<review-id>/` on the running server). When the human submits, the doorbell wakes the idle session (Claude Code waiter hook, or `codex queue` from the server) and the loop resumes with an ingest turn; the page tells the human when they need to send a message instead.
 4. Settle gates in a later manager turn: `gate.mjs ingested --review <id>` once the answers are recorded, `gate.mjs close --review <id> [--reason …]` when the gate is done. `gate.mjs list` shows them; `role-summary.mjs` lists open gates.
 
 Every step is a progress event: `gate-opened`, `answers-submitted` (logged by the hook once per submit of an open gate's page), `gate-ingested`, `gate-closed`. Submitted answers come back to you in an ingest turn (below).

@@ -53,6 +53,10 @@ How review pages, answers, the inbox and the doorbell plug into the implementati
 
 - A blocking gate leaves the session idle. A submit (or a problem report, or an inbox entry) makes the server ring the session with the mechanism chosen in Phase 2. The waking turn routes to manager ingest.
 - Fallback: `UserPromptSubmit` injects pending answers on the human's next message. The page says so when no doorbell is available for the platform.
+- **Implementation (Phase 4 Task 3):**
+  - The waiter hook (Claude Code) and `codex queue` from the server (Codex) are described in `doorbell.md` "Implemented".
+  - The submit response carries `doorbell`: `waiter`, `codex-queue`, `loop-running` or `none`. The page shows "picks your answers up now", "at its next step" or "send any message in the agent session to continue".
+  - Problem reports do not ring yet (Task 4).
 
 ## Stop Report Page And Auto-Continue
 

@@ -28,7 +28,42 @@ export function buildInstallHooksCommand(skillDir, extraArgs = "") {
 }
 
 function isEpicLoopHookCommand(command) {
-  return typeof command === "string" && /epic[-_]loop/u.test(command) && /hook\.mjs|epic-loop\.mjs|epic_loop\.py|\bhook\b/u.test(command);
+  return typeof command === "string" && !isDoorbellWaiterCommand(command) && /epic[-_]loop/u.test(command) && /hook\.mjs|epic-loop\.mjs|epic_loop\.py|\bhook\b/u.test(command);
+}
+
+// The Claude Code doorbell waiter (D34), as the skill's install-hooks.mjs writes it.
+const DOORBELL_WAITER_EVENTS = ["Stop", "SessionStart"];
+const DOORBELL_WAITER_TIMEOUT_SECONDS = 86400;
+const DOORBELL_REWAKE_MESSAGE = "epic-loop:";
+
+function isDoorbellWaiterCommand(command) {
+  return typeof command === "string" && command.includes("doorbell-waiter.mjs");
+}
+
+export function doorbellWaiterScriptPath(skillDir) {
+  return path.join(skillDir, "scripts", "doorbell-waiter.mjs");
+}
+
+// Whether the waiter hooks are installed with an explicit timeout (the host default of 600 s
+// kills the waiter). A skill without the waiter script (older than the doorbell) is not checked.
+function inspectDoorbellWaiter(hooks, root, skillDir) {
+  if (!fs.existsSync(doorbellWaiterScriptPath(skillDir))) {
+    return { checked: false, missingEvents: [], ready: true, timeoutMissing: [] };
+  }
+  const command = `node ${shellQuote(doorbellWaiterScriptPath(skillDir))} --root ${shellQuote(root)}`;
+  const missingEvents = [];
+  const timeoutMissing = [];
+  for (const eventName of DOORBELL_WAITER_EVENTS) {
+    const waiterHooks = (Array.isArray(hooks[eventName]) ? hooks[eventName] : [])
+      .flatMap((entry) => (Array.isArray(entry?.hooks) ? entry.hooks : []))
+      .filter((hook) => isDoorbellWaiterCommand(hook?.command));
+    const current = waiterHooks.some(
+      (hook) => hook.command === command && hook.asyncRewake === true && hook.timeout === DOORBELL_WAITER_TIMEOUT_SECONDS && hook.rewakeMessage === DOORBELL_REWAKE_MESSAGE,
+    );
+    if (!current) missingEvents.push(eventName);
+    if (waiterHooks.some((hook) => hook.asyncRewake === true && !Number.isFinite(hook.timeout))) timeoutMissing.push(eventName);
+  }
+  return { checked: true, command, missingEvents, ready: missingEvents.length === 0, timeoutMissing, timeoutSeconds: DOORBELL_WAITER_TIMEOUT_SECONDS };
 }
 
 function parseCodexHooksFeature(configPath) {
@@ -203,14 +238,17 @@ export function inspectClaudeHookConfig(root, skillDir) {
     }
   }
 
+  const doorbell = inspectDoorbellWaiter(hooks, root, skillDir);
+
   return {
     command,
+    doorbell,
     error: null,
     exists: strict.exists,
     invalid: false,
     missingEvents,
     path: settingsPath,
-    ready: missingEvents.length === 0 && staleEvents.length === 0,
+    ready: missingEvents.length === 0 && staleEvents.length === 0 && doorbell.ready,
     staleEvents,
     writable,
   };

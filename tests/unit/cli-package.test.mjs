@@ -13,7 +13,9 @@ const repoSkillDir = path.join(repoRoot, "plugins", "epic-loop", "skills", "epic
 const cliVersion = readJsonFile(path.join(repoRoot, "packages", "cli", "package.json")).version;
 
 function baseEnv(home, extra = {}) {
-  const env = { ...process.env, EPIC_LOOP_CLI: cliEntry, EPIC_LOOP_NO_UPDATE_CHECK: "1", HOME: home, ...extra };
+  // Doorbell probes never reach a real host CLI in tests.
+  const absent = path.join(home, "no-such-host-cli");
+  const env = { ...process.env, EPIC_LOOP_CLAUDE_BIN: absent, EPIC_LOOP_CLI: cliEntry, EPIC_LOOP_CODEX_BIN: absent, EPIC_LOOP_NO_UPDATE_CHECK: "1", HOME: home, ...extra };
   for (const key of [
     "EPIC_LOOP_SKILL_DIR",
     "EPIC_LOOP_SKILL_VERSION",

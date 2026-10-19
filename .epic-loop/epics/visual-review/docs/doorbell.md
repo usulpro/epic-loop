@@ -155,6 +155,18 @@ Keep the role's background waiter (run 12 E1) as the pattern for a **role-level*
 - a warning that `asyncRewake` is backgrounded only in interactive sessions, so a headless `claude -p` driver relies on the fallback;
 - the Claude Code version is at least 2.1.293, the version these results come from (lower bound not tested).
 
+### Implemented (Phase 4 Task 3)
+
+- **Claude Code:**
+  - The waiter is `scripts/doorbell-waiter.mjs`, installed on `Stop` and `SessionStart` with `asyncRewake`, `timeout: 86400` and `rewakeMessage: "epic-loop:"`.
+  - It holds a per-epic lock and polls about once per second for pending input. It rings by exiting 2 with a pointer carrying `[epic-loop doorbell]`.
+- **Codex (D37, provisional):** the review server runs `codex queue --thread <driver session id>`. The hook `session_id` equals the thread id: run 11's QD rollout and its registered thread id match. Rings are logged to `.runtime/doorbell.jsonl`.
+- **Both:**
+  - The wake logs `doorbell-wake`, and the next `Stop` resumes the loop into the ingest turn.
+  - Human messages get a pending-input note.
+  - The submit response tells the page whether the doorbell applies.
+  - `doctor` reports the waiter hooks and the host versions.
+
 ### Codex
 
 On hold (H3): the end-to-end Codex run needs a `danger-full-access` sandbox run. The Codex matrix above already shows `codex queue` delivering in every state except after Esc (where the queue waits for the next completed turn) and a running loop (untested).

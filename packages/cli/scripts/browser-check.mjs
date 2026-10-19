@@ -175,6 +175,19 @@ async function checkAnswers(s, server, project) {
   const submitted = readAnswers();
   expect(Boolean(submitted.submittedAt), `answers.json has submittedAt ${submitted.submittedAt}`);
   expect((await evaluate("document.querySelector('.el-submit').textContent")) === "Submit again", "button offers Submit again");
+  expect(
+    (await evaluate("document.querySelector('.el-doorbell').textContent")) === "Send any message in the agent session to continue.",
+    "with no loop waiting, the page says how to continue (doorbell none)",
+  );
+  const runtimeDir = path.join(project.root, ".epic-loop", "epics", "demo", ".runtime");
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.writeFileSync(path.join(runtimeDir, "runtime-state.json"), JSON.stringify({ implementation_loop: { status: "running" } }));
+  await evaluate("document.querySelector('.el-submit').click()");
+  await waitFor("document.querySelector('.el-doorbell').dataset.doorbell === 'loop-running'", "doorbell loop-running");
+  expect(
+    (await evaluate("document.querySelector('.el-doorbell').textContent")) === "The loop picks your answers up at its next step.",
+    "with the loop running, a resubmit says it is picked up at the next step",
+  );
 
   await evaluate("document.querySelector('#el-problem textarea').value = 'browser check problem'; document.querySelector('#el-problem form').submit()");
   await waitFor("document.body.textContent.includes('the problem is recorded')", "problem confirmation");

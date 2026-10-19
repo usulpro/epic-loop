@@ -9,6 +9,7 @@
 - [Hook Payload](#hook-payload)
 - [Project-Local State](#project-local-state)
 - [Binding Sessions](#binding-sessions)
+- [Doorbell](#doorbell)
 - [What Hooks Can And Cannot Do](#what-hooks-can-and-cannot-do)
 - [Parallel Safety](#parallel-safety)
 
@@ -199,6 +200,15 @@ This designates the current session as the exclusive implementation driver for t
 For driver binding, Codex `--current` uses the existing Codex current-session capture and session metadata fallback. Claude Code `--current` reads only the Claude Code hook capture for the selected platform; the capture must be fresh, match the current project root, and include string `session_id` and `transcript_path`. If the Claude Code capture is missing, stale, malformed, wrong-root, or ambiguous, pass `--session-id "<session_id>"` explicitly.
 
 Unbind on user request with `node <skill-dir>/scripts/unbind-session.mjs --current` (or `--session-id "<session_id>"`, optional `--reason`). It deactivates the session's entry in `session-bindings.json` (`active: false`, `deactivated_at`, `deactivated_reason`); hooks become silent no-ops for that session id afterwards. Unbinding an unbound session is a harmless no-op. Rebind later through the normal `bind-session.mjs` flow.
+
+## Doorbell
+
+When a blocking gate leaves the loop `awaiting-review`, the driver session is idle; the doorbell wakes it when the human's input arrives (D34, D37 of the visual-review epic). Every wake carries the marker `[epic-loop doorbell]`, and the hook logs `doorbell-wake` and tells the agent to reply in one line and end the turn; the next `Stop` resumes the loop with a manager ingest turn.
+
+- **Claude Code:** `install-hooks.mjs` adds `scripts/doorbell-waiter.mjs` on `Stop` and `SessionStart` with `asyncRewake: true`, `timeout: 86400` (the host default of 600 s kills the waiter) and `rewakeMessage: "epic-loop:"`. The waiter exits 0 at once unless its session drives a loop that awaits a review; then it takes the per-epic lock `.runtime/doorbell-waiter.lock` (a live holder wins; a dead one is taken over), polls the disk for pending input, and exits 2 with the pointer on stderr (`doorbell-ring`). It exits 0 when the loop leaves `awaiting-review` or the lock is lost. `asyncRewake` runs backgrounded only in interactive sessions; a headless `claude -p` driver relies on the fallback.
+- **Codex:** the review server rings the driver thread with `codex queue --thread <session id> --message <pointer>` on a submit or an inbox entry while the loop awaits a review (provisional until the H3 run). Each attempt goes to `.runtime/doorbell.jsonl` with its exit code or error; a failed ring never fails the submit.
+- **Fallback:** on any human message in the driver session, the hook names pending input (answered reviews, inbox ids): it is ingested after the reply when awaiting a review, at the next role transition when running, and waits for a resume when idle or stopped. After a submit the review page says whether the loop picks the answers up now or the human should send a message.
+- `doctor` reports doorbell readiness: the waiter hooks with an explicit timeout and the Claude Code version (at least 2.1.293, "unknown" when it cannot be read), or `codex` 0.149+ with a working `codex queue`. A missing host prerequisite is a warning with a `fix`; missing or broken waiter hooks are setup-required.
 
 ## What Hooks Can And Cannot Do
 
